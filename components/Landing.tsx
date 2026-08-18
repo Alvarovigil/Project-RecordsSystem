@@ -102,7 +102,7 @@ const COVERS = [
 
 const FEATURES = [
   {
-    title: "Tu estantería",
+    title: "Tu colección",
     body: "Añade discos desde Discogs con su portada, su ficha y un adelanto de audio. Ordénalos como quieras.",
   },
   {

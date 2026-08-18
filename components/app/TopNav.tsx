@@ -22,13 +22,13 @@ export default function TopNav({
   const pathname = usePathname();
   const { available, user } = useSession();
 
-  // signed out there is no shelf of yours to open, but there is a demo one —
+  // signed out there is no collection of yours to open, but there is a demo one —
   // a dead link would be worse than a smaller promise
   const links = [
     { href: "/inicio", label: "Inicio" },
     available && !user
-      ? { href: "/demo", label: "Estantería" }
-      : { href: "/estanteria", label: "Mi estantería" },
+      ? { href: "/demo", label: "Colección" }
+      : { href: "/coleccion", label: "Mi colección" },
     { href: "/explorar", label: "Explorar" },
   ];
 

@@ -10,7 +10,7 @@ export default function NotFound() {
         Error 404
       </span>
       <h1 className="max-w-[24ch] text-[28px] leading-tight">
-        Este disco no está en la estantería
+        Este disco no está en la colección
       </h1>
       <p className="max-w-[42ch] text-[14px] text-paper/45">
         La página que buscas no existe, o su dueño la ha hecho privada.

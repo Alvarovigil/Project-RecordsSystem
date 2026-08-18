@@ -2,7 +2,7 @@ import ShelfApp from "@/components/ShelfApp";
 
 export const metadata = {
   title: "Demo",
-  description: "La estantería completa, sin cuenta: todo vive en tu navegador.",
+  description: "La colección completa, sin cuenta: todo vive en tu navegador.",
   robots: { index: false },
 };
 

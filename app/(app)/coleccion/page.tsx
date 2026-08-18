@@ -5,7 +5,7 @@ import ShelfApp from "@/components/ShelfApp";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Tu estantería",
+  title: "Tu colección",
   // your own shelf is nobody else's business
   robots: { index: false },
 };

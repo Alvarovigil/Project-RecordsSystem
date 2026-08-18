@@ -56,10 +56,10 @@ export default function HomeView() {
             </p>
           </div>
           <Link
-            href="/estanteria"
+            href="/coleccion"
             className="mono border border-paper/20 px-4 py-2 text-[10px] uppercase tracking-[0.18em] text-paper/70 transition hover:border-paper/60 hover:text-paper"
           >
-            Ir a mi estantería →
+            Ir a mi colección →
           </Link>
         </header>
 
@@ -72,7 +72,7 @@ export default function HomeView() {
               <p className="text-[15px] text-paper/80">Todavía no sigues a nadie.</p>
               <p className="mt-2 max-w-[52ch] text-[13px] text-paper/45">
                 Sigue a alguien o a una lista y aquí verás lo que van añadiendo. Cada disco
-                de tu estantería lleva a las listas donde vive.
+                de tu colección lleva a las listas donde vive.
               </p>
               <Link
                 href="/explorar"
@@ -133,13 +133,13 @@ export default function HomeView() {
 
         {/* --- your own shelf, one click away ---------------------------- */}
         {yourLists.length > 0 && (
-          <Section title="Tus listas" href="/estanteria" linkLabel="Abrir estantería">
+          <Section title="Tus listas" href="/coleccion" linkLabel="Abrir estantería">
             <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               {yourLists.map((l) => {
                 const cover = lib.releases.find((v) => lib.idsOf(l.id).includes(v.id));
                 return (
                   <li key={l.id}>
-                    <Link href="/estanteria" className="group block">
+                    <Link href="/coleccion" className="group block">
                       <span className="block aspect-square w-full overflow-hidden bg-paper/[0.05]">
                         {cover && (
                           // eslint-disable-next-line @next/next/no-img-element

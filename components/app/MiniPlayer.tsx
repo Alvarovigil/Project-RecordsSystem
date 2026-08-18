@@ -17,7 +17,7 @@ export default function MiniPlayer() {
 
   // any shelf — yours or the demo — already carries the transport in the
   // scene, and two sets of controls for the same sound is worse than one
-  const onShelf = pathname.startsWith("/estanteria") || pathname.startsWith("/demo");
+  const onShelf = pathname.startsWith("/coleccion") || pathname.startsWith("/demo");
   if (!nowPlaying || onShelf) return null;
 
   return (
@@ -53,10 +53,10 @@ export default function MiniPlayer() {
         </button>
 
         <Link
-          href="/estanteria"
+          href="/coleccion"
           className="mono shrink-0 text-[10px] uppercase tracking-[0.16em] text-paper/35 transition hover:text-paper"
         >
-          Ver en la estantería
+          Ver en mi colección
         </Link>
       </div>
     </div>

@@ -370,7 +370,7 @@ function ListView({
                     className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-ink/85 via-transparent to-transparent p-2 opacity-0 transition group-hover:opacity-100"
                   >
                     <span className="mono text-[9px] uppercase tracking-[0.16em] text-paper">
-                      {owned ? "Ver en mi estantería" : "Guardar"}
+                      {owned ? "Ver en mi colección" : "Guardar"}
                     </span>
                   </button>
                 </div>

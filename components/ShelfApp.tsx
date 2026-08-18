@@ -531,7 +531,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
               <button
                 key={v}
                 onClick={() => setView(v)}
-                aria-label={v === "shelf" ? "Vista estantería" : "Vista cuadrícula"}
+                aria-label={v === "shelf" ? "Vista colección" : "Vista cuadrícula"}
                 aria-pressed={view === v}
                 className={`flex h-[26px] w-[30px] items-center justify-center transition ${
                   view === v

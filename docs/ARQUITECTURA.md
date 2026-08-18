@@ -88,7 +88,7 @@ saltas a la lista o al perfil.
 |---|---|---|
 | Landing | `/` | Hecha. Redirige a `/inicio` si hay sesión. |
 | Inicio social | `/inicio` | Hecho: movimientos de quien sigues, tus listas, comunidad. |
-| Tu estantería | `/estanteria` | Hecha (3D + cuadrícula, reproducción, listas). |
+| Tu colección | `/coleccion` | Hecha (3D + cuadrícula, reproducción, listas). |
 | Demo sin cuenta | `/demo` | Hecha. Todo funciona contra `localStorage`. |
 | Perfil público | `/u/[usuario]` | Hecho: listas, seguidores, siguiendo, seguir. |
 | Lista pública | `/u/[usuario]/[lista]` | Hecha, con seguir lista y metadatos para compartir. |
@@ -100,7 +100,7 @@ saltas a la lista o al perfil.
 ### La carcasa
 
 Todo lo de dentro (`app/(app)/…`) comparte un mismo armazón: barra superior
-fija —Inicio · Estantería · Explorar· tu cuenta— y el reproductor, que vive en
+fija —Inicio · Colección · Explorar · tu cuenta— y el reproductor, que vive en
 el layout y por tanto **no se detiene al navegar**. Esa continuidad es lo que
 convierte un conjunto de páginas en un sitio.
 
