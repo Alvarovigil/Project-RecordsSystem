@@ -56,7 +56,23 @@ function readReleases(): Vinyl[] {
   if (typeof window === "undefined") return data as Vinyl[];
   try {
     const raw = localStorage.getItem(RELEASES_KEY);
-    if (raw) return JSON.parse(raw) as Vinyl[];
+    if (!raw) return data as Vinyl[];
+    const stored = JSON.parse(raw) as Vinyl[];
+    const bundled = new Map((data as Vinyl[]).map((v) => [v.id, v]));
+    // A copy saved before we had covers or previews for a record would keep
+    // showing it as unplayable forever. Fill the gaps from the shipped
+    // catalogue — but never resurrect a record the user deleted.
+    return stored.map((v) => {
+      const source = bundled.get(v.id);
+      if (!source) return v;
+      return {
+        ...v,
+        cover: v.cover ?? source.cover,
+        previewUrl: v.previewUrl ?? source.previewUrl,
+        palette: v.palette?.length ? v.palette : source.palette,
+        tracklist: v.tracklist?.length ? v.tracklist : source.tracklist,
+      };
+    });
   } catch {}
   return data as Vinyl[];
 }
