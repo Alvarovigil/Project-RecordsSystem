@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import SiteNav from "@/components/SiteNav";
 import { useSession } from "@/hooks/useSession";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -48,14 +49,9 @@ export default function SettingsPage() {
 
   return (
     <main className="min-h-screen bg-ink text-paper">
+      <SiteNav />
       <div className="mx-auto w-full max-w-[560px] px-6 py-16">
-        <Link
-          href="/estanteria"
-          className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40 transition hover:text-paper"
-        >
-          ← Mi estantería
-        </Link>
-        <h1 className="mt-8 text-[26px] leading-tight">Ajustes</h1>
+        <h1 className="mt-2 text-[26px] leading-tight">Ajustes</h1>
 
         {!available ? (
           <p className="mt-8 text-[13px] text-paper/45">

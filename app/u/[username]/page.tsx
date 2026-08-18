@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SiteNav from "@/components/SiteNav";
 import { notFound } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import FollowButton from "@/components/ProfileHeader";
@@ -78,15 +79,9 @@ export default async function ProfilePage({
 
   return (
     <main className="min-h-screen bg-ink text-paper">
+      <SiteNav />
       <div className="mx-auto w-full max-w-[880px] px-6 py-16">
-        <Link
-          href="/estanteria"
-          className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40 transition hover:text-paper"
-        >
-          ← Mi estantería
-        </Link>
-
-        <header className="mt-8 flex items-start justify-between gap-6 border-b border-paper/[0.08] pb-8">
+        <header className="mt-2 flex items-start justify-between gap-6 border-b border-paper/[0.08] pb-8">
           <div className="flex items-start gap-5">
             <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper/10 text-[16px] text-paper/70">
               {profile.avatar_url ? (

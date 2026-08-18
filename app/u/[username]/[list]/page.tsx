@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import FollowListButton from "@/components/FollowListButton";
+import SiteNav from "@/components/SiteNav";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,7 @@ export default async function ListPage({
 
   return (
     <main className="min-h-screen bg-ink text-paper">
+      <SiteNav />
       <div className="mx-auto w-full max-w-[1000px] px-6 py-16">
         <Link
           href={`/u/${profile.username}`}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import SiteNav from "./SiteNav";
 import { useRepository } from "@/hooks/useRepository";
 import type { ListWithRecord, Profile } from "@/lib/data/types";
 
@@ -37,17 +38,9 @@ export default function ExploreView() {
 
   return (
     <main className="min-h-screen bg-ink text-paper">
+      <SiteNav />
       <div className="mx-auto w-full max-w-[900px] px-6 py-16">
-        <div className="flex items-baseline justify-between">
-          <Link
-            href="/estanteria"
-            className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40 transition hover:text-paper"
-          >
-            ← Mi estantería
-          </Link>
-        </div>
-
-        <h1 className="mt-8 text-[30px] leading-tight">Explorar</h1>
+        <h1 className="mt-2 text-[30px] leading-tight">Explorar</h1>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}

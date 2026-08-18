@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import SiteNav from "./SiteNav";
 import { useRepository } from "@/hooks/useRepository";
 import type { FeedEntry } from "@/lib/data/types";
 
@@ -31,14 +32,9 @@ export default function FeedView() {
 
   return (
     <main className="min-h-screen bg-ink text-paper">
+      <SiteNav />
       <div className="mx-auto w-full max-w-[760px] px-6 py-16">
-        <Link
-          href="/estanteria"
-          className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40 transition hover:text-paper"
-        >
-          ← Mi estantería
-        </Link>
-        <h1 className="mt-8 text-[30px] leading-tight">Novedades</h1>
+        <h1 className="mt-2 text-[30px] leading-tight">Novedades</h1>
 
         {entries === null ? (
           <p className="mt-10 text-[13px] text-paper/35">Cargando…</p>
