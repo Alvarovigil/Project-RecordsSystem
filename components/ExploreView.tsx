@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import TopNav from "./app/TopNav";
 import { useRepository } from "@/hooks/useRepository";
@@ -17,6 +18,12 @@ export default function ExploreView() {
   const [lists, setLists] = useState<ListWithRecord[]>([]);
   const [people, setPeople] = useState<Profile[]>([]);
   const [query, setQuery] = useState("");
+  // arriving from the bar's search puts the cursor where you expect it
+  const params = useSearchParams();
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (params.get("buscar")) inputRef.current?.focus();
+  }, [params]);
 
   useEffect(() => {
     let alive = true;
@@ -42,6 +49,7 @@ export default function ExploreView() {
       <div className="mx-auto w-full max-w-[900px] px-6 py-16">
         <h1 className="mt-2 text-[30px] leading-tight">Explorar</h1>
         <input
+          ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar personas o listas…"

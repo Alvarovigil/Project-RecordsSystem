@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { PlaybackProvider } from "@/lib/playback-context";
 import MiniPlayer from "@/components/app/MiniPlayer";
+import Onboarding from "@/components/Onboarding";
 
 /**
  * The shell every signed-in surface shares.
@@ -14,6 +15,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <PlaybackProvider>
       {children}
+      <Onboarding />
       <MiniPlayer />
     </PlaybackProvider>
   );

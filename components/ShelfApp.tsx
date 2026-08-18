@@ -10,7 +10,6 @@ import CollectionsOverlay from "@/components/CollectionsOverlay";
 import VinylEditOverlay from "@/components/VinylEditOverlay";
 import CommunityBridge from "@/components/CommunityBridge";
 import MarqueeText from "@/components/MarqueeText";
-import Onboarding from "@/components/Onboarding";
 import DemoNotice from "@/components/DemoNotice";
 import { setAuthenticated, type ListWithRecord } from "@/lib/data";
 import { useRepository } from "@/hooks/useRepository";
@@ -809,8 +808,6 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           </div>
         </div>
       )}
-
-      <Onboarding onDone={() => void lib.refresh()} />
 
       {/* Demo mode says so, once, quietly. Everything works — it just lives in
           this browser, and that is worth knowing before you build a shelf. */}

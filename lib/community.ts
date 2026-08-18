@@ -144,6 +144,10 @@ export function allUsers(): CommunityUser[] {
   return USERS;
 }
 
+export function getUserByHandle(handle: string): CommunityUser | undefined {
+  return USERS.find((u) => u.handle === handle);
+}
+
 export function getUser(id: string): CommunityUser | undefined {
   return USERS.find((u) => u.id === id);
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { getRepository } from "@/lib/data";
+import { getRepository, resetRepository } from "@/lib/data";
 import { migrateLocalLibrary, localLibraryMigrated, localLibrarySize } from "@/lib/migrate";
 import { useSession } from "@/hooks/useSession";
 
@@ -42,6 +42,8 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
     localStorage.setItem(`vinilos.onboarded.${user.id}`, new Date().toISOString());
     setStep(null);
     onDone?.();
+    // the shell hosts this now, so the page underneath re-reads its data
+    resetRepository();
   };
 
   const saveIdentity = async () => {

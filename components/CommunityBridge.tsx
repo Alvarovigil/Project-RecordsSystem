@@ -335,6 +335,12 @@ function ListView({
               {known.itemCount} discos · {known.followers} siguen · {known.updatedAt}
             </span>
           </div>
+          <Link
+            href={`/u/${known.owner.username}/${known.slug}`}
+            className="mono mt-3 inline-block text-[10px] uppercase tracking-[0.16em] text-paper/40 underline-offset-2 transition hover:text-paper hover:underline"
+          >
+            Ver la lista completa →
+          </Link>
         </div>
         <FollowButton following={following} onClick={onToggleFollow} />
       </header>

@@ -62,6 +62,19 @@ export default function TopNav({
         </div>
         <div className="flex items-center gap-5">
           {right}
+          {!right && (
+            <Link
+              href="/explorar?buscar=1"
+              className="group flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-paper/50 transition hover:text-paper"
+              aria-label="Buscar"
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden>
+                <circle cx="6" cy="6" r="4.2" stroke="currentColor" strokeWidth="1.2" />
+                <path d="M9.2 9.2 L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
+              <span className="hidden sm:inline">Buscar</span>
+            </Link>
+          )}
           <AccountMenu />
         </div>
       </div>

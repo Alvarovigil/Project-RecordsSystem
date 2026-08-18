@@ -3,6 +3,8 @@ import TopNav from "@/components/app/TopNav";
 import { notFound } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import FollowButton from "@/components/ProfileHeader";
+import DemoProfile from "@/components/DemoProfile";
+import { getUserByHandle } from "@/lib/community";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +49,13 @@ export default async function ProfilePage({
     .eq("username", params.username)
     .maybeSingle();
 
-  if (!profile) notFound();
+  // the placeholder community has profiles too: every link in the demo has to
+  // lead somewhere real-looking, and this disappears once people sign up
+  if (!profile) {
+    const demo = getUserByHandle(params.username);
+    if (demo) return <DemoProfile profileId={demo.id} />;
+    notFound();
+  }
 
   const { data: followedLists } = await supabase
     .from("list_follows")
