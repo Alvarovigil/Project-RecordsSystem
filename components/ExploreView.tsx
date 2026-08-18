@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import SiteNav from "./SiteNav";
+import TopNav from "./app/TopNav";
 import { useRepository } from "@/hooks/useRepository";
 import type { ListWithRecord, Profile } from "@/lib/data/types";
 
@@ -37,8 +37,8 @@ export default function ExploreView() {
   }, [repo, query]);
 
   return (
-    <main className="min-h-screen bg-ink text-paper">
-      <SiteNav />
+    <main className="min-h-screen bg-ink pb-28 text-paper">
+      <TopNav />
       <div className="mx-auto w-full max-w-[900px] px-6 py-16">
         <h1 className="mt-2 text-[30px] leading-tight">Explorar</h1>
         <input

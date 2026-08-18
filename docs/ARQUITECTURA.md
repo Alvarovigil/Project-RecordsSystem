@@ -86,7 +86,8 @@ saltas a la lista o al perfil.
 
 | Superficie | Ruta | Estado |
 |---|---|---|
-| Landing | `/` | Hecha. Redirige a la estantería si hay sesión. |
+| Landing | `/` | Hecha. Redirige a `/inicio` si hay sesión. |
+| Inicio social | `/inicio` | Hecho: movimientos de quien sigues, tus listas, comunidad. |
 | Tu estantería | `/estanteria` | Hecha (3D + cuadrícula, reproducción, listas). |
 | Demo sin cuenta | `/demo` | Hecha. Todo funciona contra `localStorage`. |
 | Perfil público | `/u/[usuario]` | Hecho: listas, seguidores, siguiendo, seguir. |
@@ -95,6 +96,18 @@ saltas a la lista o al perfil.
 | Novedades | `/feed` | Hecha: lo que añaden quienes sigues. |
 | Ajustes | `/ajustes` | Hechos: usuario, nombre, bio, sesión. |
 | Panel admin | `/admin` | Hecho, tras contraseña. |
+
+### La carcasa
+
+Todo lo de dentro (`app/(app)/…`) comparte un mismo armazón: barra superior
+fija —Inicio · Estantería · Explorar· tu cuenta— y el reproductor, que vive en
+el layout y por tanto **no se detiene al navegar**. Esa continuidad es lo que
+convierte un conjunto de páginas en un sitio.
+
+La estantería 3D no tiene barra propia: sus controles (vista y buscador) se
+alojan en la misma fila que la navegación. Y su reproductor sigue estando en la
+escena, así que ahí el mini reproductor se oculta: dos mandos para el mismo
+sonido son peores que uno.
 
 ### Reglas sociales que ya están decididas
 

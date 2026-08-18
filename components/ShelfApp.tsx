@@ -10,13 +10,13 @@ import CollectionsOverlay from "@/components/CollectionsOverlay";
 import VinylEditOverlay from "@/components/VinylEditOverlay";
 import CommunityBridge from "@/components/CommunityBridge";
 import MarqueeText from "@/components/MarqueeText";
-import AccountMenu from "@/components/AccountMenu";
 import Onboarding from "@/components/Onboarding";
 import DemoNotice from "@/components/DemoNotice";
 import { setAuthenticated, type ListWithRecord } from "@/lib/data";
 import { useRepository } from "@/hooks/useRepository";
 import { useLibrary } from "@/hooks/useLibrary";
-import { usePlayback } from "@/hooks/usePlayback";
+import { usePlaybackContext } from "@/lib/playback-context";
+import TopNav from "@/components/app/TopNav";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
 import { type Collection, type SortMode, sortedVinylIds } from "@/lib/collections";
@@ -208,7 +208,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   const handleSaveToList = (v: Vinyl, listId: string) => void lib.saveToList(v, listId);
 
   // sound is its own concern, in its own hook
-  const audio = usePlayback();
+  const audio = usePlaybackContext();
   const { nowPlaying, playing } = audio;
   const loadingPreview = audio.loading;
   const playPreview = audio.play;
@@ -521,11 +521,11 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         </>
       )}
 
-      {/* top bar */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between px-8 py-6">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.svg" alt="RackrClub" className="h-5 w-auto opacity-80" />
-        <div className="pointer-events-auto flex items-center gap-5">
+      {/* the shared bar, with the shelf's own controls in the same row */}
+      <TopNav
+        transparent
+        right={
+          <div className="flex items-center gap-5">
           {/* view switch: 3D shelf ↔ grid */}
           <div className="flex items-center border border-paper/20">
             {(["shelf", "grid"] as const).map((v) => (
@@ -566,9 +566,9 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             </kbd>
             <span>Buscar</span>
           </button>
-          <AccountMenu />
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {/* active title — moves up + shrinks when a vinyl is opened so it never
           overlaps the centred cover */}

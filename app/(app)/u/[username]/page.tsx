@@ -1,5 +1,5 @@
 import Link from "next/link";
-import SiteNav from "@/components/SiteNav";
+import TopNav from "@/components/app/TopNav";
 import { notFound } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import FollowButton from "@/components/ProfileHeader";
@@ -84,8 +84,8 @@ export default async function ProfilePage({
   const discos = (lists ?? []).reduce((n, l) => n + (l.item_count ?? 0), 0);
 
   return (
-    <main className="min-h-screen bg-ink text-paper">
-      <SiteNav />
+    <main className="min-h-screen bg-ink pb-28 text-paper">
+      <TopNav />
       <div className="mx-auto w-full max-w-[880px] px-6 py-16">
         <header className="mt-2 flex items-start justify-between gap-6 border-b border-paper/[0.08] pb-8">
           <div className="flex items-start gap-5">

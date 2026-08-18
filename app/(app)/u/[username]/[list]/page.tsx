@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import FollowListButton from "@/components/FollowListButton";
-import SiteNav from "@/components/SiteNav";
+import TopNav from "@/components/app/TopNav";
 
 export const dynamic = "force-dynamic";
 
@@ -74,8 +74,8 @@ export default async function ListPage({
   }[]).map((r) => r.releases);
 
   return (
-    <main className="min-h-screen bg-ink text-paper">
-      <SiteNav />
+    <main className="min-h-screen bg-ink pb-28 text-paper">
+      <TopNav />
       <div className="mx-auto w-full max-w-[1000px] px-6 py-16">
         <Link
           href={`/u/${profile.username}`}
