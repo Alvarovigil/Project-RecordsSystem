@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Vinyl } from "@/lib/types";
 import type { SortMode } from "@/lib/collections";
 import type {
+  FeedEntry,
   FriendWithRecord,
   LibraryRepository,
   List,
@@ -405,6 +406,28 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         .order("item_count", { ascending: false })
         .limit(20);
       return ((data ?? []) as any[]).map(withOwner);
+    },
+
+    async feed() {
+      const { data } = await sb.rpc("feed_for_me", { max_rows: 40 });
+      return ((data ?? []) as any[]).map((r) => ({
+        at: r.added_at,
+        actor: {
+          id: r.actor_id,
+          username: r.actor_handle,
+          displayName: r.actor_name,
+          avatarUrl: r.actor_avatar,
+        },
+        listId: r.list_id,
+        listTitle: r.list_title,
+        listSlug: r.list_slug,
+        release: {
+          slug: r.release_slug,
+          title: r.release_title,
+          artist: r.release_artist,
+          cover: r.release_cover,
+        },
+      }));
     },
 
     async popularLists() {

@@ -5,6 +5,27 @@ import FollowButton from "@/components/ProfileHeader";
 
 export const dynamic = "force-dynamic";
 
+/** Shared links should show who they lead to. */
+export async function generateMetadata({ params }: { params: { username: string } }) {
+  const supabase = getSupabaseServerClient();
+  const { data } = (await supabase
+    ?.from("profiles")
+    .select("display_name, bio, avatar_url")
+    .eq("username", params.username)
+    .maybeSingle()) ?? { data: null };
+
+  if (!data) return { title: "Rackr" };
+  return {
+    title: `${data.display_name} — Rackr`,
+    description: data.bio || `La colección de vinilos de ${data.display_name}.`,
+    openGraph: {
+      title: `${data.display_name} en Rackr`,
+      description: data.bio || `La colección de vinilos de ${data.display_name}.`,
+      images: data.avatar_url ? [data.avatar_url] : undefined,
+    },
+  };
+}
+
 /**
  * A public profile: who someone is, and what they've built.
  *

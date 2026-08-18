@@ -82,6 +82,31 @@ saltas a la lista o al perfil.
 
 ---
 
+## 2 bis. Qué existe ya
+
+| Superficie | Ruta | Estado |
+|---|---|---|
+| Landing | `/` | Hecha. Redirige a la estantería si hay sesión. |
+| Tu estantería | `/estanteria` | Hecha (3D + cuadrícula, reproducción, listas). |
+| Demo sin cuenta | `/demo` | Hecha. Todo funciona contra `localStorage`. |
+| Perfil público | `/u/[usuario]` | Hecho: listas, seguidores, siguiendo, seguir. |
+| Lista pública | `/u/[usuario]/[lista]` | Hecha, con seguir lista y metadatos para compartir. |
+| Explorar | `/explorar` | Hecha: listas destacadas y gente, con buscador. |
+| Novedades | `/feed` | Hecha: lo que añaden quienes sigues. |
+| Ajustes | `/ajustes` | Hechos: usuario, nombre, bio, sesión. |
+| Panel admin | `/admin` | Hecho, tras contraseña. |
+
+### Reglas sociales que ya están decididas
+
+- **Seguir personas y seguir listas son cosas distintas.** Una lista ajena
+  aparece en tu panel bajo su propio epígrafe, marcada con quién la hizo. No se
+  mezcla con las tuyas: mezclarlas emborrona de quién es cada colección.
+- **Cada lista es pública, con enlace o privada.** La de deseos nace privada.
+- **El flujo agrupa por persona y lista**: "Marta añadió 4 discos a Sonido de
+  sótano" es un hecho; cuatro líneas sueltas son ruido con fecha.
+- **Lo público se renderiza en servidor** para poder compartirse; lo que ve
+  cada visitante lo decide RLS, nunca el cliente.
+
 ## 3. Fases
 
 **F0 — ahora (sin backend).** Seguimos puliendo la experiencia: estantería, cuadrícula,

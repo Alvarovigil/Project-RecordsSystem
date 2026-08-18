@@ -27,6 +27,7 @@ import {
   saveFollows,
 } from "@/lib/community";
 import type {
+  FeedEntry,
   FriendWithRecord,
   LibraryRepository,
   List,
@@ -336,6 +337,55 @@ export function createLocalRepository(): LibraryRepository {
         }
       }
       return out;
+    },
+
+    async feed() {
+      // Placeholder activity from what you follow. Lists are resolved through
+      // the registry, not by scanning profiles: the same list has a different
+      // generated id depending on whether you met it through a record or
+      // through its owner.
+      const followed = loadFollows();
+      const all = readReleases();
+      const ids = all.map((v) => v.id);
+
+      const fromLists = followed
+        .map(getGeneratedList)
+        .filter((l): l is NonNullable<typeof l> => !!l)
+        .map((l) => toCommunityList(l, l.ownerId));
+
+      const fromPeople = followed
+        .filter((id) => id.startsWith("u-"))
+        .flatMap((userId) => listsOfUser(userId, ids).map((l) => toCommunityList(l, userId)));
+
+      const seen = new Set<string>();
+      const lists = [...fromLists, ...fromPeople].filter((l) =>
+        seen.has(l.id) ? false : (seen.add(l.id), true),
+      );
+
+      const entries = lists.flatMap((l) =>
+        ((l as ListWithRecord & { vinylIds?: string[] }).vinylIds ?? [])
+          .slice(0, 4)
+          .map((releaseId, i) => {
+            const release = all.find((v) => v.id === releaseId);
+            if (!release) return null;
+            return {
+              at: new Date(Date.now() - (i + 1) * 36e5).toISOString(),
+              actor: l.owner,
+              listId: l.id,
+              listTitle: l.title,
+              listSlug: l.slug,
+              release: {
+                slug: release.id,
+                title: release.title,
+                artist: release.artist,
+                cover: release.cover,
+              },
+            };
+          })
+          .filter(Boolean),
+      ) as FeedEntry[];
+
+      return entries.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 40);
     },
 
     async popularLists() {

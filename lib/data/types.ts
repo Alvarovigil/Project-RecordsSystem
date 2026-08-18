@@ -45,6 +45,16 @@ export type FriendWithRecord = {
   viaListTitle: string;
 };
 
+/** One thing that happened: someone put a record in a list. */
+export type FeedEntry = {
+  at: string;
+  actor: Pick<Profile, "id" | "username" | "displayName" | "avatarUrl">;
+  listId: string;
+  listTitle: string;
+  listSlug: string;
+  release: { slug: string; title: string; artist: string; cover: string | null };
+};
+
 export type NewListInput = {
   title: string;
   description?: string;
@@ -84,6 +94,8 @@ export interface LibraryRepository {
   /** what to show someone who hasn't searched for anything yet */
   popularLists(): Promise<ListWithRecord[]>;
   suggestedProfiles(): Promise<Profile[]>;
+  /** what the people and lists you follow have been adding */
+  feed(): Promise<FeedEntry[]>;
 
   // ---- community ----------------------------------------------------------
   listsWithRelease(releaseId: string): Promise<ListWithRecord[]>;

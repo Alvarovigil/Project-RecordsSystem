@@ -5,6 +5,39 @@ import FollowListButton from "@/components/FollowListButton";
 
 export const dynamic = "force-dynamic";
 
+/** A shared list should arrive with its name, its owner and a cover. */
+export async function generateMetadata({
+  params,
+}: {
+  params: { username: string; list: string };
+}) {
+  const supabase = getSupabaseServerClient();
+  if (!supabase) return { title: "Rackr" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, display_name")
+    .eq("username", params.username)
+    .maybeSingle();
+  if (!profile) return { title: "Rackr" };
+
+  const { data: list } = await supabase
+    .from("lists")
+    .select("title, description, item_count")
+    .eq("owner_id", profile.id)
+    .eq("slug", params.list)
+    .maybeSingle();
+  if (!list) return { title: "Rackr" };
+
+  const description =
+    list.description || `${list.item_count} discos en la colección de ${profile.display_name}.`;
+  return {
+    title: `${list.title} — ${profile.display_name} · Rackr`,
+    description,
+    openGraph: { title: list.title, description },
+  };
+}
+
 /** A public list: the page you land on from the bridge, and the one you share. */
 export default async function ListPage({
   params,
