@@ -78,6 +78,7 @@ export function useSession() {
     await supabase?.auth.signOut();
     setAuthenticated(false);
     resetRepository();
+    window.location.href = "/";
   }, [supabase]);
 
   return {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Vinyl } from "@/lib/types";
 import { type SortMode, DEFAULT_ID, WISHLIST_ID, loadActiveId, saveActiveId } from "@/lib/collections";
 import { getRepository, type List, type NewListInput } from "@/lib/data";
+import { useRepository } from "./useRepository";
 
 /**
  * Your library: records, lists and everything you can do to them.
@@ -12,7 +13,7 @@ import { getRepository, type List, type NewListInput } from "@/lib/data";
  * backend (localStorage → Supabase) changes nothing here.
  */
 export function useLibrary() {
-  const repo = useMemo(() => getRepository(), []);
+  const repo = useRepository();
   const [releases, setReleases] = useState<Vinyl[]>([]);
   const [lists, setLists] = useState<List[]>([]);
   const [activeListId, setActiveListId] = useState<string>(DEFAULT_ID);

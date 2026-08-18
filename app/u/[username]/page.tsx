@@ -45,7 +45,7 @@ export default async function ProfilePage({
     <main className="min-h-screen bg-ink text-paper">
       <div className="mx-auto w-full max-w-[880px] px-6 py-16">
         <Link
-          href="/"
+          href="/estanteria"
           className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40 transition hover:text-paper"
         >
           ← Mi estantería

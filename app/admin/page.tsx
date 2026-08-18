@@ -33,7 +33,7 @@ export default async function AdminHome({
           <h1 className="text-[22px]">Panel</h1>
           <div className="flex items-center gap-5">
             <Link
-              href="/"
+              href="/estanteria"
               className="mono text-[10px] uppercase tracking-[0.18em] text-paper/40 transition hover:text-paper"
             >
               Ir a la app

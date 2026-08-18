@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
+import { useRepository } from "@/hooks/useRepository";
 import {
   getRepository,
   type FriendWithRecord,
@@ -34,7 +35,7 @@ type Props = {
  * thread you pulled.
  */
 export default function CommunityBridge({ vinyl, allVinilos, onOpenOwn, onSave }: Props) {
-  const repo = useMemo(() => getRepository(), []);
+  const repo = useRepository();
   const [open, setOpen] = useState(false);
   const [stack, setStack] = useState<View[]>([{ kind: "record" }]);
   const [follows, setFollows] = useState<string[]>([]);
@@ -299,7 +300,7 @@ function ListView({
   onOpenOwn: (v: Vinyl) => void;
   onSave: (v: Vinyl) => void;
 }) {
-  const repo = useMemo(() => getRepository(), []);
+  const repo = useRepository();
   const [items, setItems] = useState<Vinyl[] | null>(null);
 
   useEffect(() => {

@@ -9,18 +9,14 @@ export function getSupabaseServerClient() {
   const store = cookies();
   return createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
-      get: (name) => store.get(name)?.value,
-      set: (name, value, options) => {
+      getAll: () => store.getAll(),
+      setAll: (list) => {
         try {
-          store.set({ name, value, ...options });
+          list.forEach(({ name, value, options }) => store.set({ name, value, ...options }));
         } catch {
-          // called from a Server Component: the middleware refreshes instead
+          // Server Components can't write cookies; the session is refreshed by
+          // the route handlers instead, so this is safe to ignore.
         }
-      },
-      remove: (name, options) => {
-        try {
-          store.set({ name, value: "", ...options });
-        } catch {}
       },
     },
   });
