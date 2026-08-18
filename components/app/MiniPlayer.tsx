@@ -15,7 +15,10 @@ export default function MiniPlayer() {
   const { nowPlaying, playing, loading, toggleCurrent } = usePlaybackContext();
   const pathname = usePathname();
 
-  if (!nowPlaying || pathname.startsWith("/estanteria")) return null;
+  // any shelf — yours or the demo — already carries the transport in the
+  // scene, and two sets of controls for the same sound is worse than one
+  const onShelf = pathname.startsWith("/estanteria") || pathname.startsWith("/demo");
+  if (!nowPlaying || onShelf) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-paper/[0.08] bg-ink/92 backdrop-blur-md">
