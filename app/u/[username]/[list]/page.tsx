@@ -33,7 +33,7 @@ export async function generateMetadata({
   const description =
     list.description || `${list.item_count} discos en la colección de ${profile.display_name}.`;
   return {
-    title: `${list.title} — ${profile.display_name} · Rackr`,
+    title: `${list.title} — ${profile.display_name}`,
     description,
     openGraph: { title: list.title, description },
   };

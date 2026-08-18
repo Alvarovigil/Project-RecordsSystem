@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: { username: string 
 
   if (!data) return { title: "Rackr" };
   return {
-    title: `${data.display_name} — Rackr`,
+    title: data.display_name,
     description: data.bio || `La colección de vinilos de ${data.display_name}.`,
     openGraph: {
       title: `${data.display_name} en Rackr`,

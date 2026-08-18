@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -13,41 +14,29 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
-const SITE_URL = "https://records-system-eta.vercel.app";
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "Rackr — Tu colección de vinilos",
-  description:
-    "Cataloga, busca y reproduce previews de tu colección de vinilos en 3D. Listas, wishlist y todo lo que tienes a un click.",
-  applicationName: "Rackr",
-  icons: {
-    icon: "/icon.svg",
-    apple: "/icon.svg",
+  title: {
+    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    // every page appends the name, so a tab is identifiable without reading it
+    template: `%s · ${SITE_NAME}`,
   },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  // icon.png / apple-icon.png / opengraph-image are picked up by convention
+  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
   openGraph: {
-    title: "Rackr — Tu colección de vinilos",
-    description:
-      "Cataloga, busca y reproduce previews de tu colección de vinilos en 3D.",
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
     url: SITE_URL,
-    siteName: "Rackr",
-    images: [
-      {
-        url: "/icon.svg",
-        width: 1200,
-        height: 630,
-        alt: "Rackr",
-      },
-    ],
+    siteName: SITE_NAME,
     locale: "es_ES",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Rackr — Tu colección de vinilos",
-    description:
-      "Cataloga, busca y reproduce previews de tu colección de vinilos en 3D.",
-    images: ["/icon.svg"],
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
   },
 };
 

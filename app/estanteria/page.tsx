@@ -4,7 +4,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import ShelfApp from "@/components/ShelfApp";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Rackr — Tu estantería" };
+export const metadata = {
+  title: "Tu estantería",
+  // your own shelf is nobody else's business
+  robots: { index: false },
+};
 
 /** Your own shelf. Without a session there is nothing here to show. */
 export default async function ShelfPage() {
