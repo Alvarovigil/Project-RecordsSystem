@@ -22,7 +22,7 @@ type Props = {
   onClose: () => void;
   /** put a record (new or already in the library) into a list */
   onSaveToList: (v: Vinyl, listId: string) => void;
-  onCreateList: (name: string) => string;
+  onCreateList: (name: string) => Promise<string>;
   onRemoveFromList: (vinylId: string, listId: string) => void;
   onDeleteVinyl: (vinylId: string) => void;
   collections: Collection[];

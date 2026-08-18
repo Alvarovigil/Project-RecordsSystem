@@ -32,6 +32,7 @@ exactamente igual que hasta ahora: `lib/data/index.ts` elige el backend.
 | `0002_rules.sql` | Reglas que no pueden vivir en el cliente: alta de usuario (perfil + listas predefinidas), exclusividad de deseos, contadores, protección de listas predefinidas. |
 | `0003_rls.sql` | Row Level Security. Todo niega por defecto; una lista privada no se filtra ni con un fallo en la interfaz. |
 | `0004_bridge.sql` | El puente: `lists_with_release`, `friends_with_release` y búsqueda de personas. |
+| `0005_catalogue_writes.sql` | Quién amplía el catálogo: con sesión puedes añadir un disco nuevo, nadie puede modificarlo después. |
 
 ## Decisiones que conviene no deshacer
 
@@ -42,3 +43,13 @@ exactamente igual que hasta ahora: `lib/data/index.ts` elige el backend.
   no puede desincronizarse de lo que realmente tienes.
 - **Las reglas de negocio están en triggers**, no en el cliente: cualquier
   cliente futuro (app móvil, script de importación) las hereda gratis.
+
+## Panel de administración
+
+Vive en `/admin`, detrás de una contraseña única (`ADMIN_PASSWORD`, mínimo 8
+caracteres). La cookie de sesión guarda una firma HMAC, no la contraseña, es
+`httpOnly` y caduca a las 8 horas.
+
+Las lecturas del panel usan `SUPABASE_SERVICE_ROLE_KEY` porque tiene que ver
+también lo privado para poder moderarlo. Sin esa variable, el panel entra pero
+avisa de que no puede leer.

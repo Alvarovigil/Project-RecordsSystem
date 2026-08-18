@@ -11,7 +11,7 @@ type PickerProps = {
   anchor: HTMLElement | null;
   disabledIds?: string[];
   onPick: (listId: string) => void;
-  onCreate: (name: string) => string;
+  onCreate: (name: string) => Promise<string>;
   onClose: () => void;
 };
 
@@ -123,10 +123,10 @@ export function ListPicker({
             autoFocus
             defaultValue={listed.length === 0 ? q.trim() : ""}
             placeholder="Nombre de la lista"
-            onKeyDown={(e) => {
+            onKeyDown={async (e) => {
               if (e.key !== "Enter") return;
               const name = (e.target as HTMLInputElement).value.trim();
-              if (name) onPick(onCreate(name));
+              if (name) onPick(await onCreate(name));
             }}
             className="w-full bg-transparent px-3 py-2.5 text-[13px] text-paper outline-none placeholder:text-paper/30"
           />
@@ -159,7 +159,7 @@ export function DestinationBar({
   collections: Collection[];
   targetId: string;
   onTargetChange: (id: string) => void;
-  onCreateList: (name: string) => string;
+  onCreateList: (name: string) => Promise<string>;
 }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -227,7 +227,7 @@ export function RowSave({
   busy?: boolean;
   onSave: (listId: string) => void;
   onUndo?: (listId: string) => void;
-  onCreateList: (name: string) => string;
+  onCreateList: (name: string) => Promise<string>;
   onTargetChange: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);

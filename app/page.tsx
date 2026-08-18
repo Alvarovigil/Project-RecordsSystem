@@ -151,12 +151,8 @@ export default function Home() {
 
   // Accepts an updater so operations that chain in the same tick — creating a
   // list and immediately saving a record into it — both see fresh state.
-  const handleCreateCollection = (name: string) => {
-    // the picker saves into the list it just created, in the same gesture
-    const tempId = `pending-${Date.now()}`;
-    void lib.createList(name).then((id) => lib.activate(id) as unknown as void);
-    return tempId;
-  };
+  /** returns the new list's id, so the caller can save into it right away */
+  const handleCreateCollection = (name: string) => lib.createList(name);
 
   const handleRenameCollection = (id: string, name: string) => void lib.renameList(id, name);
   const handleDeleteCollection = (id: string) => void lib.deleteList(id);

@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "./env";
 
@@ -32,7 +33,7 @@ export function getSupabaseServerClient() {
 export function getSupabaseAdminClient() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!isSupabaseConfigured || !key) return null;
-  return createServerClient(SUPABASE_URL, key, {
-    cookies: { get: () => undefined, set: () => {}, remove: () => {} },
+  return createClient(SUPABASE_URL, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
 }
