@@ -99,6 +99,26 @@ const toList = (r: ListRow): List => ({
   updatedAt: r.updated_at,
 });
 
+const toProfile = (p: any): Profile => ({
+  id: p.id,
+  username: p.username,
+  displayName: p.display_name,
+  bio: p.bio ?? "",
+  avatarUrl: p.avatar_url,
+});
+
+/** A list row joined with its owner, as the community surfaces expect it. */
+const withOwner = (row: any): ListWithRecord => ({
+  ...toList(row as ListRow),
+  followers: 0,
+  owner: {
+    id: row.owner_id,
+    username: row.profiles.username,
+    displayName: row.profiles.display_name,
+    avatarUrl: row.profiles.avatar_url,
+  },
+});
+
 export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository {
   /** release slug → uuid, resolved once per call site */
   const releaseIdOf = async (slug: string) => {
@@ -348,16 +368,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         .eq("owner_id", profileId)
         .eq("visibility", "public")
         .order("position");
-      return ((data ?? []) as any[]).map((r) => ({
-        ...toList(r as ListRow),
-        followers: 0,
-        owner: {
-          id: profileId,
-          username: r.profiles.username,
-          displayName: r.profiles.display_name,
-          avatarUrl: r.profiles.avatar_url,
-        },
-      }));
+      return ((data ?? []) as any[]).map(withOwner);
     },
 
     async releasesOfList(listId) {
@@ -369,6 +380,76 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       return ((data ?? []) as unknown as { releases: ReleaseRow }[]).map((r) =>
         toVinyl(r.releases),
       );
+    },
+
+    // ---- discovery --------------------------------------------------------
+    async searchProfiles(query) {
+      if (!query.trim()) return [];
+      const { data } = await sb.rpc("search_profiles", { q: query.trim() });
+      return ((data ?? []) as any[]).map((p) => ({
+        id: p.id,
+        username: p.username,
+        displayName: p.display_name,
+        bio: p.bio ?? "",
+        avatarUrl: p.avatar_url,
+      }));
+    },
+
+    async searchLists(query) {
+      if (!query.trim()) return [];
+      const { data } = await sb
+        .from("lists")
+        .select("*, profiles!inner(username, display_name, avatar_url)")
+        .eq("visibility", "public")
+        .ilike("title", `%${query.trim()}%`)
+        .order("item_count", { ascending: false })
+        .limit(20);
+      return ((data ?? []) as any[]).map(withOwner);
+    },
+
+    async popularLists() {
+      const { data } = await sb
+        .from("lists")
+        .select("*, profiles!inner(username, display_name, avatar_url)")
+        .eq("visibility", "public")
+        .gt("item_count", 0)
+        .order("item_count", { ascending: false })
+        .limit(12);
+      return ((data ?? []) as any[]).map(withOwner);
+    },
+
+    async suggestedProfiles() {
+      const { data } = await sb
+        .from("profiles")
+        .select("id, username, display_name, bio, avatar_url")
+        .order("created_at", { ascending: false })
+        .limit(12);
+      return ((data ?? []) as any[]).map(toProfile);
+    },
+
+    async followedLists() {
+      const userId = await requireUser();
+      const { data } = await sb
+        .from("list_follows")
+        .select("lists!inner(*, profiles!inner(username, display_name, avatar_url))")
+        .eq("user_id", userId);
+      return ((data ?? []) as any[]).map((row) => withOwner(row.lists));
+    },
+
+    async followersOf(profileId) {
+      const { data } = await sb
+        .from("follows")
+        .select("profiles!follows_follower_id_fkey(id, username, display_name, bio, avatar_url)")
+        .eq("following_id", profileId);
+      return ((data ?? []) as any[]).map((r) => toProfile(r.profiles));
+    },
+
+    async followingOf(profileId) {
+      const { data } = await sb
+        .from("follows")
+        .select("profiles!follows_following_id_fkey(id, username, display_name, bio, avatar_url)")
+        .eq("follower_id", profileId);
+      return ((data ?? []) as any[]).map((r) => toProfile(r.profiles));
     },
 
     async follow(kind, id) {

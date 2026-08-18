@@ -22,6 +22,8 @@ export type Collection = {
   name: string;
   vinylIds: string[];
   sortBy?: SortMode;
+  /** who can see it once you have an account; local-only lists keep it too */
+  visibility?: "public" | "unlisted" | "private";
 };
 
 const KEY = "vinilos.collections.v1";

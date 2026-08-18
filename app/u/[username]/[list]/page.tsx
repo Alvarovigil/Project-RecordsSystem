@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import FollowListButton from "@/components/FollowListButton";
 
 export const dynamic = "force-dynamic";
 
@@ -48,14 +49,33 @@ export default async function ListPage({
           ← {profile.display_name}
         </Link>
 
-        <header className="mt-8 border-b border-paper/[0.08] pb-8">
-          <h1 className="text-[30px] leading-tight">{list.title}</h1>
-          {list.description && (
-            <p className="mt-2 max-w-[56ch] text-[14px] text-paper/55">{list.description}</p>
-          )}
-          <p className="mono mt-4 text-[10px] uppercase tracking-[0.18em] text-paper/30">
-            {list.item_count} discos
-          </p>
+        <header className="mt-8 flex flex-wrap items-end justify-between gap-6 border-b border-paper/[0.08] pb-8">
+          <div className="min-w-0">
+            <h1 className="text-[30px] leading-tight">{list.title}</h1>
+            {list.description && (
+              <p className="mt-2 max-w-[56ch] text-[14px] text-paper/55">{list.description}</p>
+            )}
+            <div className="mt-4 flex items-center gap-3">
+              <Link
+                href={`/u/${profile.username}`}
+                className="flex items-center gap-2 text-[13px] text-paper/60 transition hover:text-paper"
+              >
+                <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-paper/10 mono text-[9px] text-paper/60">
+                  {profile.avatar_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    profile.display_name.slice(0, 2).toUpperCase()
+                  )}
+                </span>
+                {profile.display_name}
+              </Link>
+              <span className="mono text-[10px] uppercase tracking-[0.18em] text-paper/30">
+                {list.item_count} discos
+              </span>
+            </div>
+          </div>
+          <FollowListButton listId={list.id} />
         </header>
 
         <ul className="mt-8 grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-5">

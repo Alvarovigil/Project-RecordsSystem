@@ -78,6 +78,13 @@ export interface LibraryRepository {
   removeFromList(listId: string, releaseId: string): Promise<void>;
   reorderList(listId: string, fromIndex: number, toIndex: number): Promise<void>;
 
+  // ---- discovery ----------------------------------------------------------
+  searchProfiles(query: string): Promise<Profile[]>;
+  searchLists(query: string): Promise<ListWithRecord[]>;
+  /** what to show someone who hasn't searched for anything yet */
+  popularLists(): Promise<ListWithRecord[]>;
+  suggestedProfiles(): Promise<Profile[]>;
+
   // ---- community ----------------------------------------------------------
   listsWithRelease(releaseId: string): Promise<ListWithRecord[]>;
   friendsWithRelease(releaseId: string): Promise<FriendWithRecord[]>;
@@ -90,4 +97,9 @@ export interface LibraryRepository {
   follow(kind: "profile" | "list", id: string): Promise<void>;
   unfollow(kind: "profile" | "list", id: string): Promise<void>;
   following(): Promise<{ profiles: string[]; lists: string[] }>;
+  /** the lists you follow, ready to show alongside your own */
+  followedLists(): Promise<ListWithRecord[]>;
+  /** the people around a profile */
+  followersOf(profileId: string): Promise<Profile[]>;
+  followingOf(profileId: string): Promise<Profile[]>;
 }

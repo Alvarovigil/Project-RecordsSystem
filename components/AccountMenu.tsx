@@ -68,6 +68,7 @@ export default function AccountMenu() {
             <div className="mono truncate text-[11px] text-paper/40">@{profile?.username}</div>
           </div>
           <MenuLink href={`/u/${profile?.username ?? ""}`}>Mi perfil</MenuLink>
+          <MenuLink href="/explorar">Explorar</MenuLink>
           <MenuLink href="/ajustes">Ajustes</MenuLink>
           <button
             onClick={() => {

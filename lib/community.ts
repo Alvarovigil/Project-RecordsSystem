@@ -107,12 +107,41 @@ const LIST_NOTES = [
 
 /**
  * Every list handed out gets remembered, so a list can later be looked up by
- * id alone (the generator needs a seed otherwise). Placeholder data only.
+ * id alone (the generator needs a seed otherwise, and the same list is reached
+ * from two different seeds: a record's bridge and its owner's profile).
+ *
+ * Persisted so a followed list survives a reload. Placeholder data only —
+ * this whole registry disappears when the real backend answers.
  */
-const REGISTRY = new Map<string, CommunityList>();
+const REGISTRY_KEY = "vinilos.community.registry.v1";
+const REGISTRY = new Map<string, CommunityList>(loadRegistry());
+
+function loadRegistry(): [string, CommunityList][] {
+  if (typeof window === "undefined") return [];
+  try {
+    return JSON.parse(localStorage.getItem(REGISTRY_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function remember(list: CommunityList) {
+  REGISTRY.set(list.id, list);
+  if (typeof window === "undefined") return;
+  try {
+    // bounded: this is a cache of make-believe, not a database
+    const entries = [...REGISTRY.entries()].slice(-300);
+    localStorage.setItem(REGISTRY_KEY, JSON.stringify(entries));
+  } catch {}
+}
 
 export function getGeneratedList(id: string): CommunityList | undefined {
   return REGISTRY.get(id);
+}
+
+/** The whole placeholder roster, for search and listings. */
+export function allUsers(): CommunityUser[] {
+  return USERS;
 }
 
 export function getUser(id: string): CommunityUser | undefined {
@@ -150,7 +179,7 @@ export function listsWithRecord(vinylId: string, allVinylIds: string[]): Communi
       followers: Math.floor(r() * 380),
       updated: pick(r, ["hace 2 días", "hace una semana", "hace un mes", "ayer", "hace 3 días"]),
     };
-    REGISTRY.set(list.id, list);
+    remember(list);
     return list;
   });
 }
@@ -199,7 +228,7 @@ export function listsOfUser(userId: string, allVinylIds: string[]): CommunityLis
       followers: Math.floor(r() * 380),
       updated: pick(r, ["hace 2 días", "hace una semana", "hace un mes", "ayer"]),
     };
-    REGISTRY.set(list.id, list);
+    remember(list);
     return list;
   });
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { type Collection, type SortMode, SORT_LABELS, sortedVinylIds, DEFAULT_ID, WISHLIST_ID } from "@/lib/collections";
+import type { ListVisibility, ListWithRecord } from "@/lib/data/types";
 
 const isPrimaryId = (id: string) => id === DEFAULT_ID || id === WISHLIST_ID;
 import type { Vinyl } from "@/lib/types";
@@ -19,6 +20,11 @@ type Props = {
   onDeleteVinyl: (vinylId: string) => void;
   onSetSort: (collectionId: string, sortBy: SortMode) => void;
   onReorder: (collectionId: string, fromIdx: number, toIdx: number) => void;
+  onSetVisibility: (collectionId: string, visibility: ListVisibility) => void;
+  /** lists made by other people that you follow */
+  followed: ListWithRecord[];
+  onUnfollowList: (listId: string) => void;
+  visibilityOf: (collectionId: string) => ListVisibility;
   allVinilos: Vinyl[];
 };
 
@@ -65,6 +71,10 @@ export default function CollectionsOverlay({
   onDeleteVinyl,
   onSetSort,
   onReorder,
+  onSetVisibility,
+  followed,
+  onUnfollowList,
+  visibilityOf,
   allVinilos,
 }: Props) {
   const [editId, setEditId] = useState<string | null>(null);
@@ -127,6 +137,8 @@ export default function CollectionsOverlay({
               allVinilos={allVinilos}
               isPrimary={isPrimaryId(editing.id)}
               isLibrary={editing.id === DEFAULT_ID}
+              visibility={visibilityOf(editing.id)}
+              onSetVisibility={onSetVisibility}
               onRename={onRename}
               onToggleVinyl={onToggleVinyl}
               onDeleteVinyl={onDeleteVinyl}
@@ -359,6 +371,58 @@ export default function CollectionsOverlay({
                 )}
               </ul>
 
+              {/* Lists you follow. Kept apart on purpose: they are not yours
+                  to edit, and mixing them into your own would blur whose
+                  collection you are looking at. */}
+              {followed.length > 0 && (
+                <>
+                  <div className="mt-8 flex items-baseline justify-between border-y border-paper/[0.07] px-6 py-3">
+                    <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
+                      Listas que sigues
+                    </span>
+                    <span className="mono text-[10px] tracking-[0.16em] text-paper/25">
+                      {followed.length}
+                    </span>
+                  </div>
+                  <ul className="px-3 py-3 space-y-1">
+                    {followed.map((l) => (
+                      <li key={l.id} className="group relative">
+                        <a
+                          href={`/u/${l.owner.username}/${l.slug}`}
+                          className="flex items-center gap-3 rounded-md border border-dashed border-paper/[0.12] px-3 py-2.5 transition hover:border-paper/25 hover:bg-paper/[0.04]"
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper/[0.06] mono text-[9px] text-paper/50">
+                            {l.owner.avatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={l.owner.avatarUrl} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              l.owner.displayName.slice(0, 2).toUpperCase()
+                            )}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[14px] text-paper/90">{l.title}</span>
+                            <span className="mono mt-0.5 block truncate text-[10px] uppercase tracking-[0.16em] text-paper/35">
+                              de {l.owner.displayName} · {l.itemCount} discos
+                            </span>
+                          </span>
+                        </a>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onUnfollowList(l.id);
+                          }}
+                          aria-label="Dejar de seguir"
+                          title="Dejar de seguir"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 mono text-[9px] uppercase tracking-[0.16em] text-paper/25 opacity-0 transition hover:text-paper group-hover:opacity-100"
+                        >
+                          Dejar
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
               {/* create new — sticky footer-ish */}
               <div className="px-6 py-4 mt-2 border-t border-paper/[0.04]">
                 <div className="flex items-center gap-3">
@@ -440,6 +504,8 @@ function EditPanel({
   allVinilos,
   isPrimary,
   isLibrary,
+  visibility,
+  onSetVisibility,
   onRename,
   onToggleVinyl,
   onDeleteVinyl,
@@ -451,6 +517,8 @@ function EditPanel({
   isPrimary: boolean;
   /** Mi Colección is the library itself: taking a record out means deleting it */
   isLibrary: boolean;
+  visibility: ListVisibility;
+  onSetVisibility: (collectionId: string, visibility: ListVisibility) => void;
   onRename: (id: string, name: string) => void;
   onToggleVinyl: (collectionId: string, vinylId: string) => void;
   onDeleteVinyl: (vinylId: string) => void;
@@ -485,6 +553,35 @@ function EditPanel({
       {/* one field per rule, label left / value right — the count lives with
           the list below, so it isn't stated twice */}
       <div className="border-y border-paper/[0.07] px-6">
+        {/* Who can see it. The wishlist stays private by nature: what you want
+            to buy is nobody else's business unless you say so. */}
+        <div className="flex items-center justify-between gap-4 border-b border-paper/[0.07] py-3">
+          <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
+            Visible
+          </span>
+          <div className="flex items-center gap-1">
+            {(
+              [
+                ["public", "Pública"],
+                ["unlisted", "Con enlace"],
+                ["private", "Privada"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                onClick={() => onSetVisibility(editing.id, value)}
+                className={`px-2.5 py-1 text-[12px] transition ${
+                  visibility === value
+                    ? "bg-paper text-ink"
+                    : "text-paper/45 hover:text-paper"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex items-center justify-between gap-4 py-3">
           <label
             htmlFor="sort-select"

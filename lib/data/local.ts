@@ -17,6 +17,7 @@ import {
   newCollection,
 } from "@/lib/collections";
 import {
+  allUsers,
   friendsWithRecord,
   listsWithRecord,
   listsOfUser,
@@ -113,6 +114,37 @@ function toList(
   };
 }
 
+const communityUsers = allUsers;
+
+/** One shape for every community list the placeholder layer hands out. */
+function toCommunityList(
+  l: { id: string; title: string; description: string; vinylIds: string[]; followers: number; updated: string },
+  ownerId: string,
+): ListWithRecord {
+  const owner = getUser(ownerId);
+  return {
+    id: l.id,
+    ownerId,
+    title: l.title,
+    slug: slugify(l.title),
+    description: l.description,
+    kind: "custom",
+    visibility: "public",
+    sortBy: "custom",
+    position: 0,
+    itemCount: l.vinylIds.length,
+    updatedAt: l.updated,
+    followers: l.followers,
+    vinylIds: l.vinylIds,
+    owner: {
+      id: ownerId,
+      username: owner?.handle ?? ownerId,
+      displayName: owner?.name ?? ownerId,
+      avatarUrl: null,
+    },
+  } as ListWithRecord;
+}
+
 export function createLocalRepository(): LibraryRepository {
   const mutate = (fn: (cols: Collection[]) => Collection[]) => {
     const next = fn(collectionsOf());
@@ -177,8 +209,10 @@ export function createLocalRepository(): LibraryRepository {
       mutate((cols) => cols.map((c) => (c.id === listId ? { ...c, sortBy } : c)));
     },
 
-    async setListVisibility(_listId: string, _visibility: ListVisibility) {
-      // local backend has no audience: everything is yours alone
+    async setListVisibility(listId, visibility) {
+      // nobody can see it yet, but the choice is yours and it travels with
+      // the list when you sign in
+      mutate((cols) => cols.map((c) => (c.id === listId ? { ...c, visibility } : c)));
     },
 
     async listItems(listId) {
@@ -235,30 +269,7 @@ export function createLocalRepository(): LibraryRepository {
     // ---- community: placeholder data until the backend lands --------------
     async listsWithRelease(releaseId) {
       const ids = readReleases().map((v) => v.id);
-      return listsWithRecord(releaseId, ids).map((l) => {
-        const owner = getUser(l.ownerId)!;
-        return {
-          id: l.id,
-          ownerId: l.ownerId,
-          title: l.title,
-          slug: slugify(l.title),
-          description: l.description,
-          kind: "custom" as const,
-          visibility: "public" as const,
-          sortBy: "custom" as SortMode,
-          position: 0,
-          itemCount: l.vinylIds.length,
-          updatedAt: l.updated,
-          followers: l.followers,
-          vinylIds: l.vinylIds,
-          owner: {
-            id: owner.id,
-            username: owner.handle,
-            displayName: owner.name,
-            avatarUrl: null,
-          },
-        };
-      });
+      return listsWithRecord(releaseId, ids).map((l) => toCommunityList(l, l.ownerId));
     },
 
     async friendsWithRelease(releaseId): Promise<FriendWithRecord[]> {
@@ -284,28 +295,7 @@ export function createLocalRepository(): LibraryRepository {
 
     async listsOfProfile(profileId): Promise<ListWithRecord[]> {
       const ids = readReleases().map((v) => v.id);
-      const owner = getUser(profileId);
-      return listsOfUser(profileId, ids).map((l) => ({
-        id: l.id,
-        ownerId: profileId,
-        title: l.title,
-        slug: slugify(l.title),
-        description: l.description,
-        kind: "custom" as const,
-        visibility: "public" as const,
-        sortBy: "custom" as SortMode,
-        position: 0,
-        itemCount: l.vinylIds.length,
-        updatedAt: l.updated,
-        followers: l.followers,
-        vinylIds: l.vinylIds,
-        owner: {
-          id: profileId,
-          username: owner?.handle ?? profileId,
-          displayName: owner?.name ?? profileId,
-          avatarUrl: null,
-        },
-      }));
+      return listsOfUser(profileId, ids).map((l) => toCommunityList(l, profileId));
     },
 
     async releasesOfList(listId) {
@@ -315,6 +305,82 @@ export function createLocalRepository(): LibraryRepository {
         ? (getGeneratedList(listId)?.vinylIds ?? [])
         : idsOf(listId);
       return ids.map((id) => all.find((v) => v.id === id)).filter((v): v is Vinyl => !!v);
+    },
+
+    // ---- discovery: placeholder people and lists ------------------------
+    async searchProfiles(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return [];
+      return communityUsers()
+        .filter((u) => u.name.toLowerCase().includes(q) || u.handle.includes(q))
+        .map((u) => ({
+          id: u.id,
+          username: u.handle,
+          displayName: u.name,
+          bio: u.bio,
+          avatarUrl: null,
+        }));
+    },
+
+    async searchLists(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return [];
+      const ids = readReleases().map((v) => v.id);
+      const seen = new Set<string>();
+      const out: ListWithRecord[] = [];
+      for (const user of communityUsers()) {
+        for (const l of listsOfUser(user.id, ids)) {
+          if (seen.has(l.id) || !l.title.toLowerCase().includes(q)) continue;
+          seen.add(l.id);
+          out.push(toCommunityList(l, user.id));
+        }
+      }
+      return out;
+    },
+
+    async popularLists() {
+      const ids = readReleases().map((v) => v.id);
+      return communityUsers()
+        .flatMap((u) => listsOfUser(u.id, ids).map((l) => toCommunityList(l, u.id)))
+        .sort((a, b) => b.followers - a.followers)
+        .slice(0, 12);
+    },
+
+    async suggestedProfiles() {
+      return communityUsers().map((u) => ({
+        id: u.id,
+        username: u.handle,
+        displayName: u.name,
+        bio: u.bio,
+        avatarUrl: null,
+      }));
+    },
+
+    async followedLists() {
+      // resolved from the registry: a list followed from a record's bridge is
+      // generated from a different seed than the same list on its owner's
+      // profile, so scanning profiles would miss it
+      return loadFollows()
+        .map(getGeneratedList)
+        .filter((l): l is NonNullable<typeof l> => !!l)
+        .map((l) => toCommunityList(l, l.ownerId));
+    },
+
+    async followersOf() {
+      return [];
+    },
+
+    async followingOf() {
+      const followed = new Set(loadFollows());
+      return communityUsers()
+        .filter((u) => followed.has(u.id))
+        .map((u) => ({
+          id: u.id,
+          username: u.handle,
+          displayName: u.name,
+          bio: u.bio,
+          avatarUrl: null,
+        }));
     },
 
     async follow(_kind, id) {

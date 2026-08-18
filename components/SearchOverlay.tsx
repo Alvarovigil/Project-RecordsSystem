@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Vinyl } from "@/lib/types";
 import type { Collection } from "@/lib/collections";
 import { DestinationBar, RowSave } from "./SaveToList";
+import { getRepository, type ListWithRecord, type Profile } from "@/lib/data";
 
 type SearchResult = {
   id: number;
@@ -32,6 +33,14 @@ type Props = {
   onJumpTo: (v: Vinyl) => void;
 };
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mono px-2 pb-2 pt-4 text-[10px] uppercase tracking-[0.2em] text-paper/35">
+      {children}
+    </div>
+  );
+}
+
 export default function SearchOverlay({
   open,
   onClose,
@@ -53,7 +62,7 @@ export default function SearchOverlay({
   const [savedIn, setSavedIn] = useState<
     Record<string, { listId: string; vinylId: string; wasNew: boolean }>
   >({});
-  const [mode, setMode] = useState<"local" | "discogs">("local");
+  const [mode, setMode] = useState<"local" | "discogs" | "people">("local");
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -128,6 +137,31 @@ export default function SearchOverlay({
     }
   };
 
+  // people and lists, searched together: you rarely know which one you want
+  const [people, setPeople] = useState<Profile[]>([]);
+  const [communityLists, setCommunityLists] = useState<ListWithRecord[]>([]);
+  useEffect(() => {
+    if (mode !== "people" || !q.trim()) {
+      setPeople([]);
+      setCommunityLists([]);
+      return;
+    }
+    let cancelled = false;
+    const handle = setTimeout(async () => {
+      setLoading(true);
+      const repo = getRepository();
+      const [p, l] = await Promise.all([repo.searchProfiles(q), repo.searchLists(q)]);
+      if (cancelled) return;
+      setPeople(p);
+      setCommunityLists(l);
+      setLoading(false);
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [q, mode]);
+
   // one cursor over the visible list: ↑↓ to move, ↵ to act on it
   const [cursor, setCursor] = useState(0);
   useEffect(() => setCursor(0), [q, mode]);
@@ -190,7 +224,7 @@ export default function SearchOverlay({
       <div className="relative w-full max-w-[640px] mx-6">
         {/* mode tabs */}
         <div className="flex items-center gap-5 mb-1">
-          {(["local", "discogs"] as const).map((m) => (
+          {(["local", "discogs", "people"] as const).map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
@@ -198,7 +232,7 @@ export default function SearchOverlay({
                 mode === m ? "text-paper" : "text-paper/35 hover:text-paper/70"
               }`}
             >
-              {m === "local" ? "Mi biblioteca" : "Añadir vinilos"}
+              {m === "local" ? "Mi biblioteca" : m === "discogs" ? "Añadir vinilos" : "Gente y listas"}
               {mode === m && (
                 <span className="absolute left-0 right-0 -bottom-px h-px bg-paper" />
               )}
@@ -210,7 +244,13 @@ export default function SearchOverlay({
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={mode === "local" ? "Buscar en tu colección…" : "Buscar vinilos para añadir…"}
+            placeholder={
+              mode === "local"
+                ? "Buscar en tu colección…"
+                : mode === "discogs"
+                  ? "Buscar vinilos para añadir…"
+                  : "Buscar personas o listas…"
+            }
             className="flex-1 bg-transparent py-4 text-[18px] text-paper outline-none placeholder:text-paper/30"
           />
           <kbd className="mono inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-[3px] border border-paper/20 text-[10px] text-paper/45">
@@ -219,7 +259,7 @@ export default function SearchOverlay({
         </div>
         {/* one destination for everything you save here, plus the keyboard
             hint — adding a run of records shouldn't need the mouse */}
-        <div className="mt-3 flex items-center justify-between gap-4">
+        <div className={`mt-3 flex items-center justify-between gap-4 ${mode === "people" ? "hidden" : ""}`}>
           <DestinationBar
             collections={collections}
             targetId={targetId}
@@ -242,6 +282,77 @@ export default function SearchOverlay({
             <div className="text-paper/50 text-sm py-3">
               Sin coincidencias en tu colección
             </div>
+          )}
+
+          {/* people and lists */}
+          {mode === "people" && (
+            <>
+              {people.length > 0 && (
+                <>
+                  <SectionLabel>Personas</SectionLabel>
+                  <ul className="divide-y divide-paper/[0.07]">
+                    {people.map((u) => (
+                      <li key={u.id}>
+                        <a
+                          href={`/u/${u.username}`}
+                          className="flex items-center gap-3 px-2 py-3 transition hover:bg-paper/5"
+                        >
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper/10 mono text-[10px] text-paper/60">
+                            {u.avatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={u.avatarUrl} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                              u.displayName.slice(0, 2).toUpperCase()
+                            )}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[14px] text-paper/90">
+                              {u.displayName}
+                            </span>
+                            <span className="mono block truncate text-[11px] text-paper/40">
+                              @{u.username}
+                            </span>
+                          </span>
+                          <span className="text-paper/25">→</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {communityLists.length > 0 && (
+                <>
+                  <SectionLabel>Listas</SectionLabel>
+                  <ul className="divide-y divide-paper/[0.07]">
+                    {communityLists.map((l) => (
+                      <li key={l.id}>
+                        <a
+                          href={`/u/${l.owner.username}/${l.slug}`}
+                          className="flex items-center gap-3 px-2 py-3 transition hover:bg-paper/5"
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[14px] text-paper/90">
+                              {l.title}
+                            </span>
+                            <span className="mono block truncate text-[11px] uppercase tracking-[0.14em] text-paper/40">
+                              {l.owner.displayName} · {l.itemCount} discos
+                            </span>
+                          </span>
+                          <span className="text-paper/25">→</span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+
+              {!loading && q.trim() && people.length === 0 && communityLists.length === 0 && (
+                <div className="py-3 text-sm text-paper/50">
+                  Nadie con ese nombre, ninguna lista con ese título.
+                </div>
+              )}
+            </>
           )}
 
           {/* local mode list */}

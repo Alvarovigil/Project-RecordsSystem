@@ -12,7 +12,8 @@ import CommunityBridge from "@/components/CommunityBridge";
 import MarqueeText from "@/components/MarqueeText";
 import AccountMenu from "@/components/AccountMenu";
 import Onboarding from "@/components/Onboarding";
-import { setAuthenticated } from "@/lib/data";
+import { setAuthenticated, type ListWithRecord } from "@/lib/data";
+import { useRepository } from "@/hooks/useRepository";
 import { useLibrary } from "@/hooks/useLibrary";
 import { usePlayback } from "@/hooks/usePlayback";
 import type { Vinyl } from "@/lib/types";
@@ -127,6 +128,22 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
       if (el) el.style.visibility = space < 130 ? "hidden" : "";
     }
   }, []);
+
+  // lists made by other people that you follow: shown apart in the panel
+  const repo = useRepository();
+  const [followed, setFollowed] = useState<ListWithRecord[]>([]);
+  const loadFollowed = useCallback(() => {
+    repo
+      .followedLists()
+      .then(setFollowed)
+      .catch(() => setFollowed([]));
+  }, [repo]);
+  useEffect(loadFollowed, [loadFollowed]);
+  // following happens elsewhere (a record's bridge, a list page), so refresh
+  // whenever the panel is opened rather than trusting a stale snapshot
+  useEffect(() => {
+    if (collectionsOpen) loadFollowed();
+  }, [collectionsOpen, loadFollowed]);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [open, setOpen] = useState<Vinyl | null>(null);
@@ -823,6 +840,15 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         onDeleteVinyl={handleDeleteVinylPermanently}
         onSetSort={handleSetSort}
         onReorder={handleReorderVinyl}
+        onSetVisibility={(id, visibility) => {
+          void repo.setListVisibility(id, visibility).then(() => void lib.refresh());
+        }}
+        visibilityOf={(id) => lib.lists.find((l) => l.id === id)?.visibility ?? "public"}
+        followed={followed}
+        onUnfollowList={(id) => {
+          setFollowed((prev) => prev.filter((l) => l.id !== id));
+          void repo.unfollow("list", id);
+        }}
         allVinilos={allVinilos}
       />
       </div>

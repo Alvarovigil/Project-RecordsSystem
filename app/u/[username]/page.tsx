@@ -34,10 +34,24 @@ export default async function ProfilePage({
     .eq("visibility", "public")
     .order("position");
 
-  const { count: followers } = await supabase
-    .from("follows")
-    .select("*", { count: "exact", head: true })
-    .eq("following_id", profile.id);
+  const [{ data: followers }, { data: following }] = await Promise.all([
+    supabase
+      .from("follows")
+      .select("profiles!follows_follower_id_fkey(id, username, display_name, avatar_url)")
+      .eq("following_id", profile.id),
+    supabase
+      .from("follows")
+      .select("profiles!follows_following_id_fkey(id, username, display_name, avatar_url)")
+      .eq("follower_id", profile.id),
+  ]);
+
+  const people = (rows: any[] | null) =>
+    (rows ?? []).map((r) => r.profiles).filter(Boolean) as {
+      id: string;
+      username: string;
+      display_name: string;
+      avatar_url: string | null;
+    }[];
 
   const discos = (lists ?? []).reduce((n, l) => n + (l.item_count ?? 0), 0);
 
@@ -68,7 +82,8 @@ export default async function ProfilePage({
                 <p className="mt-3 max-w-[46ch] text-[14px] text-paper/60">{profile.bio}</p>
               )}
               <p className="mono mt-4 text-[10px] uppercase tracking-[0.18em] text-paper/30">
-                {lists?.length ?? 0} listas · {discos} discos · {followers ?? 0} seguidores
+                {lists?.length ?? 0} listas · {discos} discos ·{" "}
+                {people(followers).length} seguidores · {people(following).length} siguiendo
               </p>
             </div>
           </div>
@@ -106,8 +121,54 @@ export default async function ProfilePage({
             )}
           </ul>
         </section>
+        <section className="mt-14 grid gap-10 border-t border-paper/[0.08] pt-8 sm:grid-cols-2">
+          <People title="Seguidores" people={people(followers)} empty="Nadie todavía." />
+          <People title="Siguiendo" people={people(following)} empty="A nadie todavía." />
+        </section>
       </div>
     </main>
+  );
+}
+
+/** The people around a profile: the other half of a social object. */
+function People({
+  title,
+  people,
+  empty,
+}: {
+  title: string;
+  people: { id: string; username: string; display_name: string; avatar_url: string | null }[];
+  empty: string;
+}) {
+  return (
+    <div>
+      <h2 className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
+        {title} · {people.length}
+      </h2>
+      <ul className="mt-4 space-y-3">
+        {people.map((p) => (
+          <li key={p.id}>
+            <Link href={`/u/${p.username}`} className="group flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-paper/10 mono text-[10px] text-paper/60">
+                {p.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.avatar_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  p.display_name.slice(0, 2).toUpperCase()
+                )}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-[14px] text-paper/85 transition group-hover:text-paper">
+                  {p.display_name}
+                </span>
+                <span className="mono block truncate text-[11px] text-paper/35">@{p.username}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+        {people.length === 0 && <li className="text-[13px] text-paper/30">{empty}</li>}
+      </ul>
+    </div>
   );
 }
 
