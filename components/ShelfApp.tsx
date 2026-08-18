@@ -18,13 +18,7 @@ import { useLibrary } from "@/hooks/useLibrary";
 import { usePlayback } from "@/hooks/usePlayback";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
-import {
-  type Collection,
-  type SortMode,
-  sortedVinylIds,
-  DEFAULT_ID,
-  WISHLIST_ID,
-} from "@/lib/collections";
+import { type Collection, type SortMode, sortedVinylIds } from "@/lib/collections";
 
 export default function ShelfApp({ authenticated = false }: { authenticated?: boolean }) {
   // set synchronously, before any data hook reads the backend
@@ -66,11 +60,14 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         name: l.title,
         vinylIds: lib.idsOf(l.id),
         sortBy: l.sortBy,
+        kind: l.kind,
+        visibility: l.visibility,
       })),
     [lib.lists, lib.idsOf],
   );
   const activeCollection =
     resolvedCollections.find((c) => c.id === activeCollectionId) ?? null;
+  const activeListKind = activeCollection?.kind ?? "custom";
   const vinilos = useMemo(
     () =>
       activeCollection
@@ -500,11 +497,15 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
               vinyl={open}
               collections={resolvedCollections}
               activeCollectionId={activeCollectionId}
-              isInWishlist={activeCollectionId === WISHLIST_ID}
-              activeIsLibrary={activeCollectionId === DEFAULT_ID}
+              isInWishlist={activeListKind === "wishlist"}
+              activeIsLibrary={activeListKind === "collection"}
               onAddTo={(cid) => handleAddVinylTo(cid, open.id)}
               onMoveToCollection={() => {
-                handleAddVinylTo(DEFAULT_ID, open.id); // mutex handler removes it from wishlist
+                // "lo he comprado": moving it to the collection is what takes
+                // it out of the wishlist, and the id of that list depends on
+                // whether you're signed in
+                const collectionId = lib.lists.find((l) => l.kind === "collection")?.id;
+                if (collectionId) handleAddVinylTo(collectionId, open.id);
               }}
               onRemoveFromActive={() => {
                 handleRemoveVinylFromActive(open.id);

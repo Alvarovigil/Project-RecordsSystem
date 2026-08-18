@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { type Collection, DEFAULT_ID, WISHLIST_ID } from "@/lib/collections";
+import { type Collection } from "@/lib/collections";
 
-const isPrimary = (id: string) => id === DEFAULT_ID || id === WISHLIST_ID;
+const isPrimary = (c: Collection) => (c.kind ?? "custom") !== "custom";
 
 type PickerProps = {
   collections: Collection[];
@@ -66,8 +66,8 @@ export function ListPicker({
 
   const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const listed = collections.filter((c) => !q.trim() || norm(c.name).includes(norm(q.trim())));
-  const primaries = listed.filter((c) => isPrimary(c.id));
-  const customs = listed.filter((c) => !isPrimary(c.id));
+  const primaries = listed.filter(isPrimary);
+  const customs = listed.filter((c) => !isPrimary(c));
 
   const Row = ({ c }: { c: Collection }) => {
     const off = disabledIds.includes(c.id);

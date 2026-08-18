@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { type Collection, type SortMode, SORT_LABELS, sortedVinylIds, DEFAULT_ID, WISHLIST_ID } from "@/lib/collections";
+import { type Collection, type SortMode, SORT_LABELS, sortedVinylIds } from "@/lib/collections";
 import type { ListVisibility, ListWithRecord } from "@/lib/data/types";
 
-const isPrimaryId = (id: string) => id === DEFAULT_ID || id === WISHLIST_ID;
+/** Predefined lists are told apart by what they are, not by their id. */
+const kindOf = (cols: Collection[], id: string) =>
+  cols.find((c) => c.id === id)?.kind ?? "custom";
+const isPrimaryIn = (cols: Collection[], id: string) => kindOf(cols, id) !== "custom";
 import type { Vinyl } from "@/lib/types";
 
 type Props = {
@@ -135,8 +138,8 @@ export default function CollectionsOverlay({
             <EditPanel
               editing={editing}
               allVinilos={allVinilos}
-              isPrimary={isPrimaryId(editing.id)}
-              isLibrary={editing.id === DEFAULT_ID}
+              isPrimary={isPrimaryIn(collections, editing.id)}
+              isLibrary={kindOf(collections, editing.id) === "collection"}
               visibility={visibilityOf(editing.id)}
               onSetVisibility={onSetVisibility}
               onRename={onRename}
@@ -168,7 +171,7 @@ export default function CollectionsOverlay({
                   ) : (
                     <h2 className="text-[22px] font-medium leading-tight tracking-tight flex items-center gap-2">
                       {active.name}
-                      {isPrimaryId(active.id) && (
+                      {isPrimaryIn(collections, active.id) && (
                         <span className="text-paper/30 mt-1" title="Lista predefinida">
                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                             <rect x="2.5" y="5.5" width="7" height="5" rx="0.6" stroke="currentColor" />
@@ -212,7 +215,7 @@ export default function CollectionsOverlay({
                     >
                       Editar discos →
                     </button>
-                    {!isPrimaryId(active.id) && (
+                    {!isPrimaryIn(collections, active.id) && (
                       <button
                         onClick={() => setRenaming(true)}
                         className="text-[12px] py-1.5 px-3 rounded-sm hover:bg-paper/5 text-paper/70 hover:text-paper transition"
@@ -220,7 +223,7 @@ export default function CollectionsOverlay({
                         Renombrar
                       </button>
                     )}
-                    {collections.length > 1 && !isPrimaryId(active.id) && (
+                    {collections.length > 1 && !isPrimaryIn(collections, active.id) && (
                       <button
                         onClick={() => {
                           if (confirm(`Eliminar "${active.name}"?`)) onDelete(active.id);
@@ -276,8 +279,8 @@ export default function CollectionsOverlay({
                       ) : (
                         <button
                           onClick={() => onActivate(c.id)}
-                          onDoubleClick={() => !isPrimaryId(c.id) && setRenameId(c.id)}
-                          title={isPrimaryId(c.id) ? undefined : "Doble clic para renombrar"}
+                          onDoubleClick={() => !isPrimaryIn(collections, c.id) && setRenameId(c.id)}
+                          title={isPrimaryIn(collections, c.id) ? undefined : "Doble clic para renombrar"}
                           className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition ${
                             isActive
                               ? "bg-paper/[0.10]"
@@ -298,7 +301,7 @@ export default function CollectionsOverlay({
                           <span className="min-w-0 flex-1">
                             <span className="flex items-center gap-1.5">
                               <span className="truncate text-[14px] text-paper">{c.name}</span>
-                              {isPrimaryId(c.id) && (
+                              {isPrimaryIn(collections, c.id) && (
                                 <span className="text-paper/25" title="Lista predefinida">
                                   <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                                     <rect x="2.5" y="5.5" width="7" height="5" rx="0.6" stroke="currentColor" />
@@ -336,7 +339,7 @@ export default function CollectionsOverlay({
                               <path d="M6.6 2.9 L9.1 5.4" opacity="0.55" />
                             </g>
                           </RowAction>
-                          {!isPrimaryId(c.id) && (
+                          {!isPrimaryIn(collections, c.id) && (
                             <RowAction
                               label="Borrar lista"
                               danger

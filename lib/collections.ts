@@ -22,6 +22,9 @@ export type Collection = {
   name: string;
   vinylIds: string[];
   sortBy?: SortMode;
+  /** what the list IS. Never infer this from the id: with an account the
+   *  predefined lists are database uuids, not the local constants. */
+  kind?: "collection" | "wishlist" | "custom";
   /** who can see it once you have an account; local-only lists keep it too */
   visibility?: "public" | "unlisted" | "private";
 };

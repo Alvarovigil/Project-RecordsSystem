@@ -106,7 +106,11 @@ export function useLibrary() {
     deleteList: (listId: string) =>
       act(async () => {
         await repo.deleteList(listId);
-        if (listId === activeListId) activate(DEFAULT_ID);
+        if (listId === activeListId) {
+          // fall back to the collection, whatever its id is in this backend
+          const home = lists.find((l) => l.kind === "collection") ?? lists[0];
+          if (home) activate(home.id);
+        }
       }),
     setListSort: (listId: string, sortBy: SortMode) =>
       act(() => repo.setListSort(listId, sortBy)),
