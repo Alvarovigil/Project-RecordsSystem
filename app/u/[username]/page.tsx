@@ -49,6 +49,12 @@ export default async function ProfilePage({
 
   if (!profile) notFound();
 
+  const { data: followedLists } = await supabase
+    .from("list_follows")
+    .select("lists!inner(id, title, slug, item_count, visibility, profiles!inner(username, display_name))")
+    .eq("user_id", profile.id)
+    .limit(12);
+
   const { data: lists } = await supabase
     .from("lists")
     .select("id, title, slug, description, item_count, updated_at, visibility")
@@ -137,6 +143,35 @@ export default async function ProfilePage({
             )}
           </ul>
         </section>
+        {(followedLists ?? []).length > 0 && (
+          <section className="mt-12">
+            <h2 className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
+              Listas que sigue
+            </h2>
+            <ul className="mt-4 divide-y divide-paper/[0.07] border-y border-paper/[0.07]">
+              {((followedLists ?? []) as any[])
+                .map((r) => r.lists)
+                .filter((l) => l && l.visibility === "public")
+                .map((l) => (
+                  <li key={l.id}>
+                    <Link
+                      href={`/u/${l.profiles.username}/${l.slug}`}
+                      className="flex items-center gap-4 py-3.5 transition hover:bg-paper/[0.03]"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[14px]">{l.title}</span>
+                        <span className="mono mt-0.5 block truncate text-[10px] uppercase tracking-[0.16em] text-paper/35">
+                          de {l.profiles.display_name} · {l.item_count} discos
+                        </span>
+                      </span>
+                      <span className="text-paper/25">→</span>
+                    </Link>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        )}
+
         <section className="mt-14 grid gap-10 border-t border-paper/[0.08] pt-8 sm:grid-cols-2">
           <People title="Seguidores" people={people(followers)} empty="Nadie todavía." />
           <People title="Siguiendo" people={people(following)} empty="A nadie todavía." />
