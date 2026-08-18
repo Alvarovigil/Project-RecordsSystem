@@ -1,16 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import VinylShelf, { type VinylShelfHandle } from "@/components/VinylShelf3D";
 import MiniVinyl from "@/components/MiniVinyl";
+import VinylGrid from "@/components/VinylGrid";
 import SearchOverlay from "@/components/SearchOverlay";
 import CollectionsOverlay from "@/components/CollectionsOverlay";
 import VinylEditOverlay from "@/components/VinylEditOverlay";
+import CommunityBridge from "@/components/CommunityBridge";
 import MarqueeText from "@/components/MarqueeText";
 import data from "@/data/vinilos.json";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
+import { previewSrc } from "@/lib/audio";
 import {
   type Collection,
   type SortMode,
@@ -20,9 +23,23 @@ import {
   saveActiveId,
   newCollection,
   sortedVinylIds,
+  resolveCollections,
+  isDeletable,
   DEFAULT_ID,
   WISHLIST_ID,
 } from "@/lib/collections";
+
+/**
+ * Fully lets go of an audio element: pausing alone leaves the download running,
+ * and abandoned streams eat the browser's per-host connection budget until the
+ * next preview can't get through.
+ */
+function releaseAudio(a: HTMLAudioElement | null) {
+  if (!a) return;
+  a.pause();
+  a.removeAttribute("src");
+  a.load();
+}
 
 export default function Home() {
   const [allVinilos, setAllVinilos] = useState<Vinyl[]>(data as Vinyl[]);
@@ -31,6 +48,16 @@ export default function Home() {
   const [collectionsOpen, setCollectionsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [collectionFading, setCollectionFading] = useState(false);
+  const [view, setView] = useState<"shelf" | "grid">("shelf");
+
+  // remember the last used view
+  useEffect(() => {
+    const v = localStorage.getItem("vinilos:view");
+    if (v === "grid" || v === "shelf") setView(v);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem("vinilos:view", view);
+  }, [view]);
 
   // fade everything when the active collection changes
   useEffect(() => {
@@ -39,37 +66,87 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [activeCollectionId]);
 
-  // hydrate from localStorage (with a minimum 3s display of the loading screen)
+  // hydrate collections from localStorage
   useEffect(() => {
     const allIds = (data as Vinyl[]).map((v) => v.id);
     const cols = loadCollections(allIds);
     setCollections(cols);
     const aid = loadActiveId();
     setActiveCollectionId(cols.some((c) => c.id === aid) ? aid : cols[0].id);
-    const t = setTimeout(() => setHydrated(true), 3000);
-    return () => clearTimeout(t);
   }, []);
+
 
   // current collection's vinyls (filtered + sorted)
   // Wishlist and Mi Colección are mutually exclusive: a vinyl is owned (Mi
   // Colección + custom lists) OR wished (Wishlist), never both.
-  const wishlist = collections.find((c) => c.id === WISHLIST_ID);
-  const wishlistSet = new Set(wishlist?.vinylIds ?? []);
-  const ownedVinylIds = allVinilos
-    .map((v) => v.id)
-    .filter((id) => !wishlistSet.has(id));
+  // every consumer sees the same resolved lists, so counts, "already in this
+  // list" checks and the shelf can't disagree about what Mi Colección holds.
+  // Memoised because their identity feeds the 3D shelf: recreating these on
+  // every playback tick would re-render the whole scene tree.
+  const resolvedCollections = useMemo(
+    () => resolveCollections(collections, allVinilos.map((v) => v.id)),
+    [collections, allVinilos],
+  );
+  const effectiveCollection =
+    resolvedCollections.find((c) => c.id === activeCollectionId) ?? null;
+  const activeCollection = effectiveCollection;
+  const vinilos = useMemo(
+    () =>
+      effectiveCollection
+        ? sortedVinylIds(effectiveCollection, allVinilos)
+            .map((id) => allVinilos.find((v) => v.id === id))
+            .filter((v): v is Vinyl => !!v)
+        : allVinilos,
+    [effectiveCollection, allVinilos],
+  );
 
-  const activeCollection = collections.find((c) => c.id === activeCollectionId);
-  const effectiveCollection = activeCollection
-    ? activeCollection.id === DEFAULT_ID
-      ? { ...activeCollection, vinylIds: ownedVinylIds }
-      : activeCollection
-    : null;
-  const vinilos = effectiveCollection
-    ? sortedVinylIds(effectiveCollection, allVinilos)
-        .map((id) => allVinilos.find((v) => v.id === id))
-        .filter((v): v is Vinyl => !!v)
-    : allVinilos;
+  // Hold the loading card until the first covers have actually decoded, so the
+  // shelf never appears as a row of empty sleeves. Floors at 420ms (a card that
+  // blinks feels broken) and caps at 3.5s (a slow network shouldn't block).
+  const bootedRef = useRef(false);
+  useEffect(() => {
+    if (bootedRef.current || collections.length === 0) return;
+    bootedRef.current = true;
+    const started = performance.now();
+    let settled = false;
+    const reveal = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(cap);
+      const wait = Math.max(0, 420 - (performance.now() - started));
+      setTimeout(() => setHydrated(true), wait);
+    };
+    const cap = setTimeout(reveal, 3500);
+    const urls = vinilos.slice(0, 10).map(coverFor);
+    let left = urls.length;
+    if (!left) return reveal();
+    urls.forEach((u) => {
+      const img = new Image();
+      const tick = () => {
+        if (--left === 0) reveal();
+      };
+      img.onload = tick;
+      img.onerror = tick;
+      img.src = u;
+    });
+  }, [collections, vinilos]);
+
+  // The side info must never sit on the cover. The shelf measures how wide the
+  // centred sleeve really is (it depends on fov, camera distance and viewport)
+  // and we store it as a CSS variable, so layout follows the actual artwork
+  // instead of a hardcoded percentage. Written straight to the DOM: this
+  // changes every frame of the open animation and must not re-render React.
+  const sideRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const handleCoverHalfWidth = useCallback((px: number) => {
+    document.documentElement.style.setProperty("--cover-half", `${Math.round(px)}px`);
+    // no room left for a readable column? then don't show one
+    // below this the column is too narrow for "Sony Music" to stay on one
+    // line, and a cramped, wrapping label reads worse than no label
+    const space = window.innerWidth / 2 - px - 40;
+    for (const el of sideRefs.current) {
+      if (el) el.style.visibility = space < 130 ? "hidden" : "";
+    }
+  }, []);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [open, setOpen] = useState<Vinyl | null>(null);
@@ -96,20 +173,35 @@ export default function Home() {
     }
   }, [vinilos, active]);
 
-  const updateCollections = useCallback((next: Collection[]) => {
-    setCollections(next);
-    saveCollections(next);
-  }, []);
+  // Accepts an updater so operations that chain in the same tick — creating a
+  // list and immediately saving a record into it — both see fresh state.
+  const updateCollections = useCallback(
+    (next: Collection[] | ((prev: Collection[]) => Collection[])) => {
+      setCollections((prev) => {
+        const value = typeof next === "function" ? next(prev) : next;
+        saveCollections(value);
+        return value;
+      });
+    },
+    [],
+  );
 
   const handleCreateCollection = (name: string) => {
     const c = newCollection(name);
-    updateCollections([...collections, c]);
+    updateCollections((prev) => [...prev, c]);
+    return c.id;
+  };
+
+  /** Save a record — new to the library or already in it — into a list. */
+  const handleSaveToList = (v: Vinyl, listId: string) => {
+    setAllVinilos((prev) => (prev.some((x) => x.id === v.id) ? prev : [...prev, v]));
+    handleAddVinylTo(listId, v.id);
   };
   const handleRenameCollection = (id: string, name: string) => {
     updateCollections(collections.map((c) => (c.id === id ? { ...c, name } : c)));
   };
   const handleDeleteCollection = (id: string) => {
-    if (id === DEFAULT_ID) return; // primary collection is permanent
+    if (!isDeletable(id)) return; // the two predefined lists are permanent
     const next = collections.filter((c) => c.id !== id);
     updateCollections(next);
     if (id === activeCollectionId) {
@@ -127,8 +219,15 @@ export default function Home() {
   };
   const handleAddVinylTo = (colId: string, vinylId: string) => {
     const addingToWishlist = colId === WISHLIST_ID;
-    updateCollections(
-      collections.map((c) => {
+    updateCollections((prev) =>
+      prev.map((c) => {
+        // Mi Colección isn't stored: being there just means being in the
+        // library and not wished, so all it takes is leaving the wishlist
+        if (colId === DEFAULT_ID) {
+          return c.id === WISHLIST_ID
+            ? { ...c, vinylIds: c.vinylIds.filter((id) => id !== vinylId) }
+            : c;
+        }
         if (c.id === colId) {
           return c.vinylIds.includes(vinylId)
             ? c
@@ -204,16 +303,42 @@ export default function Home() {
     );
   };
   const [playing, setPlaying] = useState(false);
+  const [nowPlaying, setNowPlaying] = useState<Vinyl | null>(null);
+  // the stream is opening: "En pausa" would be a lie during those milliseconds
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  // only a pause YOU asked for lets the transport re-sync with the shelf; a
+  // stalled stream or a preview reaching its end must not wipe what you chose
+  const [pausedByUser, setPausedByUser] = useState(false);
   const shelfRef = useRef<VinylShelfHandle>(null);
 
-  const handleVinylClick = (v: Vinyl) => {
-    const idx = vinilos.findIndex((x) => x.id === v.id);
+  // a record picked in the grid opens once the shelf has mounted
+  const pendingOpenRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (view !== "shelf" || !pendingOpenRef.current) return;
+    const id = pendingOpenRef.current;
+    pendingOpenRef.current = null;
+    const idx = vinilos.findIndex((x) => x.id === id);
     if (idx < 0) return;
-    setOpen(v);
-    shelfRef.current?.open(idx);
-  };
+    const t = setTimeout(() => {
+      shelfRef.current?.goTo(idx);
+      setOpen(vinilos[idx]);
+      shelfRef.current?.open(idx);
+    }, 60);
+    return () => clearTimeout(t);
+  }, [view, vinilos]);
+
+  const handleVinylClick = useCallback(
+    (v: Vinyl) => {
+      const idx = vinilos.findIndex((x) => x.id === v.id);
+      if (idx < 0) return;
+      setOpen(v);
+      shelfRef.current?.open(idx);
+    },
+    [vinilos],
+  );
 
   const handleClose = useCallback(() => {
+    // closing the detail view doesn't stop the music — only Play does
     setOpen(null);
     shelfRef.current?.close();
   }, []);
@@ -247,79 +372,162 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleClose, searchOpen, open]);
 
-  // audio cache: keyed by vinyl id → HTMLAudioElement (preloaded)
-  const audioCacheRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  const activeIndex = active ? vinilos.findIndex((v) => v.id === active.id) : -1;
+  // NOTE: no neighbour pre-loading. It used to warm ±2 previews on every active
+  // change, so browsing left dozens of 1MB downloads queued on the browser's
+  // 6-connections-per-host budget — and the request for the preview you
+  // actually pressed Play on ended up starved behind them (silent playback).
+  // The preview streams fast enough on demand.
 
-  // preload audio for the active item and its ±2 neighbours
-  useEffect(() => {
-    const window = 2;
-    const cache = audioCacheRef.current;
-    for (let d = -window; d <= window; d++) {
-      const i = activeIndex + d;
-      if (i < 0 || i >= vinilos.length) continue;
-      const v = vinilos[i];
-      if (!v.previewUrl || cache.has(v.id)) continue;
-      const a = new Audio();
-      a.preload = "auto";
-      a.src = v.previewUrl;
-      cache.set(v.id, a);
-    }
-  }, [activeIndex, vinilos]);
-
+  // What SOUNDS is its own state, independent from what you are looking at:
+  // browsing the shelf never touches playback. Only Play and the transport
+  // arrows change it.
   const playPreview = useCallback((v: Vinyl) => {
-    if (!v.previewUrl) {
-      console.warn("no previewUrl for", v.id);
-      return;
-    }
-    // stop whatever is currently playing
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-    // create fresh inside the user gesture (cached one acts only as a network warm-up)
-    const audio = new Audio(v.previewUrl);
+    if (!v.previewUrl) return;
+    releaseAudio(currentAudioRef.current);
+    const audio = new Audio(previewSrc(v.previewUrl));
     audio.preload = "auto";
-    audio.addEventListener("ended", () => setPlaying(false));
-    audio.addEventListener("error", (e) => {
-      console.error("audio error", v.id, e);
+    audio.addEventListener("playing", () => setLoadingPreview(false));
+    audio.addEventListener("ended", () => {
       setPlaying(false);
+      setLoadingPreview(false);
+    });
+    audio.addEventListener("error", () => {
+      setPlaying(false);
+      setLoadingPreview(false);
     });
     currentAudioRef.current = audio;
-    audio
-      .play()
-      .then(() => setPlaying(true))
-      .catch((err) => {
-        console.error("play() rejected:", err);
-        setPlaying(false);
-      });
+    setNowPlaying(v);
+    setLoadingPreview(true);
+    setPausedByUser(false);
+
+    const start = () =>
+      audio
+        .play()
+        .then(() => {
+          if (currentAudioRef.current === audio) setPlaying(true);
+        })
+        .catch(() => false);
+    // play() can reject while the stream is still opening; in that case wait
+    // for the element to say it's ready and try once more.
+    start().then((ok) => {
+      if (ok !== false || currentAudioRef.current !== audio) return;
+      audio.addEventListener("canplay", () => {
+        if (currentAudioRef.current === audio) start();
+      }, { once: true });
+    });
   }, []);
 
-  // stop audio when active album changes (unless we triggered the change ourselves)
-  const autoPlayOnSettleRef = useRef(false);
-  useEffect(() => {
-    if (active && autoPlayOnSettleRef.current) {
-      autoPlayOnSettleRef.current = false;
-      playPreview(active);
-    } else {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
-      }
-      setPlaying(false);
-    }
-  }, [active?.id, active, playPreview]);
+  const stopPlayback = useCallback(() => {
+    releaseAudio(currentAudioRef.current);
+    currentAudioRef.current = null;
+    setPlaying(false);
+    setLoadingPreview(false);
+    setPausedByUser(false);
+    setNowPlaying(null);
+  }, []);
 
-  const togglePlay = () => {
-    if (!active?.previewUrl) return;
-    if (playing && currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      setPlaying(false);
+  // Paused and you keep browsing? Then the paused record stops being "yours":
+  // the transport re-syncs with the shelf, so Play always means the one in
+  // front of you. While it PLAYS, browsing never touches it.
+  useEffect(() => {
+    if (!nowPlaying || playing || loadingPreview || !pausedByUser) return;
+    if (view !== "shelf" || !active || active.id === nowPlaying.id) return;
+    stopPlayback();
+  }, [active, nowPlaying, playing, loadingPreview, pausedByUser, view, stopPlayback]);
+
+  // if the record that sounds leaves the current collection, stop
+  useEffect(() => {
+    if (nowPlaying && !vinilos.some((v) => v.id === nowPlaying.id)) stopPlayback();
+  }, [vinilos, nowPlaying, stopPlayback]);
+
+  // The transport always acts on one record: the one centred in the shelf, or
+  // — in the grid, where nothing is "in front" — the one that sounds.
+  const transportTarget = view === "grid" ? nowPlaying ?? vinilos[0] ?? null : active;
+  const activeIsSounding =
+    playing && !!transportTarget && nowPlaying?.id === transportTarget.id;
+  // you scrolled away from what's sounding: the two actions (pause THAT one /
+  // play THIS one) stop being the same action, so the transport splits in two
+  const soundingElsewhere =
+    view === "shelf" && !!nowPlaying && nowPlaying.id !== active?.id;
+  // A skip moves the shelf AND the playback, so they are briefly out of sync
+  // while the shelf travels. Waiting a beat before showing the extra control
+  // keeps it from blinking on every Next/Previous.
+  const [showSounding, setShowSounding] = useState(false);
+  useEffect(() => {
+    if (!soundingElsewhere) {
+      setShowSounding(false);
       return;
     }
-    playPreview(active);
+    const t = setTimeout(() => setShowSounding(true), 500);
+    return () => clearTimeout(t);
+  }, [soundingElsewhere]);
+
+  const toggleSounding = () => {
+    const audio = currentAudioRef.current;
+    if (!audio || !nowPlaying) return;
+    if (playing) {
+      audio.pause();
+      setPlaying(false);
+      setPausedByUser(true);
+    } else {
+      setPausedByUser(false);
+      audio
+        .play()
+        .then(() => setPlaying(true))
+        .catch(() => setPlaying(false));
+    }
+  };
+
+  const toggleTransport = () => {
+    if (nowPlaying && currentAudioRef.current) {
+      toggleSounding();
+      return;
+    }
+    togglePlay();
+  };
+
+  const togglePlay = () => {
+    const target = transportTarget;
+    if (!target?.previewUrl) return;
+    const isActiveSounding = nowPlaying?.id === target.id && currentAudioRef.current;
+    if (isActiveSounding) {
+      // same record: pause / resume where it was, never restart
+      if (playing) {
+        currentAudioRef.current!.pause();
+        setPlaying(false);
+        setPausedByUser(true);
+      } else {
+        setPausedByUser(false);
+        currentAudioRef
+          .current!.play()
+          .then(() => setPlaying(true))
+          .catch(() => setPlaying(false));
+      }
+      return;
+    }
+    // a different record: it takes over
+    playPreview(target);
+  };
+
+  // Transport skip: plays the record next to the one that SOUNDS (falling back
+  // to the one on screen if nothing has played yet), and brings the shelf along
+  // so what you see is what you hear. Records without a preview are stepped
+  // over — a skip that lands on silence isn't a skip.
+  const skip = (dir: 1 | -1) => {
+    const N = vinilos.length;
+    if (N === 0) return;
+    const from = nowPlaying ?? transportTarget ?? active;
+    const fromIdx = from ? vinilos.findIndex((v) => v.id === from.id) : -1;
+    for (let step = 1; step <= N; step++) {
+      const idx = ((fromIdx + dir * step) % N + N) % N;
+      const candidate = vinilos[idx];
+      if (!candidate.previewUrl) continue;
+      shelfRef.current?.goTo(idx);
+      playPreview(candidate);
+      return;
+    }
   };
 
   // while opened, keep `open` (side info) in sync with the visible centred vinyl
@@ -327,15 +535,8 @@ export default function Home() {
     if (open && active && open.id !== active.id) setOpen(active);
   }, [active, open]);
 
-  const goPrev = () => {
-    autoPlayOnSettleRef.current = true;
-    shelfRef.current?.prev();
-  };
-
-  const goNext = () => {
-    autoPlayOnSettleRef.current = true;
-    shelfRef.current?.next();
-  };
+  const goPrev = () => skip(-1);
+  const goNext = () => skip(1);
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-ink text-paper">
@@ -373,8 +574,33 @@ export default function Home() {
           !hydrated || collectionFading ? "opacity-0" : "opacity-100"
         }`}
       >
-      {vinilos.length > 0 && (
-        <VinylShelf ref={shelfRef} vinilos={vinilos} onOpen={handleVinylClick} onActiveChange={setActive} />
+      {vinilos.length > 0 && view === "shelf" && (
+        <VinylShelf
+          ref={shelfRef}
+          vinilos={vinilos}
+          onOpen={handleVinylClick}
+          onActiveChange={setActive}
+          onCoverHalfWidth={handleCoverHalfWidth}
+        />
+      )}
+
+      {vinilos.length > 0 && view === "grid" && (
+        <VinylGrid
+          vinilos={vinilos}
+          activeId={active?.id}
+          playingId={nowPlaying?.id}
+          isPlaying={playing}
+          onPlay={(v: Vinyl) => {
+            if (nowPlaying?.id === v.id) togglePlay();
+            else playPreview(v);
+          }}
+          onSelect={(v) => {
+            // jump back to the 3D shelf with that record centred + opened
+            pendingOpenRef.current = v.id;
+            setActive(v);
+            setView("shelf");
+          }}
+        />
       )}
 
       {/* invisible backdrop while opened — click anywhere outside the vinyl closes */}
@@ -398,7 +624,12 @@ export default function Home() {
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.45 }}
-            className="pointer-events-none absolute left-[6vw] right-[71%] top-[42%] -translate-y-1/2 z-10 text-right text-paper/80"
+            ref={(el) => {
+              sideRefs.current[0] = el;
+            }}
+            data-side="left"
+            style={{ right: "calc(50% + var(--cover-half, 21vw) + 32px)" }}
+            className="pointer-events-none absolute left-6 top-[42%] -translate-y-1/2 z-10 text-right text-paper/80"
           >
             <Field label="Artist" value={open.artist} />
             <Field label="Year" value={String(open.year)} />
@@ -409,7 +640,12 @@ export default function Home() {
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.45 }}
-            className="pointer-events-none absolute left-[71%] right-[6vw] top-[42%] -translate-y-1/2 z-10 text-left text-paper/80"
+            ref={(el) => {
+              sideRefs.current[1] = el;
+            }}
+            data-side="right"
+            style={{ left: "calc(50% + var(--cover-half, 21vw) + 32px)" }}
+            className="pointer-events-none absolute right-6 top-[42%] -translate-y-1/2 z-10 text-left text-paper/80"
           >
             <Field label="Label" value={open.label} />
             <Field label="Country" value={open.country} />
@@ -433,11 +669,26 @@ export default function Home() {
             </motion.button>
           )}
           {fullyOpen && (
+            <CommunityBridge
+              vinyl={open}
+              allVinilos={allVinilos}
+              onOpenOwn={(v) => {
+                const idx = vinilos.findIndex((x) => x.id === v.id);
+                if (idx >= 0) {
+                  setOpen(v);
+                  shelfRef.current?.open(idx);
+                }
+              }}
+              onSave={(v) => handleSaveToList(v, activeCollectionId)}
+            />
+          )}
+          {fullyOpen && (
             <VinylEditOverlay
               vinyl={open}
-              collections={collections}
+              collections={resolvedCollections}
               activeCollectionId={activeCollectionId}
               isInWishlist={activeCollectionId === WISHLIST_ID}
+              activeIsLibrary={activeCollectionId === DEFAULT_ID}
               onAddTo={(cid) => handleAddVinylTo(cid, open.id)}
               onMoveToCollection={() => {
                 handleAddVinylTo(DEFAULT_ID, open.id); // mutex handler removes it from wishlist
@@ -459,7 +710,37 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between px-8 py-6">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.svg" alt="RackrClub" className="h-5 w-auto opacity-80" />
-        <div className="pointer-events-auto flex items-center gap-4">
+        <div className="pointer-events-auto flex items-center gap-5">
+          {/* view switch: 3D shelf ↔ grid */}
+          <div className="flex items-center border border-paper/20">
+            {(["shelf", "grid"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                aria-label={v === "shelf" ? "Vista estantería" : "Vista cuadrícula"}
+                aria-pressed={view === v}
+                className={`flex h-[26px] w-[30px] items-center justify-center transition ${
+                  view === v
+                    ? "bg-paper/90 text-ink"
+                    : "text-paper/50 hover:text-paper"
+                }`}
+              >
+                {v === "shelf" ? (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1" />
+                    <circle cx="6" cy="6" r="1.3" fill="currentColor" />
+                  </svg>
+                ) : (
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path
+                      d="M1 1h4v4H1zM7 1h4v4H7zM1 7h4v4H1zM7 7h4v4H7z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
           <button
             onClick={() => setSearchOpen(true)}
             className="group flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-paper/60 hover:text-paper transition"
@@ -475,7 +756,7 @@ export default function Home() {
 
       {/* active title — moves up + shrinks when a vinyl is opened so it never
           overlaps the centred cover */}
-      {active && (
+      {active && view === "shelf" && (
         <div
           className={`pointer-events-none absolute inset-x-0 z-10 flex flex-col items-center text-center transition-all ease-out ${
             open
@@ -506,54 +787,58 @@ export default function Home() {
       {/* subtle bottom gradient to improve readability of the bottom UI */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-48 bg-gradient-to-t from-ink via-ink/60 to-transparent" />
 
-      {/* bottom-left: collection name + switcher */}
+      {/* bottom-left: the whole block opens the lists panel. The old circular
+          switcher cycled lists blindly and was too faint to read as a control. */}
       <div className="absolute bottom-0 left-0 z-20 px-8 py-6">
-        <div className="flex items-center gap-3">
-          {collections.length > 1 && (
-            <button
-              onClick={() => {
-                const idx = collections.findIndex((c) => c.id === activeCollectionId);
-                const next = collections[(idx + 1) % collections.length];
-                handleActivateCollection(next.id);
-              }}
-              className="flex h-6 w-6 items-center justify-center rounded-full border border-paper/30 text-paper/70 hover:text-paper hover:border-paper/60 transition"
-              aria-label="Siguiente colección"
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M3 2 L3 8 M1 4 L3 2 L5 4 M7 8 L7 2 M5 6 L7 8 L9 6" stroke="currentColor" strokeWidth="1" />
-              </svg>
-            </button>
-          )}
-          <div className="text-left">
-            <div className="text-[20px] font-medium leading-none">
+        <button
+          onClick={() => setCollectionsOpen(true)}
+          aria-label="Abrir listas"
+          className="group flex items-center gap-3 text-left"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-paper/25 text-paper/60 transition group-hover:border-paper/70 group-hover:text-paper">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+              <path
+                d="M2 3.5 H12 M2 7 H12 M2 10.5 H8"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          <span>
+            <span className="block text-[20px] font-medium leading-none text-paper">
               {activeCollection?.name ?? "Mi Colección"}
-            </div>
-            <div className="mt-1 text-[11px] uppercase tracking-[0.18em] text-paper/50">
-              {vinilos.length} discos ·{" "}
-              <button
-                onClick={() => setCollectionsOpen(true)}
-                className="text-paper/70 hover:text-paper transition underline-offset-2 hover:underline"
-              >
-                Listas
-              </button>
-            </div>
-          </div>
-        </div>
+            </span>
+            <span className="mt-1.5 block text-[11px] uppercase tracking-[0.18em] text-paper/50 transition group-hover:text-paper/75">
+              {vinilos.length} {vinilos.length === 1 ? "disco" : "discos"}
+            </span>
+          </span>
+        </button>
       </div>
 
-      {/* bottom-center: controls — always centered on viewport */}
+      {/* bottom-center: controls — the main button is the music's play/pause;
+          the satellite plays the record you're looking at.
+          Everything here animates with CSS transforms on purpose: the 3D shelf
+          owns the main thread, and JS-driven tweens stuttered against it. */}
       <div className="pointer-events-none absolute bottom-0 left-1/2 z-20 -translate-x-1/2 py-7">
-        <div className="pointer-events-auto flex items-center gap-6">
+        <div
+          className={`pointer-events-auto relative flex items-center gap-10 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            showSounding ? "-translate-x-[29px]" : "translate-x-0"
+          }`}
+        >
           <button
             onClick={goPrev}
-            className="text-paper/70 hover:text-paper transition"
+            className="-m-3 p-3 text-paper/70 hover:text-paper transition"
             aria-label="Previous"
           >
             <Skip dir="prev" />
           </button>
+
+          {/* play / pause of what sounds */}
           <button
-            onClick={togglePlay}
-            disabled={!active?.previewUrl}
+            onClick={toggleTransport}
+            disabled={!nowPlaying && !transportTarget?.previewUrl}
+            title={playing ? "Pausar" : "Reproducir"}
             className="flex h-12 w-12 items-center justify-center rounded-full border border-paper/30 text-paper hover:border-paper/80 transition disabled:opacity-30 disabled:cursor-not-allowed"
             aria-label={playing ? "Pause" : "Play"}
           >
@@ -568,9 +853,62 @@ export default function Home() {
               </svg>
             )}
           </button>
+
+          {/* play THIS record. Always mounted so its cover is decoded long
+              before it shows — mounting it on demand made the artwork pop in. */}
+          {/* the wrapper must never take clicks: it overlaps the Next arrow,
+              and while the button was hidden it silently ate them */}
+          <div
+            className="pointer-events-none absolute left-1/2 top-1/2 ml-[34px] -translate-y-1/2"
+            aria-hidden={!showSounding}
+          >
+            <button
+              onClick={() => active && playPreview(active)}
+              disabled={!active?.previewUrl || !showSounding}
+              tabIndex={showSounding ? 0 : -1}
+              title="Reproducir este disco"
+              aria-label="Reproducir este disco"
+              className={`relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-paper/25 bg-ink text-paper transition-[opacity,transform,border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-paper/70 ${
+                showSounding
+                  ? "pointer-events-auto scale-100 opacity-100"
+                  : "pointer-events-none scale-75 opacity-0"
+              }`}
+            >
+              {active && (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={coverFor(active)}
+                    alt=""
+                    className="absolute inset-0 h-full w-full rounded-full object-cover"
+                  />
+                  <span className="absolute inset-0 rounded-full bg-ink/40" />
+                  <svg
+                    className="relative drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)]"
+                    width="13"
+                    height="13"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                  >
+                    <path
+                      d="M3 2 L12 7 L3 12 Z"
+                      fill="#fff"
+                      stroke="#fff"
+                      strokeWidth="1.4"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* the next arrow steps aside to make room for the satellite */}
           <button
             onClick={goNext}
-            className="text-paper/70 hover:text-paper transition"
+            className={`-m-3 p-3 text-paper/70 hover:text-paper transition-[transform,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              showSounding ? "translate-x-[36px]" : "translate-x-0"
+            }`}
             aria-label="Next"
           >
             <Skip dir="next" />
@@ -579,18 +917,38 @@ export default function Home() {
       </div>
 
       {/* bottom-right: now viewing */}
-      {active && (
-        <div className="pointer-events-none absolute bottom-0 right-0 z-20 px-8 py-6">
-          <div className="flex items-center gap-3 text-right">
+      {/* now playing — tied to the audio, not to what you're browsing */}
+      {nowPlaying && (
+        <motion.button
+          key={nowPlaying.id}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          onClick={() => {
+            if (view === "grid") {
+              document
+                .getElementById(`grid-${nowPlaying.id}`)
+                ?.scrollIntoView({ behavior: "smooth", block: "center" });
+              return;
+            }
+            const idx = vinilos.findIndex((v) => v.id === nowPlaying.id);
+            if (idx >= 0) shelfRef.current?.goTo(idx);
+          }}
+          aria-label="Ir al disco que suena"
+          className="absolute bottom-0 right-0 z-20 px-8 py-6 text-right"
+        >
+          <div className="flex items-center gap-3">
             <div className="max-w-[320px]">
               <div className="text-[11px] uppercase tracking-[0.18em] text-paper/50">
-                Ahora viendo
+                {loadingPreview ? "Cargando" : playing ? "Ahora escuchando" : "En pausa"}
               </div>
-              <MarqueeText className="mt-1 font-medium text-[15px]">{active.title}</MarqueeText>
+              <MarqueeText className="mt-1 font-medium text-[15px]">
+                {nowPlaying.title}
+              </MarqueeText>
             </div>
-            <MiniVinyl coverUrl={coverFor(active)} />
+            <MiniVinyl coverUrl={coverFor(nowPlaying)} spinning={playing} />
           </div>
-        </div>
+        </motion.button>
       )}
 
       {/* empty state — archive card aesthetic */}
@@ -639,30 +997,24 @@ export default function Home() {
       <SearchOverlay
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
+        collections={resolvedCollections}
+        activeCollectionId={activeCollectionId}
+        allVinilos={allVinilos}
         localVinilos={vinilos}
         onJumpTo={(v) => {
           const idx = vinilos.findIndex((x) => x.id === v.id);
           if (idx >= 0) shelfRef.current?.goTo(idx);
         }}
-        onAdded={(v, target) => {
-          // add to master list
-          setAllVinilos((prev) => (prev.some((x) => x.id === v.id) ? prev : [...prev, v]));
-          // pick destination: wishlist or active collection (defaulting to
-          // Mi Colección when the user is currently viewing the wishlist)
-          const destId =
-            target === "wishlist"
-              ? WISHLIST_ID
-              : activeCollectionId === WISHLIST_ID
-              ? DEFAULT_ID
-              : activeCollectionId;
-          handleAddVinylTo(destId, v.id);
-        }}
+        onCreateList={handleCreateCollection}
+        onSaveToList={handleSaveToList}
+        onRemoveFromList={(vinylId, listId) => handleToggleVinyl(listId, vinylId)}
+        onDeleteVinyl={handleDeleteVinylPermanently}
       />
 
       <CollectionsOverlay
         open={collectionsOpen}
         onClose={() => setCollectionsOpen(false)}
-        collections={collections}
+        collections={resolvedCollections}
         activeId={activeCollectionId}
         onActivate={handleActivateCollection}
         onCreate={handleCreateCollection}

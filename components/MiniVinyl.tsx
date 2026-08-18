@@ -3,13 +3,26 @@
 import { motion } from "framer-motion";
 
 /** Tiny spinning vinyl used as a now-viewing indicator. */
-export default function MiniVinyl({ coverUrl, size = 56 }: { coverUrl: string; size?: number }) {
+export default function MiniVinyl({
+  coverUrl,
+  size = 56,
+  spinning = true,
+}: {
+  coverUrl: string;
+  size?: number;
+  /** the disc only turns while audio is actually playing */
+  spinning?: boolean;
+}) {
   return (
     <motion.div
       className="relative shrink-0 rounded-full overflow-hidden"
       style={{ width: size, height: size }}
-      animate={{ rotate: 360 }}
-      transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+      animate={spinning ? { rotate: 360 } : {}}
+      transition={
+        spinning
+          ? { duration: 6, repeat: Infinity, ease: "linear" }
+          : { duration: 0.4, ease: "easeOut" }
+      }
     >
       {/* disc */}
       <div

@@ -9,6 +9,8 @@ type Props = {
   collections: Collection[];
   activeCollectionId: string;
   isInWishlist?: boolean;
+  /** Mi Colección is derived from the library: "remove" there means delete */
+  activeIsLibrary?: boolean;
   onAddTo: (collectionId: string) => void;
   onMoveToCollection?: () => void;
   onRemoveFromActive: () => void;
@@ -25,6 +27,7 @@ export default function VinylEditOverlay({
   collections,
   activeCollectionId,
   isInWishlist,
+  activeIsLibrary = false,
   onAddTo,
   onMoveToCollection,
   onRemoveFromActive,
@@ -122,15 +125,19 @@ export default function VinylEditOverlay({
                 </div>
               )}
             </div>
-            <button
-              onClick={() => {
-                onRemoveFromActive();
-                setMenuOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 text-paper/80 hover:bg-paper/5 hover:text-paper rounded-sm"
-            >
-              Quitar de esta colección
-            </button>
+            {/* Mi Colección holds everything you own, so there is nothing to
+                "remove" from it — only deleting the record makes sense */}
+            {!activeIsLibrary && (
+              <button
+                onClick={() => {
+                  onRemoveFromActive();
+                  setMenuOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 text-paper/80 hover:bg-paper/5 hover:text-paper rounded-sm"
+              >
+                {isInWishlist ? "Quitar de deseos" : "Quitar de esta lista"}
+              </button>
+            )}
             <div className="h-px bg-paper/10 my-1" />
             {!confirmDelete ? (
               <button

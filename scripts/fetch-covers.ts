@@ -10,9 +10,11 @@
 import { readFile, writeFile, mkdir, access } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { Vinyl } from "../lib/types";
+import { downloadDeezerPreview } from "../lib/preview";
 
 const DATA_PATH = resolve(process.cwd(), "data/vinilos.json");
 const OUT_DIR = resolve(process.cwd(), "public/covers");
+const PREVIEW_DIR = resolve(process.cwd(), "public/previews");
 
 type Result = {
   collectionId?: number;
@@ -63,6 +65,7 @@ async function fileExists(path: string): Promise<boolean> {
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
+  await mkdir(PREVIEW_DIR, { recursive: true });
   const raw = await readFile(DATA_PATH, "utf8");
   const vinilos: Vinyl[] = JSON.parse(raw);
 
@@ -78,32 +81,33 @@ async function main() {
       }
 
       const match = await searchAlbum(v.artist, v.title);
-      if (!match) {
-        console.warn(`✗ ${v.artist} — ${v.title} (no album result)`);
-        out.push({ ...v, previewUrl: v.previewUrl ?? null });
-        continue;
-      }
 
-      // cover
+      // cover (iTunes)
       let coverPath = v.cover;
-      if (!haveCover && match.artworkUrl100) {
+      if (!haveCover && match?.artworkUrl100) {
         const url = match.artworkUrl100.replace(/\/\d+x\d+bb\.(jpg|png)$/, "/1000x1000bb.$1");
         const ext = url.match(/\.(jpg|png)$/)?.[1] ?? "jpg";
         const filename = `${v.id}.${ext}`;
-        const dest = resolve(OUT_DIR, filename);
-        await download(url, dest);
+        await download(url, resolve(OUT_DIR, filename));
         coverPath = `/covers/${filename}`;
       }
 
-      // preview
+      // preview: iTunes first, then Deezer (downloaded locally — its URLs expire)
       let previewUrl = v.previewUrl ?? null;
-      if (!havePreview && match.collectionId) {
+      if (!havePreview && match?.collectionId) {
         previewUrl = await firstPreviewForAlbum(match.collectionId);
+      }
+      if (!previewUrl) {
+        const dest = resolve(PREVIEW_DIR, `${v.id}.mp3`);
+        if (await downloadDeezerPreview(v.artist, v.title, dest)) {
+          previewUrl = `/previews/${v.id}.mp3`;
+        }
       }
 
       out.push({ ...v, cover: coverPath, previewUrl });
-      console.log(`✓ ${v.artist} — ${v.title}${previewUrl ? " (cover + preview)" : " (cover only)"}`);
-      await new Promise((r) => setTimeout(r, 250));
+      const tag = previewUrl ? "preview" : "no preview";
+      console.log(`✓ ${v.artist} — ${v.title} (${coverPath ? "cover" : "no cover"} · ${tag})`);
+      await new Promise((r) => setTimeout(r, 300));
     } catch (e) {
       console.error(`✗ ${v.artist} — ${v.title}:`, (e as Error).message);
       out.push({ ...v, previewUrl: v.previewUrl ?? null });

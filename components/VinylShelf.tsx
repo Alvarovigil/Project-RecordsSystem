@@ -11,9 +11,31 @@ type Props = {
   onActiveChange?: (v: Vinyl) => void;
 };
 
-const ITEM_W = 560;
-const THICKNESS = 100;
-const PERSPECTIVE = 2200;
+// The scene was authored at these reference pixel sizes. We keep their ratios
+// fixed and scale the whole composition off the viewport so the vinyl always
+// occupies the same proportion of the screen (the side-info layout reserves the
+// central ~42vw for it). Driving everything off one width means perspective,
+// thickness and ring radius stay in lock-step regardless of window size.
+const REF_ITEM_W = 560;
+const THICKNESS_RATIO = 100 / REF_ITEM_W;
+const PERSPECTIVE_RATIO = 2200 / REF_ITEM_W;
+
+function useItemWidth() {
+  const [w, setW] = useState(REF_ITEM_W);
+  useEffect(() => {
+    const measure = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      // central 42vw matches the flanking info panels; cap by height so the
+      // square cover never overflows on wide/short windows.
+      setW(Math.round(Math.min(vw * 0.42, vh * 0.78)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+  return w;
+}
 
 /**
  * Horizontal ring of 3D vinyl boxes. Each box is rotated so its right side
@@ -29,6 +51,9 @@ const PERSPECTIVE = 2200;
 export default function VinylShelf({ vinilos, onOpen, onActiveChange }: Props) {
   const N = vinilos.length;
   const anglePerItem = 360 / N;
+  const ITEM_W = useItemWidth();
+  const THICKNESS = Math.round(ITEM_W * THICKNESS_RATIO);
+  const PERSPECTIVE = Math.round(ITEM_W * PERSPECTIVE_RATIO);
   // ring radius so adjacent items leave breathing room.
   // chord between neighbours = 2 R sin(angle/2). We want chord ≥ THICKNESS * 6
   // (each item has thickness THICKNESS poking radially inward+outward).
@@ -157,6 +182,8 @@ export default function VinylShelf({ vinilos, onOpen, onActiveChange }: Props) {
               radius={radius}
               rotation={rotation}
               isActive={i === active}
+              itemW={ITEM_W}
+              thickness={THICKNESS}
               onClick={() => onOpen(v)}
             />
           );
@@ -172,6 +199,8 @@ function RingBox({
   radius,
   rotation,
   isActive,
+  itemW,
+  thickness,
   onClick,
 }: {
   vinyl: Vinyl;
@@ -179,6 +208,8 @@ function RingBox({
   radius: number;
   rotation: ReturnType<typeof useSpring>;
   isActive: boolean;
+  itemW: number;
+  thickness: number;
   onClick: () => void;
 }) {
   // angle from the camera's gaze axis, in degrees, in [-180, 180]
@@ -215,10 +246,10 @@ function RingBox({
       tabIndex={0}
       className="absolute outline-none"
       style={{
-        left: -ITEM_W / 2,
-        top: -ITEM_W / 2,
-        width: ITEM_W,
-        height: ITEM_W,
+        left: -itemW / 2,
+        top: -itemW / 2,
+        width: itemW,
+        height: itemW,
         transformStyle: "preserve-3d",
         transform: itemTransform,
         opacity,
@@ -227,7 +258,7 @@ function RingBox({
       }}
       aria-label={`${vinyl.artist} — ${vinyl.title}`}
     >
-      <VinylBox vinyl={vinyl} size={ITEM_W} thickness={THICKNESS} />
+      <VinylBox vinyl={vinyl} size={itemW} thickness={thickness} />
     </motion.div>
   );
 }

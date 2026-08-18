@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Vinyl } from "@/lib/types";
+import type { Collection } from "@/lib/collections";
+import { DestinationBar, RowSave } from "./SaveToList";
 
 type SearchResult = {
   id: number;
@@ -18,12 +20,39 @@ type SearchResult = {
 type Props = {
   open: boolean;
   onClose: () => void;
-  onAdded: (v: Vinyl, target: "collection" | "wishlist") => void;
+  /** put a record (new or already in the library) into a list */
+  onSaveToList: (v: Vinyl, listId: string) => void;
+  onCreateList: (name: string) => string;
+  onRemoveFromList: (vinylId: string, listId: string) => void;
+  onDeleteVinyl: (vinylId: string) => void;
+  collections: Collection[];
+  activeCollectionId: string;
+  allVinilos: Vinyl[];
   localVinilos: Vinyl[];
   onJumpTo: (v: Vinyl) => void;
 };
 
-export default function SearchOverlay({ open, onClose, onAdded, localVinilos, onJumpTo }: Props) {
+export default function SearchOverlay({
+  open,
+  onClose,
+  onSaveToList,
+  onCreateList,
+  onRemoveFromList,
+  onDeleteVinyl,
+  collections,
+  activeCollectionId,
+  allVinilos,
+  localVinilos,
+  onJumpTo,
+}: Props) {
+  // the chosen destination sticks between saves, like a pinboard would
+  const [targetId, setTargetId] = useState(activeCollectionId);
+  useEffect(() => setTargetId(activeCollectionId), [activeCollectionId]);
+  // what a save actually did, so Deshacer can undo exactly that: a record that
+  // was new to the library must leave it again, not just leave the list
+  const [savedIn, setSavedIn] = useState<
+    Record<string, { listId: string; vinylId: string; wasNew: boolean }>
+  >({});
   const [mode, setMode] = useState<"local" | "discogs">("local");
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -75,7 +104,9 @@ export default function SearchOverlay({ open, onClose, onAdded, localVinilos, on
         })
       : [];
 
-  const add = async (r: SearchResult, target: "collection" | "wishlist") => {
+  // Saving keeps the search open on purpose: adding several records in a row
+  // is the common case, and a closing overlay would punish it.
+  const add = async (r: SearchResult, listId: string) => {
     setAdding(r.id);
     try {
       const res = await fetch(`/api/discogs/release`, {
@@ -85,13 +116,59 @@ export default function SearchOverlay({ open, onClose, onAdded, localVinilos, on
       });
       const data = await res.json();
       if (data.vinyl) {
-        onAdded(data.vinyl, target);
-        onClose();
+        const wasNew = !allVinilos.some((v) => v.id === data.vinyl.id);
+        onSaveToList(data.vinyl, listId);
+        setSavedIn((m) => ({
+          ...m,
+          [`d${r.id}`]: { listId, vinylId: data.vinyl.id, wasNew },
+        }));
       }
     } finally {
       setAdding(null);
     }
   };
+
+  // one cursor over the visible list: ↑↓ to move, ↵ to act on it
+  const [cursor, setCursor] = useState(0);
+  useEffect(() => setCursor(0), [q, mode]);
+  const rowCount = mode === "local" ? localResults.length : results.length;
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (rowCount === 0) return;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setCursor((i) => {
+          const next = e.key === "ArrowDown" ? i + 1 : i - 1;
+          return Math.max(0, Math.min(rowCount - 1, next));
+        });
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (mode === "local") {
+          const v = localResults[cursor];
+          if (v) {
+            onJumpTo(v);
+            onClose();
+          }
+        } else {
+          const r = results[cursor];
+          if (r) add(r, targetId);
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  // keep the cursor row in view
+  useEffect(() => {
+    document
+      .querySelector(`[data-row="${cursor}"]`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [cursor]);
+
+  const listsHolding = (vinylId: string) =>
+    collections.filter((c) => c.vinylIds.includes(vinylId)).map((c) => c.id);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -140,7 +217,21 @@ export default function SearchOverlay({ open, onClose, onAdded, localVinilos, on
             Esc
           </kbd>
         </div>
-        <div data-scrollable className="mt-4 max-h-[60vh] overflow-y-auto">
+        {/* one destination for everything you save here, plus the keyboard
+            hint — adding a run of records shouldn't need the mouse */}
+        <div className="mt-3 flex items-center justify-between gap-4">
+          <DestinationBar
+            collections={collections}
+            targetId={targetId}
+            onTargetChange={setTargetId}
+            onCreateList={onCreateList}
+          />
+          <span className="mono hidden text-[10px] uppercase tracking-[0.18em] text-paper/25 sm:block">
+            ↑↓ moverse · ↵ {mode === "local" ? "ir al disco" : "guardar"}
+          </span>
+        </div>
+
+        <div data-scrollable className="mt-3 max-h-[60vh] overflow-y-auto">
           {mode === "discogs" && loading && (
             <div className="text-paper/50 text-sm py-3">Buscando…</div>
           )}
@@ -156,14 +247,21 @@ export default function SearchOverlay({ open, onClose, onAdded, localVinilos, on
           {/* local mode list */}
           {mode === "local" && (
             <ul className="divide-y divide-paper/10">
-              {localResults.map((v) => (
-                <li key={v.id}>
+              {localResults.map((v, i) => (
+                <li
+                  key={v.id}
+                  data-row={i}
+                  onMouseEnter={() => setCursor(i)}
+                  className={`group flex items-center gap-2 pr-2 transition ${
+                    cursor === i ? "bg-paper/[0.06]" : ""
+                  }`}
+                >
                   <button
                     onClick={() => {
                       onJumpTo(v);
                       onClose();
                     }}
-                    className="w-full flex items-center gap-3 py-3 text-left hover:bg-paper/5 transition px-2"
+                    className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left hover:bg-paper/5 transition px-2"
                   >
                     {v.cover ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -177,8 +275,30 @@ export default function SearchOverlay({ open, onClose, onAdded, localVinilos, on
                         {[v.artist, v.year, v.genre].filter(Boolean).join(" · ")}
                       </div>
                     </div>
-                    <span className="text-paper/30 text-lg pr-2">→</span>
                   </button>
+                  <RowSave
+                    collections={collections}
+                    targetId={targetId}
+                    onTargetChange={setTargetId}
+                    onCreateList={onCreateList}
+                    containedIn={listsHolding(v.id)}
+                    savedIn={savedIn[v.id]?.listId ?? null}
+                    onSave={(listId: string) => {
+                      onSaveToList(v, listId);
+                      setSavedIn((m) => ({
+                        ...m,
+                        [v.id]: { listId, vinylId: v.id, wasNew: false },
+                      }));
+                    }}
+                    onUndo={(listId: string) => {
+                      onRemoveFromList(v.id, listId);
+                      setSavedIn((m) => {
+                        const next = { ...m };
+                        delete next[v.id];
+                        return next;
+                      });
+                    }}
+                  />
                 </li>
               ))}
             </ul>
@@ -186,49 +306,61 @@ export default function SearchOverlay({ open, onClose, onAdded, localVinilos, on
 
           {/* discogs add list */}
           <ul className={mode === "discogs" ? "divide-y divide-paper/10" : "hidden"}>
-            {results.map((r) => (
-              <li key={r.id} className="group flex items-center gap-2">
-                <button
-                  onClick={() => add(r, "collection")}
-                  disabled={adding === r.id}
-                  className="flex-1 flex items-center gap-3 py-3 text-left hover:bg-paper/5 transition disabled:opacity-40 px-2"
-                  aria-label="Añadir a colección"
+            {results.map((r, i) => {
+              // a record already in the library keeps its identity, so the
+              // control can tell you which lists already hold it
+              const known = allVinilos.find((v) => v.discogsId === r.id);
+              return (
+                <li
+                  key={r.id}
+                  data-row={i}
+                  onMouseEnter={() => setCursor(i)}
+                  className={`group flex items-center gap-2 pr-2 transition ${
+                    cursor === i ? "bg-paper/[0.06]" : ""
+                  }`}
                 >
-                  {r.thumb ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={r.thumb} alt="" className="w-12 h-12 object-cover rounded-sm" />
-                  ) : (
-                    <div className="w-12 h-12 bg-paper/10 rounded-sm" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[14px] text-paper/90">{r.title}</div>
-                    <div className="mt-0.5 text-[11px] text-paper/50 truncate">
-                      {[r.year, r.country, r.label, r.format?.join(", ")]
-                        .filter(Boolean)
-                        .join(" · ")}
+                  <div className="flex min-w-0 flex-1 items-center gap-3 py-3 px-2">
+                    {r.thumb ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.thumb} alt="" className="w-12 h-12 object-cover rounded-sm" />
+                    ) : (
+                      <div className="w-12 h-12 bg-paper/10 rounded-sm" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[14px] text-paper/90">{r.title}</div>
+                      <div className="mt-0.5 text-[11px] text-paper/50 truncate">
+                        {[r.year, r.country, r.label, r.format?.join(", ")]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </div>
                     </div>
                   </div>
-                  {adding === r.id && <span className="text-[11px] text-paper/60">añadiendo…</span>}
-                </button>
-                {/* add to wishlist */}
-                <button
-                  onClick={() => add(r, "wishlist")}
-                  disabled={adding === r.id}
-                  aria-label="Añadir a lista de deseos"
-                  title="Añadir a lista de deseos"
-                  className="shrink-0 mr-2 flex h-9 w-9 items-center justify-center rounded-md border border-paper/15 bg-paper/[0.04] text-paper/50 hover:text-paper hover:border-paper/40 hover:bg-paper/[0.08] transition disabled:opacity-30"
-                >
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <path
-                      d="M8 13.5s-5-3.2-5-7.2A2.8 2.8 0 0 1 8 4.5a2.8 2.8 0 0 1 5 1.8c0 4-5 7.2-5 7.2z"
-                      stroke="currentColor"
-                      strokeLinejoin="round"
-                      fill="none"
-                    />
-                  </svg>
-                </button>
-              </li>
-            ))}
+                  <RowSave
+                    collections={collections}
+                    targetId={targetId}
+                    onTargetChange={setTargetId}
+                    onCreateList={onCreateList}
+                    containedIn={known ? listsHolding(known.id) : []}
+                    savedIn={savedIn[`d${r.id}`]?.listId ?? null}
+                    busy={adding === r.id}
+                    onSave={(listId: string) => add(r, listId)}
+                    onUndo={(listId: string) => {
+                      const saved = savedIn[`d${r.id}`];
+                      if (saved) {
+                        // brand new to the library → undo removes it entirely
+                        if (saved.wasNew) onDeleteVinyl(saved.vinylId);
+                        else onRemoveFromList(saved.vinylId, listId);
+                      }
+                      setSavedIn((m) => {
+                        const next = { ...m };
+                        delete next[`d${r.id}`];
+                        return next;
+                      });
+                    }}
+                  />
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>

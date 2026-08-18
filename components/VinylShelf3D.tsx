@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { PerspectiveCamera } from "@react-three/drei";
-import { forwardRef, Suspense, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, memo, Suspense, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { useControls } from "leva";
 import type { Vinyl } from "@/lib/types";
@@ -95,6 +95,9 @@ type Props = {
   vinilos: Vinyl[];
   onOpen: (v: Vinyl) => void;
   onActiveChange?: (v: Vinyl) => void;
+  /** reports how wide the centred cover actually is, so the page can keep its
+   *  side panels clear of it at any viewport */
+  onCoverHalfWidth?: (px: number) => void;
 };
 
 export type VinylShelfHandle = {
@@ -107,9 +110,15 @@ export type VinylShelfHandle = {
 
 const SLEEVE_W = 3;
 const SLEEVE_H = 3;
+const BACKGROUND = "#0a0a0a";
+// reveal: each sleeve fades + rises into place once its cover has decoded,
+// staggered outwards from the centre of the shelf.
+const REVEAL_MS = 560;
+const REVEAL_STAGGER_MS = 38;
+const REVEAL_STAGGER_MAX = 300;
 
 const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
-  { vinilos, onOpen, onActiveChange },
+  { vinilos, onOpen, onActiveChange, onCoverHalfWidth },
   ref,
 ) {
   // animation tuning (fixed)
@@ -226,6 +235,19 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       return Math.max(0, Math.min(N - 1, v));
     };
 
+    // The shelf must never come to rest between two records: after the last
+    // wheel event it magnetises to the nearest one, like a detented dial.
+    let snapTimer: ReturnType<typeof setTimeout> | null = null;
+    const snapToNearest = () => {
+      snapTimer = null;
+      if (openTarget.current > 0) return;
+      target.current = clampToList(Math.round(target.current));
+    };
+    const scheduleSnap = () => {
+      if (snapTimer) clearTimeout(snapTimer);
+      snapTimer = setTimeout(snapToNearest, 90);
+    };
+
     const onWheel = (e: WheelEvent) => {
       const t = e.target as HTMLElement | null;
       if (!t) return;
@@ -237,6 +259,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       e.preventDefault();
       const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       target.current = clampToList(target.current + delta * 0.005);
+      scheduleSnap();
     };
     // attach to window so overlays / backdrops don't block scrolling
     window.addEventListener("wheel", onWheel, { passive: false });
@@ -282,12 +305,13 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
 
     const onKey = (e: KeyboardEvent) => {
       if (openTarget.current > 0) return;
-      if (e.key === "ArrowRight") target.current = clampToList(target.current + 1);
-      else if (e.key === "ArrowLeft") target.current = clampToList(target.current - 1);
+      if (e.key === "ArrowRight") target.current = clampToList(Math.round(target.current) + 1);
+      else if (e.key === "ArrowLeft") target.current = clampToList(Math.round(target.current) - 1);
     };
     window.addEventListener("keydown", onKey);
 
     return () => {
+      if (snapTimer) clearTimeout(snapTimer);
       window.removeEventListener("wheel", onWheel);
       el.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointermove", onMove);
@@ -334,7 +358,12 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
           toPos={[-7.5, 0.5, 14]}
           toIntensity={2}
         />
-        <CameraRig openProgressRef={openProgress} baseZ={zoom} />
+        <CameraRig
+          openProgressRef={openProgress}
+          baseZ={zoom}
+          fov={fov}
+          onCoverHalfWidth={onCoverHalfWidth}
+        />
 
         <Suspense fallback={null}>
           <Strip
@@ -368,7 +397,10 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   );
 });
 
-export default VinylShelf3D;
+// Memoised: the page re-renders on every playback tick, and without this the
+// whole scene tree would be reconciled each time — the transport animation
+// stuttered against it.
+export default memo(VinylShelf3D);
 
 function Strip({
   vinilos,
@@ -433,6 +465,11 @@ function Strip({
   const modulus = enableLoop ? N * copies : Number.POSITIVE_INFINITY;
 
   const stripGroupRef = useRef<THREE.Group>(null);
+  // Only ONE sleeve can be under the cursor. r3f's pointerOut doesn't always
+  // arrive (the sleeve slides away, the pointer leaves over a DOM overlay…),
+  // which used to leave sleeves stuck in hover and visibly raised several
+  // positions away from the centre. A single shared id makes that impossible.
+  const hoveredRef = useRef<number | null>(null);
 
   // track the cursor so we can re-fire pointermove on the canvas every time
   // the carousel moves — otherwise r3f wouldn't update hover state for the
@@ -447,6 +484,7 @@ function Strip({
     };
     const onLeave = () => {
       pointerXY.current.inside = false;
+      hoveredRef.current = null;
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerleave", onLeave);
@@ -503,7 +541,19 @@ function Strip({
     // sleeve has just slid under the cursor.
     const movedEnough = Math.abs(currentRef.current - lastCurrent.current) > 0.0005;
     lastCurrent.current = currentRef.current;
-    if (movedEnough && pointerXY.current.inside) {
+    // Only re-raycast when the cursor is actually over the canvas. Without this
+    // check the synthetic move ignores the DOM chrome on top, so resting the
+    // pointer on the transport buttons hover-lifted whichever sleeve happened
+    // to sit behind them.
+    const overCanvas =
+      pointerXY.current.inside &&
+      document.elementFromPoint(pointerXY.current.x, pointerXY.current.y) ===
+        gl.domElement;
+    if (!overCanvas && hoveredRef.current !== null) {
+      hoveredRef.current = null;
+      document.body.style.cursor = "";
+    }
+    if (movedEnough && overCanvas) {
       gl.domElement.dispatchEvent(
         new PointerEvent("pointermove", {
           bubbles: true,
@@ -541,30 +591,13 @@ function Strip({
             flipEasing={flipEasing}
             hoverSpring={hoverSpring}
             hoverLift={hoverLift}
+            hoveredRef={hoveredRef}
             onClick={() => onClick(v)}
           />
         )),
       )}
     </group>
   );
-}
-
-function dominantFromPalette(palette: string[]): string {
-  if (!palette.length) return "#888";
-  const scored = palette
-    .map((hex) => {
-      const r = parseInt(hex.slice(1, 3), 16) / 255;
-      const g = parseInt(hex.slice(3, 5), 16) / 255;
-      const b = parseInt(hex.slice(5, 7), 16) / 255;
-      const max = Math.max(r, g, b);
-      const min = Math.min(r, g, b);
-      const lum = (max + min) / 2;
-      const sat = max === min ? 0 : (max - min) / (1 - Math.abs(2 * lum - 1));
-      const score = sat * (1 - Math.abs(lum - 0.5) * 1.5);
-      return { hex, score };
-    })
-    .sort((a, b) => b.score - a.score);
-  return scored[0].hex;
 }
 
 function Sleeve({
@@ -587,6 +620,7 @@ function Sleeve({
   flipEasing,
   hoverSpring,
   hoverLift,
+  hoveredRef,
   onClick,
 }: {
   vinyl: Vinyl;
@@ -608,6 +642,7 @@ function Sleeve({
   flipEasing: EasingName;
   hoverSpring: number;
   hoverLift: number;
+  hoveredRef: React.MutableRefObject<number | null>;
   onClick: () => void;
 }) {
   const url = useMemo(() => coverFor(vinyl), [vinyl]);
@@ -634,8 +669,9 @@ function Sleeve({
   // viewing distance, but ~5× fewer texture units per vinyl.
   // edge colour: prefer the colour sampled from the cover's border pixels
   // (best blend with the printed art), fall back to palette while loading
-  const paletteColor = useMemo(() => dominantFromPalette(vinyl.palette), [vinyl.palette]);
-  const edgeColor = sampledEdge ?? paletteColor;
+  // While the cover is still decoding the sleeve is fully transparent, so the
+  // placeholder colour must read as "background", never as a light grey box.
+  const edgeColor = sampledEdge ?? BACKGROUND;
   const edgeMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
@@ -680,7 +716,11 @@ function Sleeve({
 
   const meshGroupRef = useRef<THREE.Group>(null);
   const hoverRef = useRef(0); // 0..1 smooth hover progress
-  const cursorOverRef = useRef(false);
+  // reveal 0..1 — driven once the cover texture is ready, so a sleeve is never
+  // shown as an empty box waiting for its image
+  const revealRef = useRef(0);
+  const revealStartRef = useRef<number | null>(null);
+  const transparentRef = useRef(false);
 
   useFrame(() => {
     if (!meshGroupRef.current) return;
@@ -689,6 +729,44 @@ function Sleeve({
     if (delta > modulus / 2) delta -= modulus;
     if (delta < -modulus / 2) delta += modulus;
     const x = delta * spacing;
+
+    // ---- reveal (fade + rise), staggered outwards from the centre ----
+    if (texture && revealStartRef.current === null) {
+      revealStartRef.current =
+        performance.now() +
+        Math.min(REVEAL_STAGGER_MAX, Math.abs(x) * REVEAL_STAGGER_MS);
+    }
+    if (revealStartRef.current !== null && revealRef.current < 1) {
+      const p = Math.max(
+        0,
+        Math.min(1, (performance.now() - revealStartRef.current) / REVEAL_MS),
+      );
+      revealRef.current = EASINGS.easeOutCubic(p);
+    }
+    const reveal = revealRef.current;
+    if (reveal < 1) {
+      // Fading in, but STILL writing depth: three.js draws transparent meshes
+      // back-to-front without it, so the fanned sleeves showed through each
+      // other and read as overlapping — worst on the crowded right-hand side.
+      transparentRef.current = true;
+      for (const m of materials) {
+        m.transparent = true;
+        m.depthWrite = true;
+        m.opacity = reveal;
+      }
+    } else if (transparentRef.current) {
+      // settled: back to opaque so the strip renders/sorts as usual
+      transparentRef.current = false;
+      for (const m of materials) {
+        m.transparent = false;
+        m.opacity = 1;
+        m.depthWrite = true;
+      }
+    }
+    if (reveal <= 0.001) {
+      if (meshGroupRef.current.visible) meshGroupRef.current.visible = false;
+      return;
+    }
 
     // fast skip: sleeves comfortably off-screen don't need per-frame math.
     // We only check 1 unit beyond visibleX to allow margin for the lift.
@@ -713,12 +791,14 @@ function Sleeve({
 
     const centerWeight = Math.max(0, 1 - Math.abs(x) / (spacing * 0.6));
 
-    // hover target: lift when this sleeve is centred (spotlight) OR when the
-    // cursor is over it. The carousel will smoothly pass the lift from one
-    // sleeve to the next as the active changes with the arrows.
+    // Two sources of lift, smoothed differently on purpose:
+    //   spotlight — a pure function of the distance to the centre, so the lift
+    //   travels with the shelf. Springing it left the previous sleeve still
+    //   raised several positions behind while you kept pressing Next.
+    //   cursor — springs, because it switches on and off abruptly.
     const spotlight = Math.max(0, Math.min(1, (centerWeight - 0.35) / 0.5));
-    const target = Math.max(spotlight, cursorOverRef.current ? 1 : 0);
-    hoverRef.current += (target - hoverRef.current) * hoverSpring;
+    const cursorOver = hoveredRef.current === baseIndex;
+    hoverRef.current += ((cursorOver ? 1 : 0) - hoverRef.current) * hoverSpring;
 
     // Sharp flip: only sleeves VERY close to center (|x| < spacing * 0.15)
     // are flipped — sleeves moving in or out of the centre stay spine-forward
@@ -731,7 +811,7 @@ function Sleeve({
 
     // hover lift fades out as we open
     // easeInOutQuint — strong S-curve, very soft entry AND exit
-    const h = hoverRef.current;
+    const h = Math.max(spotlight, hoverRef.current);
     const hoverEased =
       h < 0.5 ? 16 * h * h * h * h * h : 1 - Math.pow(-2 * h + 2, 5) / 2;
     const hoverLiftValue = hoverEased * hoverLift * (1 - open);
@@ -739,7 +819,11 @@ function Sleeve({
     // lift uses a softer curve so neighbours still rise nicely as they slide
     // toward centre — only the FLIP is sharply gated, not the lift itself
     const liftReadyness = Math.pow(centerWeight, 1.4);
-    meshGroupRef.current.position.y = movePhase * liftReadyness * 4.4 + hoverLiftValue;
+    // the reveal also lifts the sleeve the last few millimetres into the strip
+    meshGroupRef.current.position.y =
+      movePhase * liftReadyness * 4.4 + hoverLiftValue - (1 - reveal) * 0.3;
+    const s = 0.97 + reveal * 0.03;
+    meshGroupRef.current.scale.set(s, s, 1);
 
     // non-active sleeves fade away while opened
     const opacityFactor = open > 0.05
@@ -752,7 +836,10 @@ function Sleeve({
   });
 
   return (
-    <group ref={meshGroupRef}>
+    // Starts hidden: positions are assigned in useFrame, so the very first
+    // painted frame would otherwise show every sleeve piled at the origin
+    // before they snap into the strip.
+    <group ref={meshGroupRef} visible={false}>
       <mesh
         onClick={(e) => {
           e.stopPropagation();
@@ -760,11 +847,11 @@ function Sleeve({
         }}
         onPointerOver={(e) => {
           e.stopPropagation();
-          cursorOverRef.current = true;
+          hoveredRef.current = baseIndex;
           document.body.style.cursor = "pointer";
         }}
         onPointerOut={() => {
-          cursorOverRef.current = false;
+          if (hoveredRef.current === baseIndex) hoveredRef.current = null;
           document.body.style.cursor = "";
         }}
         material={materials}
@@ -838,16 +925,33 @@ function FogRig({
 function CameraRig({
   openProgressRef,
   baseZ,
+  fov,
+  onCoverHalfWidth,
 }: {
   openProgressRef: React.MutableRefObject<number>;
   baseZ: number;
+  fov: number;
+  /** half the on-screen width of a centred sleeve, in CSS pixels */
+  onCoverHalfWidth?: (px: number) => void;
 }) {
   const { camera, size } = useThree();
+  const lastReported = useRef(-1);
   useFrame(() => {
     const aspect = size.width / size.height;
     const openZ = aspect > 1.5 ? baseZ + 1.5 : baseZ + 4;
     const t = EASINGS.easeInOutCubic(openProgressRef.current);
     camera.position.z = baseZ * (1 - t) + openZ * t;
+
+    // Project the sleeve to screen space so the UI can lay itself out around
+    // the real cover instead of guessing with percentages.
+    if (!onCoverHalfWidth) return;
+    const visibleHeight =
+      2 * Math.tan((fov * Math.PI) / 360) * Math.abs(camera.position.z);
+    const halfPx = (SLEEVE_H / visibleHeight) * size.height * 0.5;
+    if (Math.abs(halfPx - lastReported.current) > 1.5) {
+      lastReported.current = halfPx;
+      onCoverHalfWidth(halfPx);
+    }
   });
   return null;
 }

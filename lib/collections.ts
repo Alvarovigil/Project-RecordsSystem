@@ -73,6 +73,24 @@ export function saveActiveId(id: string) {
   localStorage.setItem(ACTIVE_KEY, id);
 }
 
+/**
+ * "Mi Colección" is DERIVED, never stored: it is everything in your library
+ * that isn't wished. A record saved into any custom list therefore shows up
+ * here too, and taking it out of a list never makes it disappear from the
+ * library. The wishlist is the exception — it lives on its own and a record
+ * is either owned or wished, never both.
+ */
+export function resolveCollections(cols: Collection[], allVinylIds: string[]): Collection[] {
+  const wished = new Set(cols.find((c) => c.id === WISHLIST_ID)?.vinylIds ?? []);
+  const owned = allVinylIds.filter((id) => !wished.has(id));
+  return cols.map((c) => (c.id === DEFAULT_ID ? { ...c, vinylIds: owned } : c));
+}
+
+/** Neither of the two predefined lists can be deleted. */
+export function isDeletable(id: string) {
+  return id !== DEFAULT_ID && id !== WISHLIST_ID;
+}
+
 export function newCollection(name: string): Collection {
   return { id: `col-${Date.now()}`, name, vinylIds: [], sortBy: "custom" };
 }

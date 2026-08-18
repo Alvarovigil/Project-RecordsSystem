@@ -193,7 +193,7 @@
     ],
     "discogsId": 35578378,
     "cover": "/covers/rosalia-lux-35578378.jpg",
-    "previewUrl": null,
+    "previewUrl": "/previews/rosalia-lux-35578378.mp3",
     "tracklist": [
       {
         "position": "",
@@ -537,7 +537,7 @@
     ],
     "discogsId": 23206178,
     "cover": "/covers/rosalia-motomami-23206178.jpg",
-    "previewUrl": null,
+    "previewUrl": "/previews/rosalia-motomami-23206178.mp3",
     "tracklist": [
       {
         "position": "A1",
@@ -2774,7 +2774,7 @@
     ],
     "discogsId": 31803860,
     "cover": "/covers/noga-erez-the-vandalist-31803860.jpg",
-    "previewUrl": null,
+    "previewUrl": "/previews/noga-erez-the-vandalist-31803860.mp3",
     "tracklist": [
       {
         "position": "A1",
@@ -2855,6 +2855,82 @@
         "position": "B8",
         "title": "Oh, Thank You!",
         "duration": ""
+      }
+    ]
+  },
+  {
+    "id": "rosalia-el-mal-querer-12746598",
+    "title": "El Mal Querer",
+    "artist": "Rosalía",
+    "year": 2018,
+    "genre": "Electronic",
+    "label": "Sony Music",
+    "country": "Spain",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 12746598,
+    "cover": "/covers/rosalia-el-mal-querer-12746598.jpg",
+    "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/46/56/69/46566970-f20e-553c-6db4-ce4934b49aa6/mzaf_16288982831865165666.plus.aac.p.m4a",
+    "tracklist": [
+      {
+        "position": "A1",
+        "title": "Malamente (Cap.1: Augurio)",
+        "duration": "2:30"
+      },
+      {
+        "position": "A2",
+        "title": "Que No Salga La Luna (Cap.2: Boda)",
+        "duration": "4:29"
+      },
+      {
+        "position": "A3",
+        "title": "Pienso En Tu Mirá (Cap.3: Celos)",
+        "duration": "3:13"
+      },
+      {
+        "position": "A4",
+        "title": "De Aquí No Sales (Cap.4: Disputa)",
+        "duration": "2:24"
+      },
+      {
+        "position": "A5",
+        "title": "Reniego (Cap.5: Lamento)",
+        "duration": "3:28"
+      },
+      {
+        "position": "A6",
+        "title": "Preso (Cap.6: Clausura)",
+        "duration": "0:40"
+      },
+      {
+        "position": "B1",
+        "title": "Bagdad (Cap.7: Liturgia)",
+        "duration": "3:02"
+      },
+      {
+        "position": "B2",
+        "title": "Di Mi Nombre (Cap.8: Éxtasis)",
+        "duration": "2:42"
+      },
+      {
+        "position": "B3",
+        "title": "Nana (Cap.9: Concepción)",
+        "duration": "3:17"
+      },
+      {
+        "position": "B4",
+        "title": "Maldición (Cap.10: Cordura)",
+        "duration": "2:55"
+      },
+      {
+        "position": "B5",
+        "title": "A Ningún Hombre (Cap.11: Poder)",
+        "duration": "1:34"
       }
     ]
   }

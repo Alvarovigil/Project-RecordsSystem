@@ -10,7 +10,12 @@
       "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --env-filter ' *)",
       "Bash(awk '/useEffect.*el = containerRef/,/}, \\\\[/' /Users/alvarorodriguezvigil/Freelance/Personal/Vinilos/components/VinylShelf3D.tsx)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); rocks=[v for v in d if 'rock' in \\(v.get\\('genre'\\) or ''\\).lower\\(\\)]; print\\(f'Rock vinyls \\({len\\(rocks\\)}\\):'\\); [print\\(f'  - {v[\\\\\"artist\\\\\"]} — {v[\\\\\"title\\\\\"]} \\({v.get\\(\\\\\"genre\\\\\"\\)}\\)'\\) for v in rocks]\")",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); ids=[v['id'] for v in d if 'rock' in \\(v.get\\('genre'\\) or ''\\).lower\\(\\)]; print\\(json.dumps\\(ids\\)\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); ids=[v['id'] for v in d if 'rock' in \\(v.get\\('genre'\\) or ''\\).lower\\(\\)]; print\\(json.dumps\\(ids\\)\\)\")",
+      "Bash(grep -E \"\\\\.\\(tsx|ts|css\\)$\")",
+      "Bash(curl -s \"https://api.deezer.com/search?q=$\\(node -e \"console.log\\(encodeURIComponent\\('Various Guardians Of The Galaxy Awesome Mix Vol. 1'\\)\\)\"\\)&limit=25\")",
+      "Bash(curl -s \"https://api.deezer.com/search?q=$\\(node -e \"console.log\\(encodeURIComponent\\('Guardians of the Galaxy soundtrack'\\)\\)\"\\)&limit=5\")",
+      "Bash(md5 public/previews/*.mp3)",
+      "Bash(curl -s -o /dev/null -w \"status:%{http_code} type:%{content_type} bytes:%{size_download}\\\\n\" http://localhost:3000/previews/rosalia-motomami-23206178.mp3)"
     ]
   }
 }

@@ -2,11 +2,13 @@ import { NextRequest } from "next/server";
 import { writeFile, mkdir, readFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { Vinyl } from "@/lib/types";
+import { downloadDeezerPreview } from "@/lib/preview";
 
 const TOKEN = process.env.DISCOGS_TOKEN;
 const UA = "VinilosApp/0.1 +local";
 const DATA_PATH = resolve(process.cwd(), "data/vinilos.json");
 const COVERS_DIR = resolve(process.cwd(), "public/covers");
+const PREVIEWS_DIR = resolve(process.cwd(), "public/previews");
 
 function slugify(s: string) {
   return s
@@ -90,7 +92,15 @@ export async function POST(req: NextRequest) {
     } catch {}
   }
 
-  const previewUrl = await searchItunesPreview(artist, title);
+  // preview: iTunes first, then Deezer (downloaded locally — its URLs expire)
+  let previewUrl = await searchItunesPreview(artist, title);
+  if (!previewUrl) {
+    await mkdir(PREVIEWS_DIR, { recursive: true });
+    const dest = resolve(PREVIEWS_DIR, `${id}.mp3`);
+    if (await downloadDeezerPreview(artist, title, dest)) {
+      previewUrl = `/previews/${id}.mp3`;
+    }
+  }
 
   const vinyl: Vinyl = {
     id,
