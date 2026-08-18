@@ -146,12 +146,31 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     },
 
     async upsertRelease(release) {
-      // catalogue writes go through the server route, which holds the elevated
-      // key; from the browser we only read it back
-      await fetch("/api/catalogue/release", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(release),
+      const userId = await requireUser();
+      // The catalogue is shared: if the record is already there we reuse it
+      // rather than making a private copy — that is what lets us answer "who
+      // else has this record?".
+      const { data: existing } = await sb
+        .from("releases")
+        .select("id")
+        .eq("slug", release.id)
+        .maybeSingle();
+      if (existing) return release;
+
+      await sb.from("releases").insert({
+        slug: release.id,
+        discogs_id: release.discogsId,
+        title: release.title,
+        artist: release.artist,
+        year: release.year || null,
+        genre: release.genre || null,
+        label: release.label || null,
+        country: release.country || null,
+        cover_url: release.cover,
+        preview_url: release.previewUrl,
+        palette: release.palette,
+        tracklist: release.tracklist,
+        created_by: userId,
       });
       return release;
     },
@@ -339,6 +358,17 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
           avatarUrl: r.profiles.avatar_url,
         },
       }));
+    },
+
+    async releasesOfList(listId) {
+      const { data } = await sb
+        .from("list_items")
+        .select("position, releases!inner(*)")
+        .eq("list_id", listId)
+        .order("position");
+      return ((data ?? []) as unknown as { releases: ReleaseRow }[]).map((r) =>
+        toVinyl(r.releases),
+      );
     },
 
     async follow(kind, id) {

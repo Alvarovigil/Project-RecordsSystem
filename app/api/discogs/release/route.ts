@@ -73,12 +73,17 @@ export async function POST(req: NextRequest) {
   const title = cleanName(release.title ?? "Untitled");
   const id = `${slugify(artist)}-${slugify(title)}-${releaseId}`;
 
-  await mkdir(COVERS_DIR, { recursive: true });
-  // cover
+  // Vercel's filesystem is read-only: there we serve the artwork through our
+  // own image proxy instead of keeping a copy on disk.
+  const canWriteToDisk = !process.env.VERCEL;
+
+  if (canWriteToDisk) await mkdir(COVERS_DIR, { recursive: true });
   let coverPath: string | null = null;
   const imgUrl: string | undefined =
     release.images?.find((i: any) => i.type === "primary")?.uri ?? release.images?.[0]?.uri;
-  if (imgUrl) {
+  if (imgUrl && !canWriteToDisk) {
+    coverPath = `/api/cover?url=${encodeURIComponent(imgUrl)}`;
+  } else if (imgUrl) {
     try {
       const imgRes = await fetch(imgUrl, { headers: { "User-Agent": UA } });
       if (imgRes.ok) {
@@ -94,7 +99,7 @@ export async function POST(req: NextRequest) {
 
   // preview: iTunes first, then Deezer (downloaded locally — its URLs expire)
   let previewUrl = await searchItunesPreview(artist, title);
-  if (!previewUrl) {
+  if (!previewUrl && canWriteToDisk) {
     await mkdir(PREVIEWS_DIR, { recursive: true });
     const dest = resolve(PREVIEWS_DIR, `${id}.mp3`);
     if (await downloadDeezerPreview(artist, title, dest)) {
@@ -121,8 +126,9 @@ export async function POST(req: NextRequest) {
     })),
   };
 
-  // persist to data/vinilos.json (append if not present)
-  try {
+  // The local catalogue file is a development convenience; in production the
+  // record is stored in Supabase by the caller.
+  if (canWriteToDisk) try {
     const raw = await readFile(DATA_PATH, "utf8");
     const list: Vinyl[] = JSON.parse(raw);
     if (!list.some((v) => v.id === vinyl.id)) {

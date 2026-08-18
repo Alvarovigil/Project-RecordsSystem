@@ -10,41 +10,27 @@ import CollectionsOverlay from "@/components/CollectionsOverlay";
 import VinylEditOverlay from "@/components/VinylEditOverlay";
 import CommunityBridge from "@/components/CommunityBridge";
 import MarqueeText from "@/components/MarqueeText";
-import data from "@/data/vinilos.json";
+import AccountMenu from "@/components/AccountMenu";
+import Onboarding from "@/components/Onboarding";
+import { useLibrary } from "@/hooks/useLibrary";
+import { usePlayback } from "@/hooks/usePlayback";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
-import { previewSrc } from "@/lib/audio";
 import {
   type Collection,
   type SortMode,
-  loadCollections,
-  saveCollections,
-  loadActiveId,
-  saveActiveId,
-  newCollection,
   sortedVinylIds,
-  resolveCollections,
-  isDeletable,
   DEFAULT_ID,
   WISHLIST_ID,
 } from "@/lib/collections";
 
-/**
- * Fully lets go of an audio element: pausing alone leaves the download running,
- * and abandoned streams eat the browser's per-host connection budget until the
- * next preview can't get through.
- */
-function releaseAudio(a: HTMLAudioElement | null) {
-  if (!a) return;
-  a.pause();
-  a.removeAttribute("src");
-  a.load();
-}
-
 export default function Home() {
-  const [allVinilos, setAllVinilos] = useState<Vinyl[]>(data as Vinyl[]);
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const [activeCollectionId, setActiveCollectionId] = useState<string>(DEFAULT_ID);
+  // Data lives behind one repository (localStorage today, Supabase once you
+  // sign in). This page only orchestrates: it never touches storage.
+  const lib = useLibrary();
+  const allVinilos = lib.releases;
+  const activeCollectionId = lib.activeListId;
+
   const [collectionsOpen, setCollectionsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [collectionFading, setCollectionFading] = useState(false);
@@ -66,38 +52,28 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [activeCollectionId]);
 
-  // hydrate collections from localStorage
-  useEffect(() => {
-    const allIds = (data as Vinyl[]).map((v) => v.id);
-    const cols = loadCollections(allIds);
-    setCollections(cols);
-    const aid = loadActiveId();
-    setActiveCollectionId(cols.some((c) => c.id === aid) ? aid : cols[0].id);
-  }, []);
-
-
-  // current collection's vinyls (filtered + sorted)
-  // Wishlist and Mi Colección are mutually exclusive: a vinyl is owned (Mi
-  // Colección + custom lists) OR wished (Wishlist), never both.
-  // every consumer sees the same resolved lists, so counts, "already in this
-  // list" checks and the shelf can't disagree about what Mi Colección holds.
-  // Memoised because their identity feeds the 3D shelf: recreating these on
-  // every playback tick would re-render the whole scene tree.
-  const resolvedCollections = useMemo(
-    () => resolveCollections(collections, allVinilos.map((v) => v.id)),
-    [collections, allVinilos],
+  // The overlays speak the older Collection shape; adapting here keeps them
+  // untouched while the data underneath moves to the repository.
+  const resolvedCollections = useMemo<Collection[]>(
+    () =>
+      lib.lists.map((l) => ({
+        id: l.id,
+        name: l.title,
+        vinylIds: lib.idsOf(l.id),
+        sortBy: l.sortBy,
+      })),
+    [lib.lists, lib.idsOf],
   );
-  const effectiveCollection =
+  const activeCollection =
     resolvedCollections.find((c) => c.id === activeCollectionId) ?? null;
-  const activeCollection = effectiveCollection;
   const vinilos = useMemo(
     () =>
-      effectiveCollection
-        ? sortedVinylIds(effectiveCollection, allVinilos)
+      activeCollection
+        ? sortedVinylIds(activeCollection, allVinilos)
             .map((id) => allVinilos.find((v) => v.id === id))
             .filter((v): v is Vinyl => !!v)
         : allVinilos,
-    [effectiveCollection, allVinilos],
+    [activeCollection, allVinilos],
   );
 
   // Hold the loading card until the first covers have actually decoded, so the
@@ -105,7 +81,7 @@ export default function Home() {
   // blinks feels broken) and caps at 3.5s (a slow network shouldn't block).
   const bootedRef = useRef(false);
   useEffect(() => {
-    if (bootedRef.current || collections.length === 0) return;
+    if (bootedRef.current || !lib.ready) return;
     bootedRef.current = true;
     const started = performance.now();
     let settled = false;
@@ -129,7 +105,7 @@ export default function Home() {
       img.onerror = tick;
       img.src = u;
     });
-  }, [collections, vinilos]);
+  }, [lib.ready, vinilos]);
 
   // The side info must never sit on the cover. The shelf measures how wide the
   // centred sleeve really is (it depends on fov, camera distance and viewport)
@@ -175,140 +151,52 @@ export default function Home() {
 
   // Accepts an updater so operations that chain in the same tick — creating a
   // list and immediately saving a record into it — both see fresh state.
-  const updateCollections = useCallback(
-    (next: Collection[] | ((prev: Collection[]) => Collection[])) => {
-      setCollections((prev) => {
-        const value = typeof next === "function" ? next(prev) : next;
-        saveCollections(value);
-        return value;
-      });
-    },
-    [],
-  );
-
   const handleCreateCollection = (name: string) => {
-    const c = newCollection(name);
-    updateCollections((prev) => [...prev, c]);
-    return c.id;
+    // the picker saves into the list it just created, in the same gesture
+    const tempId = `pending-${Date.now()}`;
+    void lib.createList(name).then((id) => lib.activate(id) as unknown as void);
+    return tempId;
   };
 
-  /** Save a record — new to the library or already in it — into a list. */
-  const handleSaveToList = (v: Vinyl, listId: string) => {
-    setAllVinilos((prev) => (prev.some((x) => x.id === v.id) ? prev : [...prev, v]));
-    handleAddVinylTo(listId, v.id);
-  };
-  const handleRenameCollection = (id: string, name: string) => {
-    updateCollections(collections.map((c) => (c.id === id ? { ...c, name } : c)));
-  };
-  const handleDeleteCollection = (id: string) => {
-    if (!isDeletable(id)) return; // the two predefined lists are permanent
-    const next = collections.filter((c) => c.id !== id);
-    updateCollections(next);
-    if (id === activeCollectionId) {
-      const newActive = next[0]?.id ?? DEFAULT_ID;
-      setActiveCollectionId(newActive);
-      saveActiveId(newActive);
-    }
-  };
+  const handleRenameCollection = (id: string, name: string) => void lib.renameList(id, name);
+  const handleDeleteCollection = (id: string) => void lib.deleteList(id);
+
   const handleActivateCollection = (id: string) => {
     // close any open vinyl when switching list so the detail view doesn't
     // linger over a vinyl that no longer exists in the new collection
     if (open) handleClose();
-    setActiveCollectionId(id);
-    saveActiveId(id);
+    lib.activate(id);
   };
+
   const handleAddVinylTo = (colId: string, vinylId: string) => {
-    const addingToWishlist = colId === WISHLIST_ID;
-    updateCollections((prev) =>
-      prev.map((c) => {
-        // Mi Colección isn't stored: being there just means being in the
-        // library and not wished, so all it takes is leaving the wishlist
-        if (colId === DEFAULT_ID) {
-          return c.id === WISHLIST_ID
-            ? { ...c, vinylIds: c.vinylIds.filter((id) => id !== vinylId) }
-            : c;
-        }
-        if (c.id === colId) {
-          return c.vinylIds.includes(vinylId)
-            ? c
-            : { ...c, vinylIds: [...c.vinylIds, vinylId] };
-        }
-        // mutually exclusive with wishlist
-        if (addingToWishlist && c.id !== WISHLIST_ID) {
-          return c.vinylIds.includes(vinylId)
-            ? { ...c, vinylIds: c.vinylIds.filter((id) => id !== vinylId) }
-            : c;
-        }
-        if (!addingToWishlist && c.id === WISHLIST_ID) {
-          return c.vinylIds.includes(vinylId)
-            ? { ...c, vinylIds: c.vinylIds.filter((id) => id !== vinylId) }
-            : c;
-        }
-        return c;
-      }),
-    );
+    const release = allVinilos.find((v) => v.id === vinylId);
+    if (release) void lib.saveToList(release, colId);
   };
 
-  const handleRemoveVinylFromActive = (vinylId: string) => {
-    updateCollections(
-      collections.map((c) =>
-        c.id === activeCollectionId
-          ? { ...c, vinylIds: c.vinylIds.filter((id) => id !== vinylId) }
-          : c,
-      ),
-    );
-  };
+  const handleRemoveVinylFromActive = (vinylId: string) =>
+    void lib.removeFromList(activeCollectionId, vinylId);
 
-  const handleDeleteVinylPermanently = (vinylId: string) => {
-    // remove from master list AND from every collection
-    setAllVinilos((prev) => prev.filter((v) => v.id !== vinylId));
-    updateCollections(
-      collections.map((c) => ({
-        ...c,
-        vinylIds: c.vinylIds.filter((id) => id !== vinylId),
-      })),
-    );
-    // persist deletion to the JSON via a small API call (optional for now)
-    fetch("/api/vinyl/" + encodeURIComponent(vinylId), { method: "DELETE" }).catch(() => {});
-  };
+  const handleDeleteVinylPermanently = (vinylId: string) => void lib.deleteRelease(vinylId);
 
-  const handleSetSort = (colId: string, sortBy: SortMode) => {
-    updateCollections(
-      collections.map((c) => (c.id === colId ? { ...c, sortBy } : c)),
-    );
-  };
+  const handleSetSort = (colId: string, sortBy: SortMode) => void lib.setListSort(colId, sortBy);
 
-  const handleReorderVinyl = (colId: string, fromIdx: number, toIdx: number) => {
-    updateCollections(
-      collections.map((c) => {
-        if (c.id !== colId) return c;
-        const ids = [...c.vinylIds];
-        const [moved] = ids.splice(fromIdx, 1);
-        ids.splice(toIdx, 0, moved);
-        return { ...c, vinylIds: ids, sortBy: "custom" };
-      }),
-    );
-  };
+  const handleReorderVinyl = (colId: string, fromIdx: number, toIdx: number) =>
+    void lib.reorderList(colId, fromIdx, toIdx);
 
   const handleToggleVinyl = (colId: string, vinylId: string) => {
-    updateCollections(
-      collections.map((c) => {
-        if (c.id !== colId) return c;
-        const has = c.vinylIds.includes(vinylId);
-        return {
-          ...c,
-          vinylIds: has ? c.vinylIds.filter((id) => id !== vinylId) : [...c.vinylIds, vinylId],
-        };
-      }),
-    );
+    const inList = lib.idsOf(colId).includes(vinylId);
+    if (inList) void lib.removeFromList(colId, vinylId);
+    else handleAddVinylTo(colId, vinylId);
   };
-  const [playing, setPlaying] = useState(false);
-  const [nowPlaying, setNowPlaying] = useState<Vinyl | null>(null);
-  // the stream is opening: "En pausa" would be a lie during those milliseconds
-  const [loadingPreview, setLoadingPreview] = useState(false);
-  // only a pause YOU asked for lets the transport re-sync with the shelf; a
-  // stalled stream or a preview reaching its end must not wipe what you chose
-  const [pausedByUser, setPausedByUser] = useState(false);
+
+  /** Save a record — new to the library or already in it — into a list. */
+  const handleSaveToList = (v: Vinyl, listId: string) => void lib.saveToList(v, listId);
+
+  // sound is its own concern, in its own hook
+  const audio = usePlayback();
+  const { nowPlaying, playing } = audio;
+  const loadingPreview = audio.loading;
+  const playPreview = audio.play;
   const shelfRef = useRef<VinylShelfHandle>(null);
 
   // a record picked in the grid opens once the shelf has mounted
@@ -372,75 +260,19 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleClose, searchOpen, open]);
 
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  // NOTE: no neighbour pre-loading. It used to warm ±2 previews on every active
-  // change, so browsing left dozens of 1MB downloads queued on the browser's
-  // 6-connections-per-host budget — and the request for the preview you
-  // actually pressed Play on ended up starved behind them (silent playback).
-  // The preview streams fast enough on demand.
-
-  // What SOUNDS is its own state, independent from what you are looking at:
-  // browsing the shelf never touches playback. Only Play and the transport
-  // arrows change it.
-  const playPreview = useCallback((v: Vinyl) => {
-    if (!v.previewUrl) return;
-    releaseAudio(currentAudioRef.current);
-    const audio = new Audio(previewSrc(v.previewUrl));
-    audio.preload = "auto";
-    audio.addEventListener("playing", () => setLoadingPreview(false));
-    audio.addEventListener("ended", () => {
-      setPlaying(false);
-      setLoadingPreview(false);
-    });
-    audio.addEventListener("error", () => {
-      setPlaying(false);
-      setLoadingPreview(false);
-    });
-    currentAudioRef.current = audio;
-    setNowPlaying(v);
-    setLoadingPreview(true);
-    setPausedByUser(false);
-
-    const start = () =>
-      audio
-        .play()
-        .then(() => {
-          if (currentAudioRef.current === audio) setPlaying(true);
-        })
-        .catch(() => false);
-    // play() can reject while the stream is still opening; in that case wait
-    // for the element to say it's ready and try once more.
-    start().then((ok) => {
-      if (ok !== false || currentAudioRef.current !== audio) return;
-      audio.addEventListener("canplay", () => {
-        if (currentAudioRef.current === audio) start();
-      }, { once: true });
-    });
-  }, []);
-
-  const stopPlayback = useCallback(() => {
-    releaseAudio(currentAudioRef.current);
-    currentAudioRef.current = null;
-    setPlaying(false);
-    setLoadingPreview(false);
-    setPausedByUser(false);
-    setNowPlaying(null);
-  }, []);
-
   // Paused and you keep browsing? Then the paused record stops being "yours":
   // the transport re-syncs with the shelf, so Play always means the one in
   // front of you. While it PLAYS, browsing never touches it.
   useEffect(() => {
-    if (!nowPlaying || playing || loadingPreview || !pausedByUser) return;
+    if (!nowPlaying || playing || loadingPreview || !audio.pausedByUser) return;
     if (view !== "shelf" || !active || active.id === nowPlaying.id) return;
-    stopPlayback();
-  }, [active, nowPlaying, playing, loadingPreview, pausedByUser, view, stopPlayback]);
+    audio.stop();
+  }, [active, nowPlaying, playing, loadingPreview, audio, view]);
 
   // if the record that sounds leaves the current collection, stop
   useEffect(() => {
-    if (nowPlaying && !vinilos.some((v) => v.id === nowPlaying.id)) stopPlayback();
-  }, [vinilos, nowPlaying, stopPlayback]);
+    if (nowPlaying && !vinilos.some((v) => v.id === nowPlaying.id)) audio.stop();
+  }, [vinilos, nowPlaying, audio]);
 
   // The transport always acts on one record: the one centred in the shelf, or
   // — in the grid, where nothing is "in front" — the one that sounds.
@@ -464,52 +296,16 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [soundingElsewhere]);
 
-  const toggleSounding = () => {
-    const audio = currentAudioRef.current;
-    if (!audio || !nowPlaying) return;
-    if (playing) {
-      audio.pause();
-      setPlaying(false);
-      setPausedByUser(true);
-    } else {
-      setPausedByUser(false);
-      audio
-        .play()
-        .then(() => setPlaying(true))
-        .catch(() => setPlaying(false));
-    }
-  };
+  /** the small satellite: pause or resume whatever is sounding elsewhere */
+  const toggleSounding = () => audio.toggleCurrent();
 
+  /** the main circle: the music's play/pause, or start the record in front */
   const toggleTransport = () => {
-    if (nowPlaying && currentAudioRef.current) {
-      toggleSounding();
-      return;
-    }
-    togglePlay();
+    if (nowPlaying) audio.toggleCurrent();
+    else audio.toggle(transportTarget);
   };
 
-  const togglePlay = () => {
-    const target = transportTarget;
-    if (!target?.previewUrl) return;
-    const isActiveSounding = nowPlaying?.id === target.id && currentAudioRef.current;
-    if (isActiveSounding) {
-      // same record: pause / resume where it was, never restart
-      if (playing) {
-        currentAudioRef.current!.pause();
-        setPlaying(false);
-        setPausedByUser(true);
-      } else {
-        setPausedByUser(false);
-        currentAudioRef
-          .current!.play()
-          .then(() => setPlaying(true))
-          .catch(() => setPlaying(false));
-      }
-      return;
-    }
-    // a different record: it takes over
-    playPreview(target);
-  };
+  const togglePlay = () => audio.toggle(transportTarget);
 
   // Transport skip: plays the record next to the one that SOUNDS (falling back
   // to the one on screen if nothing has played yet), and brings the shelf along
@@ -751,6 +547,7 @@ export default function Home() {
             </kbd>
             <span>Buscar</span>
           </button>
+          <AccountMenu />
         </div>
       </div>
 
@@ -993,6 +790,8 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <Onboarding onDone={() => void lib.refresh()} />
 
       <SearchOverlay
         open={searchOpen}

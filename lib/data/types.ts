@@ -83,6 +83,8 @@ export interface LibraryRepository {
   friendsWithRelease(releaseId: string): Promise<FriendWithRecord[]>;
   getProfile(username: string): Promise<Profile | null>;
   listsOfProfile(profileId: string): Promise<ListWithRecord[]>;
+  /** full records of any list you're allowed to read, owned by you or not */
+  releasesOfList(listId: string): Promise<Vinyl[]>;
 
   // ---- follow graph -------------------------------------------------------
   follow(kind: "profile" | "list", id: string): Promise<void>;

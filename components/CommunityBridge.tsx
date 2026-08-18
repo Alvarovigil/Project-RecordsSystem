@@ -4,15 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
 import {
-  type CommunityList,
-  type CommunityUser,
-  friendsWithRecord,
-  getUser,
-  listsOfUser,
-  listsWithRecord,
-  loadFollows,
-  saveFollows,
-} from "@/lib/community";
+  getRepository,
+  type FriendWithRecord,
+  type ListWithRecord,
+  type Profile,
+} from "@/lib/data";
 
 type View =
   | { kind: "record" }
@@ -38,11 +34,37 @@ type Props = {
  * thread you pulled.
  */
 export default function CommunityBridge({ vinyl, allVinilos, onOpenOwn, onSave }: Props) {
+  const repo = useMemo(() => getRepository(), []);
   const [open, setOpen] = useState(false);
   const [stack, setStack] = useState<View[]>([{ kind: "record" }]);
   const [follows, setFollows] = useState<string[]>([]);
 
-  useEffect(() => setFollows(loadFollows()), []);
+  const [friends, setFriends] = useState<FriendWithRecord[]>([]);
+  const [lists, setLists] = useState<ListWithRecord[]>([]);
+
+  // the bridge itself: who else has this record, and where
+  useEffect(() => {
+    let alive = true;
+    Promise.all([
+      repo.friendsWithRelease(vinyl.id),
+      repo.listsWithRelease(vinyl.id),
+    ]).then(([f, l]) => {
+      if (!alive) return;
+      setFriends(f);
+      setLists(l);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [repo, vinyl.id]);
+
+  useEffect(() => {
+    repo
+      .following()
+      .then(({ profiles, lists }) => setFollows([...profiles, ...lists]))
+      .catch(() => setFollows([]));
+  }, [repo]);
+
   // a different record is a different thread
   useEffect(() => {
     setOpen(false);
@@ -61,31 +83,28 @@ export default function CommunityBridge({ vinyl, allVinilos, onOpenOwn, onSave }
     return () => window.removeEventListener("keydown", onKey, true);
   }, [open, stack.length]);
 
-  const allIds = useMemo(() => allVinilos.map((v) => v.id), [allVinilos]);
-  const friends = useMemo(() => friendsWithRecord(vinyl.id, allIds), [vinyl.id, allIds]);
-  const lists = useMemo(() => listsWithRecord(vinyl.id, allIds), [vinyl.id, allIds]);
-
   const view = stack[stack.length - 1];
   const push = (v: View) => setStack((s) => [...s, v]);
   const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
 
-  const toggleFollow = (id: string) => {
-    setFollows((prev) => {
-      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
-      saveFollows(next);
-      return next;
-    });
+  const toggleFollow = (kind: "profile" | "list", id: string) => {
+    const isFollowing = follows.includes(id);
+    setFollows((prev) => (isFollowing ? prev.filter((x) => x !== id) : [...prev, id]));
+    void (isFollowing ? repo.unfollow(kind, id) : repo.follow(kind, id));
   };
 
   const vinylById = (id: string) => allVinilos.find((v) => v.id === id);
-  // the lists on screen come from two places: the record bridge and profiles
-  const findList = (id: string): CommunityList | undefined =>
-    lists.find((l) => l.id === id) ??
-    stack
-      .filter((v): v is { kind: "profile"; id: string } => v.kind === "profile")
-      .flatMap((v) => listsOfUser(v.id, allIds))
-      .find((l) => l.id === id) ??
-    listsOfUser(view.kind === "profile" ? view.id : "", allIds).find((l) => l.id === id);
+
+  // lists of whichever profile you are looking at
+  const [profileLists, setProfileLists] = useState<ListWithRecord[]>([]);
+  useEffect(() => {
+    if (view.kind !== "profile") return;
+    let alive = true;
+    repo.listsOfProfile(view.id).then((l) => alive && setProfileLists(l));
+    return () => {
+      alive = false;
+    };
+  }, [repo, view]);
 
   return (
     <>
@@ -154,40 +173,33 @@ export default function CommunityBridge({ vinyl, allVinilos, onOpenOwn, onSave }
                 />
               )}
 
-              {view.kind === "list" &&
-                (() => {
-                  const list = findList(view.id);
-                  if (!list) return <Empty text="Esa lista ya no está disponible" />;
-                  return (
-                    <ListView
-                      list={list}
-                      owner={getUser(list.ownerId)}
-                      allVinilos={allVinilos}
-                      currentId={vinyl.id}
-                      following={follows.includes(list.id)}
-                      onToggleFollow={() => toggleFollow(list.id)}
-                      onOpenProfile={(id) => push({ kind: "profile", id })}
-                      onOpenOwn={onOpenOwn}
-                      onSave={onSave}
-                    />
-                  );
-                })()}
+              {view.kind === "list" && (
+                <ListView
+                  key={view.id}
+                  listId={view.id}
+                  known={lists.find((l) => l.id === view.id) ?? profileLists.find((l) => l.id === view.id)}
+                  currentId={vinyl.id}
+                  following={follows.includes(view.id)}
+                  onToggleFollow={() => toggleFollow("list", view.id)}
+                  onOpenProfile={(id) => push({ kind: "profile", id })}
+                  onOpenOwn={onOpenOwn}
+                  onSave={onSave}
+                  ownedIds={allVinilos.map((v) => v.id)}
+                />
+              )}
 
-              {view.kind === "profile" &&
-                (() => {
-                  const user = getUser(view.id);
-                  if (!user) return <Empty text="Ese perfil ya no está disponible" />;
-                  return (
-                    <ProfileView
-                      user={user}
-                      lists={listsOfUser(user.id, allIds)}
-                      vinylById={vinylById}
-                      following={follows.includes(user.id)}
-                      onToggleFollow={() => toggleFollow(user.id)}
-                      onOpenList={(id) => push({ kind: "list", id })}
-                    />
-                  );
-                })()}
+              {view.kind === "profile" && (
+                <ProfileView
+                  key={view.id}
+                  profileId={view.id}
+                  lists={profileLists}
+                  friend={friends.find((f) => f.user.id === view.id)?.user}
+                  vinylById={vinylById}
+                  following={follows.includes(view.id)}
+                  onToggleFollow={() => toggleFollow("profile", view.id)}
+                  onOpenList={(id) => push({ kind: "list", id })}
+                />
+              )}
             </div>
           </section>
         </>
@@ -206,8 +218,8 @@ function RecordView({
   onOpenProfile,
 }: {
   vinyl: Vinyl;
-  friends: ReturnType<typeof friendsWithRecord>;
-  lists: CommunityList[];
+  friends: FriendWithRecord[];
+  lists: ListWithRecord[];
   vinylById: (id: string) => Vinyl | undefined;
   onOpenList: (id: string) => void;
   onOpenProfile: (id: string) => void;
@@ -235,7 +247,7 @@ function RecordView({
                 >
                   <Avatar user={f.user} />
                   <span>
-                    <span className="block text-[13px] text-paper">{f.user.name}</span>
+                    <span className="block text-[13px] text-paper">{f.user.displayName}</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -267,118 +279,142 @@ function RecordView({
 }
 
 function ListView({
-  list,
-  owner,
-  allVinilos,
+  listId,
+  known,
   currentId,
   following,
+  ownedIds,
   onToggleFollow,
   onOpenProfile,
   onOpenOwn,
   onSave,
 }: {
-  list: CommunityList;
-  owner?: CommunityUser;
-  allVinilos: Vinyl[];
+  listId: string;
+  known?: ListWithRecord;
   currentId: string;
   following: boolean;
+  ownedIds: string[];
   onToggleFollow: () => void;
   onOpenProfile: (id: string) => void;
   onOpenOwn: (v: Vinyl) => void;
   onSave: (v: Vinyl) => void;
 }) {
-  const items = list.vinylIds
-    .map((id) => allVinilos.find((v) => v.id === id))
-    .filter((v): v is Vinyl => !!v);
+  const repo = useMemo(() => getRepository(), []);
+  const [items, setItems] = useState<Vinyl[] | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    repo.releasesOfList(listId).then((r) => alive && setItems(r));
+    return () => {
+      alive = false;
+    };
+  }, [repo, listId]);
+
+  if (!known) return <Empty text="Esa lista ya no está disponible" />;
 
   return (
     <>
       <header className="flex flex-wrap items-end justify-between gap-4 px-6 pb-5 pt-5">
         <div className="min-w-0">
-          <h2 className="text-[22px] leading-tight text-paper">{list.title}</h2>
-          <p className="mt-1.5 text-[13px] text-paper/50">{list.description}</p>
+          <h2 className="text-[22px] leading-tight text-paper">{known.title}</h2>
+          {known.description && (
+            <p className="mt-1.5 text-[13px] text-paper/50">{known.description}</p>
+          )}
           <div className="mt-3 flex items-center gap-3">
-            {owner && (
-              <button
-                onClick={() => onOpenProfile(owner.id)}
-                className="flex items-center gap-2 text-[12px] text-paper/60 transition hover:text-paper"
-              >
-                <Avatar user={owner} size={22} />
-                {owner.name}
-              </button>
-            )}
+            <button
+              onClick={() => onOpenProfile(known.owner.id)}
+              className="flex items-center gap-2 text-[12px] text-paper/60 transition hover:text-paper"
+            >
+              <Avatar user={known.owner} size={22} />
+              {known.owner.displayName}
+            </button>
             <span className="mono text-[10px] uppercase tracking-[0.16em] text-paper/30">
-              {items.length} discos · {list.followers} siguen · {list.updated}
+              {known.itemCount} discos · {known.followers} siguen · {known.updatedAt}
             </span>
           </div>
         </div>
         <FollowButton following={following} onClick={onToggleFollow} />
       </header>
 
-      <ul className="grid grid-cols-3 gap-x-4 gap-y-6 px-6 pb-8 sm:grid-cols-5">
-        {items.map((v) => {
-          const owned = true; // placeholder: the fake lists reuse your library
-          return (
-            <li key={v.id} className="group">
-              <div
-                className={`relative aspect-square w-full overflow-hidden bg-paper/[0.04] ${
-                  v.id === currentId ? "outline outline-1 outline-paper/30 outline-offset-2" : ""
-                }`}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={coverFor(v)}
-                  alt=""
-                  loading="lazy"
-                  className="h-full w-full object-cover opacity-90 transition group-hover:opacity-100"
-                />
-                <button
-                  onClick={() => (owned ? onOpenOwn(v) : onSave(v))}
-                  className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-ink/85 via-transparent to-transparent p-2 opacity-0 transition group-hover:opacity-100"
+      {items === null ? (
+        <Empty text="Cargando…" />
+      ) : (
+        <ul className="grid grid-cols-3 gap-x-4 gap-y-6 px-6 pb-8 sm:grid-cols-5">
+          {items.map((v) => {
+            const owned = ownedIds.includes(v.id);
+            return (
+              <li key={v.id} className="group">
+                <div
+                  className={`relative aspect-square w-full overflow-hidden bg-paper/[0.04] ${
+                    v.id === currentId ? "outline outline-1 outline-paper/30 outline-offset-2" : ""
+                  }`}
                 >
-                  <span className="mono text-[9px] uppercase tracking-[0.16em] text-paper">
-                    {owned ? "Ver en mi estantería" : "Guardar"}
-                  </span>
-                </button>
-              </div>
-              <div className="mt-2 truncate text-[12px] text-paper/85">{v.title}</div>
-              <div className="truncate text-[11px] text-paper/40">{v.artist}</div>
-            </li>
-          );
-        })}
-      </ul>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={coverFor(v)}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-cover opacity-90 transition group-hover:opacity-100"
+                  />
+                  <button
+                    onClick={() => (owned ? onOpenOwn(v) : onSave(v))}
+                    className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-ink/85 via-transparent to-transparent p-2 opacity-0 transition group-hover:opacity-100"
+                  >
+                    <span className="mono text-[9px] uppercase tracking-[0.16em] text-paper">
+                      {owned ? "Ver en mi estantería" : "Guardar"}
+                    </span>
+                  </button>
+                </div>
+                <div className="mt-2 truncate text-[12px] text-paper/85">{v.title}</div>
+                <div className="truncate text-[11px] text-paper/40">{v.artist}</div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </>
   );
 }
 
 function ProfileView({
-  user,
+  profileId,
+  friend,
   lists,
   vinylById,
   following,
   onToggleFollow,
   onOpenList,
 }: {
-  user: CommunityUser;
-  lists: CommunityList[];
+  profileId: string;
+  friend?: Pick<Profile, "id" | "username" | "displayName" | "avatarUrl">;
+  lists: ListWithRecord[];
   vinylById: (id: string) => Vinyl | undefined;
   following: boolean;
   onToggleFollow: () => void;
   onOpenList: (id: string) => void;
 }) {
-  const discos = new Set(lists.flatMap((l) => l.vinylIds)).size;
+  const person = friend ?? lists[0]?.owner;
+  const discos = lists.reduce((n, l) => n + l.itemCount, 0);
+
+  if (!person) return <Empty text="Ese perfil ya no está disponible" />;
+
   return (
     <>
       <header className="flex flex-wrap items-start justify-between gap-4 px-6 pb-5 pt-5">
         <div className="flex items-start gap-4">
-          <Avatar user={user} size={48} />
+          <Avatar user={person} size={48} />
           <div className="min-w-0">
-            <h2 className="text-[20px] leading-tight text-paper">{user.name}</h2>
-            <p className="mono mt-0.5 text-[11px] text-paper/40">@{user.handle}</p>
-            <p className="mt-2 max-w-[46ch] text-[13px] text-paper/55">{user.bio}</p>
+            <h2 className="text-[20px] leading-tight text-paper">{person.displayName}</h2>
+            <p className="mono mt-0.5 text-[11px] text-paper/40">@{person.username}</p>
             <p className="mono mt-3 text-[10px] uppercase tracking-[0.16em] text-paper/30">
               {lists.length} listas · {discos} discos
             </p>
+            <a
+              href={`/u/${person.username}`}
+              className="mono mt-3 inline-block text-[10px] uppercase tracking-[0.16em] text-paper/40 underline-offset-2 transition hover:text-paper hover:underline"
+            >
+              Ver perfil completo →
+            </a>
           </div>
         </div>
         <FollowButton following={following} onClick={onToggleFollow} />
@@ -392,6 +428,7 @@ function ProfileView({
             </li>
           ))}
         </ul>
+        {lists.length === 0 && <Empty text="Todavía no ha publicado listas." />}
       </Section>
     </>
   );
@@ -404,13 +441,14 @@ function ListRow({
   onOpen,
   hideOwner = false,
 }: {
-  list: CommunityList;
+  list: ListWithRecord;
   vinylById: (id: string) => Vinyl | undefined;
   onOpen: () => void;
   hideOwner?: boolean;
 }) {
-  const owner = getUser(list.ownerId);
-  const covers = list.vinylIds
+  // placeholder lists carry their members inline; real ones don't need to
+  const memberIds = (list as ListWithRecord & { vinylIds?: string[] }).vinylIds ?? [];
+  const covers = memberIds
     .map(vinylById)
     .filter((v): v is Vinyl => !!v)
     .slice(0, 4);
@@ -428,8 +466,8 @@ function ListRow({
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[14px] text-paper">{list.title}</span>
         <span className="mono mt-1 block truncate text-[10px] uppercase tracking-[0.16em] text-paper/35">
-          {!hideOwner && owner ? `${owner.name} · ` : ""}
-          {list.vinylIds.length} discos · {list.followers} siguen
+          {!hideOwner ? `${list.owner.displayName} · ` : ""}
+          {list.itemCount} discos · {list.followers} siguen
         </span>
       </span>
       <span className="text-paper/25">→</span>
@@ -452,14 +490,31 @@ function FollowButton({ following, onClick }: { following: boolean; onClick: () 
   );
 }
 
-function Avatar({ user, size = 34 }: { user: CommunityUser; size?: number }) {
+function Avatar({
+  user,
+  size = 34,
+}: {
+  user: Pick<Profile, "displayName" | "avatarUrl">;
+  size?: number;
+}) {
+  const initials = user.displayName
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
   return (
     <span
-      className="flex shrink-0 items-center justify-center rounded-full bg-paper/10 mono text-[10px] tracking-[0.06em] text-paper/70"
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper/10 mono text-[10px] tracking-[0.06em] text-paper/70"
       style={{ width: size, height: size }}
       aria-hidden
     >
-      {user.initials}
+      {user.avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
+      ) : (
+        initials
+      )}
     </span>
   );
 }

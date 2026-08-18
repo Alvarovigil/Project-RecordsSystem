@@ -16,7 +16,15 @@ import {
   saveCollections,
   newCollection,
 } from "@/lib/collections";
-import { friendsWithRecord, listsWithRecord, listsOfUser, getUser, loadFollows, saveFollows } from "@/lib/community";
+import {
+  friendsWithRecord,
+  listsWithRecord,
+  listsOfUser,
+  getGeneratedList,
+  getUser,
+  loadFollows,
+  saveFollows,
+} from "@/lib/community";
 import type {
   FriendWithRecord,
   LibraryRepository,
@@ -226,6 +234,7 @@ export function createLocalRepository(): LibraryRepository {
           itemCount: l.vinylIds.length,
           updatedAt: l.updated,
           followers: l.followers,
+          vinylIds: l.vinylIds,
           owner: {
             id: owner.id,
             username: owner.handle,
@@ -273,6 +282,7 @@ export function createLocalRepository(): LibraryRepository {
         itemCount: l.vinylIds.length,
         updatedAt: l.updated,
         followers: l.followers,
+        vinylIds: l.vinylIds,
         owner: {
           id: profileId,
           username: owner?.handle ?? profileId,
@@ -280,6 +290,15 @@ export function createLocalRepository(): LibraryRepository {
           avatarUrl: null,
         },
       }));
+    },
+
+    async releasesOfList(listId) {
+      const all = readReleases();
+      // yours, or one of the generated community lists
+      const ids = listId.startsWith("cl-")
+        ? (getGeneratedList(listId)?.vinylIds ?? [])
+        : idsOf(listId);
+      return ids.map((id) => all.find((v) => v.id === id)).filter((v): v is Vinyl => !!v);
     },
 
     async follow(_kind, id) {

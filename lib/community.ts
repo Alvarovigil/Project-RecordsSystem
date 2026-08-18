@@ -105,6 +105,16 @@ const LIST_NOTES = [
   "Ediciones que me costó encontrar más de lo razonable.",
 ];
 
+/**
+ * Every list handed out gets remembered, so a list can later be looked up by
+ * id alone (the generator needs a seed otherwise). Placeholder data only.
+ */
+const REGISTRY = new Map<string, CommunityList>();
+
+export function getGeneratedList(id: string): CommunityList | undefined {
+  return REGISTRY.get(id);
+}
+
 export function getUser(id: string): CommunityUser | undefined {
   return USERS.find((u) => u.id === id);
 }
@@ -131,7 +141,7 @@ export function listsWithRecord(vinylId: string, allVinylIds: string[]): Communi
       const cand = others[Math.floor(r() * others.length)];
       if (!members.includes(cand)) members.push(cand);
     }
-    return {
+    const list: CommunityList = {
       id: `cl-${hash(`${vinylId}:${title}:${i}`).toString(36)}`,
       title,
       ownerId: owner.id,
@@ -140,6 +150,8 @@ export function listsWithRecord(vinylId: string, allVinylIds: string[]): Communi
       followers: Math.floor(r() * 380),
       updated: pick(r, ["hace 2 días", "hace una semana", "hace un mes", "ayer", "hace 3 días"]),
     };
+    REGISTRY.set(list.id, list);
+    return list;
   });
 }
 
@@ -178,7 +190,7 @@ export function listsOfUser(userId: string, allVinylIds: string[]): CommunityLis
       const cand = allVinylIds[Math.floor(r() * allVinylIds.length)];
       if (!members.includes(cand)) members.push(cand);
     }
-    return {
+    const list: CommunityList = {
       id: `cl-${hash(`${userId}:${title}:${i}`).toString(36)}`,
       title,
       ownerId: userId,
@@ -187,6 +199,8 @@ export function listsOfUser(userId: string, allVinylIds: string[]): CommunityLis
       followers: Math.floor(r() * 380),
       updated: pick(r, ["hace 2 días", "hace una semana", "hace un mes", "ayer"]),
     };
+    REGISTRY.set(list.id, list);
+    return list;
   });
 }
 
