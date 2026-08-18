@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useMemo, useState } from "react";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
@@ -410,12 +412,12 @@ function ProfileView({
             <p className="mono mt-3 text-[10px] uppercase tracking-[0.16em] text-paper/30">
               {lists.length} listas · {discos} discos
             </p>
-            <a
+            <Link
               href={`/u/${person.username}`}
               className="mono mt-3 inline-block text-[10px] uppercase tracking-[0.16em] text-paper/40 underline-offset-2 transition hover:text-paper hover:underline"
             >
               Ver perfil completo →
-            </a>
+            </Link>
           </div>
         </div>
         <FollowButton following={following} onClick={onToggleFollow} />

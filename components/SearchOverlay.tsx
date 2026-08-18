@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useRef, useState } from "react";
 import type { Vinyl } from "@/lib/types";
 import type { Collection } from "@/lib/collections";
@@ -293,7 +295,7 @@ export default function SearchOverlay({
                   <ul className="divide-y divide-paper/[0.07]">
                     {people.map((u) => (
                       <li key={u.id}>
-                        <a
+                        <Link
                           href={`/u/${u.username}`}
                           className="flex items-center gap-3 px-2 py-3 transition hover:bg-paper/5"
                         >
@@ -314,7 +316,7 @@ export default function SearchOverlay({
                             </span>
                           </span>
                           <span className="text-paper/25">→</span>
-                        </a>
+                        </Link>
                       </li>
                     ))}
                   </ul>
@@ -327,7 +329,7 @@ export default function SearchOverlay({
                   <ul className="divide-y divide-paper/[0.07]">
                     {communityLists.map((l) => (
                       <li key={l.id}>
-                        <a
+                        <Link
                           href={`/u/${l.owner.username}/${l.slug}`}
                           className="flex items-center gap-3 px-2 py-3 transition hover:bg-paper/5"
                         >
@@ -340,7 +342,7 @@ export default function SearchOverlay({
                             </span>
                           </span>
                           <span className="text-paper/25">→</span>
-                        </a>
+                        </Link>
                       </li>
                     ))}
                   </ul>

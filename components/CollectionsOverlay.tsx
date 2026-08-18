@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useMemo, useState } from "react";
 import { type Collection, type SortMode, SORT_LABELS, sortedVinylIds } from "@/lib/collections";
 import type { ListVisibility, ListWithRecord } from "@/lib/data/types";
@@ -390,7 +392,7 @@ export default function CollectionsOverlay({
                   <ul className="px-3 py-3 space-y-1">
                     {followed.map((l) => (
                       <li key={l.id} className="group relative">
-                        <a
+                        <Link
                           href={`/u/${l.owner.username}/${l.slug}`}
                           className="flex items-center gap-3 rounded-md border border-dashed border-paper/[0.12] px-3 py-2.5 transition hover:border-paper/25 hover:bg-paper/[0.04]"
                         >
@@ -408,7 +410,7 @@ export default function CollectionsOverlay({
                               de {l.owner.displayName} · {l.itemCount} discos
                             </span>
                           </span>
-                        </a>
+                        </Link>
                         <button
                           onClick={(e) => {
                             e.preventDefault();
