@@ -16,6 +16,7 @@ import {
   saveCollections,
   newCollection,
 } from "@/lib/collections";
+import { DEMO_LISTS, DEMO_PROFILE } from "@/lib/demo";
 import {
   allUsers,
   friendsWithRecord,
@@ -38,13 +39,9 @@ import type {
 } from "./types";
 
 const RELEASES_KEY = "vinilos.releases.v1";
-const LOCAL_PROFILE: Profile = {
-  id: "local",
-  username: "yo",
-  displayName: "Mi biblioteca",
-  bio: "",
-  avatarUrl: null,
-};
+// Without an account you are borrowing the preview's identity: a collector who
+// already has lists, friends and taste. See lib/demo.ts.
+const LOCAL_PROFILE: Profile = DEMO_PROFILE;
 
 const slugify = (s: string) =>
   s
@@ -144,6 +141,30 @@ function toCommunityList(
       avatarUrl: null,
     },
   } as ListWithRecord;
+}
+
+/** Your own lists as a visitor would see them: public ones, owner attached. */
+function ownLists(releases: Vinyl[]): ListWithRecord[] {
+  const cols = collectionsOf();
+  const wished = new Set(cols.find((c) => c.id === WISHLIST_ID)?.vinylIds ?? []);
+  return cols
+    .filter((c) => c.id !== WISHLIST_ID && (c.visibility ?? "public") === "public")
+    .map((c, i) => {
+      const base = toList(c, i, releases, wished);
+      const ids = c.id === DEFAULT_ID ? releases.map((v) => v.id).filter((id) => !wished.has(id)) : c.vinylIds;
+      return {
+        ...base,
+        description: DEMO_LISTS.find((d) => d.id === c.id)?.description ?? base.description,
+        followers: 0,
+        vinylIds: ids,
+        owner: {
+          id: LOCAL_PROFILE.id,
+          username: LOCAL_PROFILE.username,
+          displayName: LOCAL_PROFILE.displayName,
+          avatarUrl: LOCAL_PROFILE.avatarUrl,
+        },
+      } as ListWithRecord;
+    });
 }
 
 export function createLocalRepository(): LibraryRepository {
@@ -288,6 +309,9 @@ export function createLocalRepository(): LibraryRepository {
     },
 
     async getProfile(username) {
+      if (username === LOCAL_PROFILE.id || username === LOCAL_PROFILE.username) {
+        return LOCAL_PROFILE;
+      }
       const u = getUser(username) ?? null;
       return u
         ? { id: u.id, username: u.handle, displayName: u.name, bio: u.bio, avatarUrl: null }
@@ -295,6 +319,9 @@ export function createLocalRepository(): LibraryRepository {
     },
 
     async listsOfProfile(profileId): Promise<ListWithRecord[]> {
+      if (profileId === LOCAL_PROFILE.id || profileId === LOCAL_PROFILE.username) {
+        return ownLists(readReleases());
+      }
       const ids = readReleases().map((v) => v.id);
       return listsOfUser(profileId, ids).map((l) => toCommunityList(l, profileId));
     },
@@ -416,8 +443,19 @@ export function createLocalRepository(): LibraryRepository {
         .map((l) => toCommunityList(l, l.ownerId));
     },
 
-    async followersOf() {
-      return [];
+    async followersOf(profileId) {
+      // the preview's own profile shows the people who follow it; a community
+      // profile keeps its placeholder emptiness
+      if (profileId !== LOCAL_PROFILE.id && profileId !== LOCAL_PROFILE.username) return [];
+      return communityUsers()
+        .slice(0, 5)
+        .map((u) => ({
+          id: u.id,
+          username: u.handle,
+          displayName: u.name,
+          bio: u.bio,
+          avatarUrl: null,
+        }));
     },
 
     async followingOf() {

@@ -106,3 +106,47 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .sound-bar { animation: none; transform: scaleY(0.55); }
 }
+
+/* ---------------------------------------------------------------- landing */
+/* The shelf, passing by. Purely decorative: two rows of sleeves drifting in
+   opposite directions behind the mark. The track holds the same covers twice,
+   so translating it exactly half its width loops without a seam. */
+@keyframes shelf-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+.shelf-drift {
+  animation: shelf-drift 90s linear infinite;
+  will-change: transform;
+}
+.shelf-drift-slow {
+  animation: shelf-drift 140s linear infinite reverse;
+  will-change: transform;
+}
+
+/* the record behind the logo, turning at something close to 33⅓ rpm */
+@keyframes platter {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.platter {
+  animation: platter 24s linear infinite;
+}
+
+/* a mark that arrives instead of appearing */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+.rise-in {
+  animation: rise-in 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shelf-drift,
+  .shelf-drift-slow,
+  .platter,
+  .rise-in {
+    animation: none;
+  }
+}

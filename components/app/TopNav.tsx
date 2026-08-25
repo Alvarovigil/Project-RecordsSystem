@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AccountMenu from "@/components/AccountMenu";
 import { useSession } from "@/hooks/useSession";
+import { DEMO_PROFILE } from "@/lib/demo";
 
 /**
  * The same bar everywhere, including over the 3D shelf.
@@ -24,11 +25,15 @@ export default function TopNav({
 
   // signed out there is no collection of yours to open, but there is a demo one —
   // a dead link would be worse than a smaller promise
+  const preview = available && !user;
   const links = [
     { href: "/inicio", label: "Inicio" },
-    available && !user
+    preview
       ? { href: "/demo", label: "Colección" }
       : { href: "/coleccion", label: "Mi colección" },
+    // signed out, the profile is part of what there is to see: the preview
+    // collector has lists, followers and people they follow
+    ...(preview ? [{ href: `/u/${DEMO_PROFILE.username}`, label: "Perfil" }] : []),
     { href: "/explorar", label: "Explorar" },
   ];
 

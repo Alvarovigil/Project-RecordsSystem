@@ -1,3 +1,5 @@
+import { DEMO_LISTS, DEMO_WISHLIST } from "@/lib/demo";
+
 export type SortMode =
   | "custom"
   | "added"
@@ -36,10 +38,33 @@ export const DEFAULT_ID = "default";
 export const WISHLIST_ID = "wishlist";
 export const PRIMARY_IDS = [DEFAULT_ID, WISHLIST_ID] as const;
 
-const seedCollections = (allIds: string[]): Collection[] => [
-  { id: DEFAULT_ID, name: "Mi Colección", vinylIds: allIds, sortBy: "custom" },
-  { id: WISHLIST_ID, name: "Lista de deseos", vinylIds: [], sortBy: "custom" },
-];
+/**
+ * A first-run shelf is the preview: the curated lists come along so that
+ * someone arriving without an account lands in a collection with a point of
+ * view, not in an empty grid. Filtered against the catalogue actually present,
+ * so a trimmed data file can never seed a list pointing at nothing.
+ */
+const seedCollections = (allIds: string[]): Collection[] => {
+  const have = new Set(allIds);
+  const keep = (ids: string[]) => ids.filter((id) => have.has(id));
+  return [
+    { id: DEFAULT_ID, name: "Mi Colección", vinylIds: allIds, sortBy: "custom" },
+    ...DEMO_LISTS.map((l) => ({
+      id: l.id,
+      name: l.name,
+      vinylIds: keep(l.vinylIds),
+      sortBy: "custom" as SortMode,
+      kind: "custom" as const,
+      visibility: "public" as const,
+    })).filter((l) => l.vinylIds.length > 0),
+    {
+      id: WISHLIST_ID,
+      name: "Lista de deseos",
+      vinylIds: keep(DEMO_WISHLIST),
+      sortBy: "custom",
+    },
+  ];
+};
 
 export function loadCollections(allIds: string[]): Collection[] {
   if (typeof window === "undefined") return seedCollections(allIds);

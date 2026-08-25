@@ -24,13 +24,13 @@ export default function DemoNotice() {
   return (
     <div className="pointer-events-auto absolute left-1/2 top-[86px] z-30 flex -translate-x-1/2 items-center gap-4 border border-paper/12 bg-ink/85 px-4 py-2.5 backdrop-blur-sm">
       <span className="text-[12px] text-paper/60">
-        Esto vive solo en este navegador.
+        Colección de ejemplo. Toca, escucha y curiosea: nada se guarda.
       </span>
       <button
         onClick={signInWithGoogle}
         className="mono text-[10px] uppercase tracking-[0.18em] text-paper underline-offset-4 transition hover:underline"
       >
-        Guardar en mi cuenta
+        Crear la mía
       </button>
       <button
         onClick={() => {

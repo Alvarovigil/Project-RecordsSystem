@@ -15,6 +15,8 @@ type Props = {
   onMoveToCollection?: () => void;
   onRemoveFromActive: () => void;
   onDeletePermanently: () => void;
+  /** in the preview there is no account to destroy anything in */
+  preview?: boolean;
 };
 
 /**
@@ -32,6 +34,7 @@ export default function VinylEditOverlay({
   onMoveToCollection,
   onRemoveFromActive,
   onDeletePermanently,
+  preview = false,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -139,7 +142,11 @@ export default function VinylEditOverlay({
               </button>
             )}
             <div className="h-px bg-paper/10 my-1" />
-            {!confirmDelete ? (
+            {preview ? (
+              <p className="px-3 py-2 text-[11px] leading-relaxed text-paper/35">
+                Editar y borrar discos llega con tu cuenta.
+              </p>
+            ) : !confirmDelete ? (
               <button
                 onClick={() => setConfirmDelete(true)}
                 className="w-full text-left px-3 py-2 text-paper/50 hover:bg-red-500/10 hover:text-red-400 rounded-sm"

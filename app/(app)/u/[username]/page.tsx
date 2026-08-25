@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import FollowButton from "@/components/ProfileHeader";
 import DemoProfile from "@/components/DemoProfile";
 import { getUserByHandle } from "@/lib/community";
+import { DEMO_PROFILE } from "@/lib/demo";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,14 @@ export default async function ProfilePage({
   params: { username: string };
 }) {
   const supabase = getSupabaseServerClient();
-  if (!supabase) return <NotConfigured />;
+  // the preview's collector lives in the visitor's browser, not in any table
+  if (!supabase) {
+    return params.username === DEMO_PROFILE.username ? (
+      <DemoProfile profileId={DEMO_PROFILE.id} />
+    ) : (
+      <NotConfigured />
+    );
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -52,6 +60,9 @@ export default async function ProfilePage({
   // the placeholder community has profiles too: every link in the demo has to
   // lead somewhere real-looking, and this disappears once people sign up
   if (!profile) {
+    if (params.username === DEMO_PROFILE.username) {
+      return <DemoProfile profileId={DEMO_PROFILE.id} />;
+    }
     const demo = getUserByHandle(params.username);
     if (demo) return <DemoProfile profileId={demo.id} />;
     notFound();

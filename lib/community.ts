@@ -11,6 +11,8 @@
  * list_items(release_id) index, which is the whole point of the bridge.
  */
 
+import { DEMO_FRIENDS } from "@/lib/demo";
+
 const FOLLOW_KEY = "vinilos.community.follows.v1";
 
 export type CommunityUser = {
@@ -238,10 +240,18 @@ export function listsOfUser(userId: string, allVinylIds: string[]): CommunityLis
 }
 
 // ------------------------------------------------------------ follow (local)
+/**
+ * Nobody follows anybody on their first visit, and a feed that opens empty
+ * reads as a broken product rather than a new one. The preview arrives with a
+ * few people already followed — and unfollowing them sticks, because the empty
+ * state is then a choice you made.
+ */
 export function loadFollows(): string[] {
-  if (typeof window === "undefined") return [];
+  if (typeof window === "undefined") return DEMO_FRIENDS;
   try {
-    return JSON.parse(localStorage.getItem(FOLLOW_KEY) ?? "[]");
+    const raw = localStorage.getItem(FOLLOW_KEY);
+    if (raw === null) return DEMO_FRIENDS;
+    return JSON.parse(raw);
   } catch {
     return [];
   }

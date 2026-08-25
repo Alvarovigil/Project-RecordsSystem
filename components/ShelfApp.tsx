@@ -16,6 +16,7 @@ import { useRepository } from "@/hooks/useRepository";
 import { useLibrary } from "@/hooks/useLibrary";
 import { usePlaybackContext } from "@/lib/playback-context";
 import TopNav from "@/components/app/TopNav";
+import { BarcodeIcon, useCanScan } from "@/components/BarcodeScanner";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
 import { type Collection, type SortMode, sortedVinylIds } from "@/lib/collections";
@@ -143,6 +144,14 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   }, [collectionsOpen, loadFollowed]);
 
   const [searchOpen, setSearchOpen] = useState(false);
+  // scanning is its own errand — you arrive with a sleeve in your hand, not
+  // with something to type — so the shelf opens the camera directly
+  const [searchScanning, setSearchScanning] = useState(false);
+  const canScan = useCanScan();
+  const openSearch = (scan = false) => {
+    setSearchScanning(scan);
+    setSearchOpen(true);
+  };
   const [open, setOpen] = useState<Vinyl | null>(null);
   const [fullyOpen, setFullyOpen] = useState(false); // true after the open animation finishes
   const [active, setActive] = useState<Vinyl | null>(allVinilos[0] ?? null);
@@ -494,6 +503,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           )}
           {fullyOpen && (
             <VinylEditOverlay
+              preview={!authenticated}
               vinyl={open}
               collections={resolvedCollections}
               activeCollectionId={activeCollectionId}
@@ -555,8 +565,19 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
               </button>
             ))}
           </div>
+          {canScan && (
+            <button
+              onClick={() => openSearch(true)}
+              className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-paper/60 transition hover:text-paper"
+              aria-label="Escanear un código de barras"
+              title="Escanear un código de barras"
+            >
+              <BarcodeIcon size={16} />
+              <span className="hidden md:inline">Escanear</span>
+            </button>
+          )}
           <button
-            onClick={() => setSearchOpen(true)}
+            onClick={() => openSearch()}
             className="group flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-paper/60 hover:text-paper transition"
             aria-label="Buscar"
           >
@@ -795,15 +816,25 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             {/* footer action */}
             <div className="flex items-stretch border-t border-paper/10">
               <button
-                onClick={() => setSearchOpen(true)}
+                onClick={() => openSearch()}
                 className="flex-1 px-5 py-3 text-left text-[14px] text-paper hover:bg-paper/[0.04] transition flex items-center justify-between"
               >
                 <span>Buscar vinilos</span>
                 <span className="text-paper/40">→</span>
               </button>
-              <div className="px-5 py-3 mono text-[10px] uppercase tracking-[0.22em] text-paper/30 border-l border-paper/10 flex items-center">
-                Tecla /
-              </div>
+              {canScan ? (
+                <button
+                  onClick={() => openSearch(true)}
+                  className="flex items-center gap-2 border-l border-paper/10 px-5 py-3 text-[14px] text-paper transition hover:bg-paper/[0.04]"
+                >
+                  <BarcodeIcon size={15} />
+                  <span>Escanear</span>
+                </button>
+              ) : (
+                <div className="px-5 py-3 mono text-[10px] uppercase tracking-[0.22em] text-paper/30 border-l border-paper/10 flex items-center">
+                  Tecla /
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -815,7 +846,11 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
 
       <SearchOverlay
         open={searchOpen}
-        onClose={() => setSearchOpen(false)}
+        autoScan={searchScanning}
+        onClose={() => {
+          setSearchOpen(false);
+          setSearchScanning(false);
+        }}
         collections={resolvedCollections}
         activeCollectionId={activeCollectionId}
         allVinilos={allVinilos}
@@ -831,6 +866,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
       />
 
       <CollectionsOverlay
+        preview={!authenticated}
         open={collectionsOpen}
         onClose={() => setCollectionsOpen(false)}
         collections={resolvedCollections}

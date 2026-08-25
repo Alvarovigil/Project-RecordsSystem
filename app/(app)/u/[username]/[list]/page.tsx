@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import FollowListButton from "@/components/FollowListButton";
 import DemoList from "@/components/DemoList";
 import { getUserByHandle } from "@/lib/community";
+import { DEMO_PROFILE } from "@/lib/demo";
 import TopNav from "@/components/app/TopNav";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +49,12 @@ export default async function ListPage({
   params: { username: string; list: string };
 }) {
   const supabase = getSupabaseServerClient();
-  if (!supabase) notFound();
+  if (!supabase) {
+    if (params.username === DEMO_PROFILE.username) {
+      return <DemoList profileId={DEMO_PROFILE.id} slug={params.list} />;
+    }
+    notFound();
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -58,6 +64,9 @@ export default async function ListPage({
 
   // placeholder community: the list lives in the browser, not the database
   if (!profile) {
+    if (params.username === DEMO_PROFILE.username) {
+      return <DemoList profileId={DEMO_PROFILE.id} slug={params.list} />;
+    }
     const demo = getUserByHandle(params.username);
     if (demo) return <DemoList profileId={demo.id} slug={params.list} />;
     notFound();

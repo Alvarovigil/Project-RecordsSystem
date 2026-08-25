@@ -30,6 +30,8 @@ type Props = {
   followed: ListWithRecord[];
   onUnfollowList: (listId: string) => void;
   visibilityOf: (collectionId: string) => ListVisibility;
+  /** the preview shows what lists are, without letting you dismantle them */
+  preview?: boolean;
   allVinilos: Vinyl[];
 };
 
@@ -81,6 +83,7 @@ export default function CollectionsOverlay({
   onUnfollowList,
   visibilityOf,
   allVinilos,
+  preview = false,
 }: Props) {
   const [editId, setEditId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
@@ -143,6 +146,7 @@ export default function CollectionsOverlay({
               isPrimary={isPrimaryIn(collections, editing.id)}
               isLibrary={kindOf(collections, editing.id) === "collection"}
               visibility={visibilityOf(editing.id)}
+              preview={preview}
               onSetVisibility={onSetVisibility}
               onRename={onRename}
               onToggleVinyl={onToggleVinyl}
@@ -225,7 +229,7 @@ export default function CollectionsOverlay({
                         Renombrar
                       </button>
                     )}
-                    {collections.length > 1 && !isPrimaryIn(collections, active.id) && (
+                    {!preview && collections.length > 1 && !isPrimaryIn(collections, active.id) && (
                       <button
                         onClick={() => {
                           if (confirm(`Eliminar "${active.name}"?`)) onDelete(active.id);
@@ -341,7 +345,7 @@ export default function CollectionsOverlay({
                               <path d="M6.6 2.9 L9.1 5.4" opacity="0.55" />
                             </g>
                           </RowAction>
-                          {!isPrimaryIn(collections, c.id) && (
+                          {!preview && !isPrimaryIn(collections, c.id) && (
                             <RowAction
                               label="Borrar lista"
                               danger
@@ -516,6 +520,7 @@ function EditPanel({
   onDeleteVinyl,
   onSetSort,
   onReorder,
+  preview = false,
 }: {
   editing: Collection;
   allVinilos: Vinyl[];
@@ -529,6 +534,7 @@ function EditPanel({
   onDeleteVinyl: (vinylId: string) => void;
   onSetSort: (collectionId: string, sortBy: SortMode) => void;
   onReorder: (collectionId: string, fromIdx: number, toIdx: number) => void;
+  preview?: boolean;
 }) {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [overIdx, setOverIdx] = useState<number | null>(null);
@@ -560,7 +566,7 @@ function EditPanel({
       <div className="border-y border-paper/[0.07] px-6">
         {/* Who can see it. The wishlist stays private by nature: what you want
             to buy is nobody else's business unless you say so. */}
-        <div className="flex items-center justify-between gap-4 border-b border-paper/[0.07] py-3">
+        <div className={`flex items-center justify-between gap-4 border-b border-paper/[0.07] py-3 ${preview ? "hidden" : ""}`}>
           <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
             Visible
           </span>
@@ -683,6 +689,7 @@ function EditPanel({
                   {v.year ? <span className="ml-2 text-paper/25">{v.year}</span> : null}
                 </span>
                 <button
+                  hidden={preview && isLibrary}
                   onClick={() => {
                     if (isLibrary) {
                       // Mi Colección: removing means deleting the vinyl entirely
