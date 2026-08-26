@@ -26,12 +26,10 @@ export default function Landing() {
       {/* ---------------------------------------------------------- screen 1 */}
       <section className="landing-hides relative z-10 flex min-h-[100svh] flex-col">
         <header className="flex items-start justify-between px-5 py-6 sm:px-8">
-          <Link
-            href="/demo"
-            className="text-[13px] uppercase tracking-[0.04em] text-paper transition hover:text-paper/60 sm:text-[15px]"
-          >
-            Cotillea una colección
-          </Link>
+          {/* not a link — the claim of the whole thing, held in the corner */}
+          <span className="max-w-[45vw] text-[13px] uppercase tracking-[0.04em] text-paper sm:max-w-none sm:text-[15px]">
+            Nadie colecciona solo
+          </span>
 
           {/* the mark, centred over everything, sized to be looked at */}
           <div className="pointer-events-none absolute left-1/2 top-5 -translate-x-1/2">
