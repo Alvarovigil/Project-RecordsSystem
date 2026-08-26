@@ -4,7 +4,6 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { PerspectiveCamera } from "@react-three/drei";
 import { forwardRef, memo, Suspense, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { useControls } from "leva";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
 
@@ -98,6 +97,16 @@ type Props = {
   /** reports how wide the centred cover actually is, so the page can keep its
    *  side panels clear of it at any viewport */
   onCoverHalfWidth?: (px: number) => void;
+  /**
+   * Wallpaper mode: the shelf drifts on its own and answers to nothing.
+   *
+   * No wheel, no drag, no keys, no hover, no clicks — the landing puts this
+   * behind its own content, and a background that steals the scroll or lifts a
+   * sleeve under the cursor stops being a background.
+   */
+  ambient?: boolean;
+  /** records per second of drift in ambient mode */
+  drift?: number;
 };
 
 export type VinylShelfHandle = {
@@ -118,7 +127,7 @@ const REVEAL_STAGGER_MS = 38;
 const REVEAL_STAGGER_MAX = 300;
 
 const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
-  { vinilos, onOpen, onActiveChange, onCoverHalfWidth },
+  { vinilos, onOpen, onActiveChange, onCoverHalfWidth, ambient = false, drift = 0.09 },
   ref,
 ) {
   // animation tuning (fixed)
@@ -227,7 +236,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el || ambient) return;
 
     const clampToList = (v: number) => {
       const N = lengthRef.current;
@@ -319,7 +328,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       window.removeEventListener("pointercancel", onUp);
       window.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [ambient]);
 
   useEffect(() => {
     onActiveChange?.(vinilos[active]);
@@ -328,11 +337,15 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   return (
     <div
       ref={containerRef}
-      className="relative h-screen w-screen select-none touch-none"
-      style={{ cursor: "grab" }}
+      className={`relative select-none touch-none ${
+        ambient ? "h-full w-full" : "h-screen w-screen"
+      }`}
+      style={{ cursor: ambient ? "default" : "grab", pointerEvents: ambient ? "none" : undefined }}
     >
       <Canvas
-        dpr={[1, 1.5]}
+        // wallpaper doesn't earn retina pixels, and this runs every frame
+        // behind someone's landing page
+        dpr={ambient ? 1 : [1, 1.5]}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 1.2,
@@ -367,6 +380,8 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
 
         <Suspense fallback={null}>
           <Strip
+            ambient={ambient}
+            drift={drift}
             vinilos={vinilos}
             targetRef={target}
             currentRef={current}
@@ -403,6 +418,8 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
 export default memo(VinylShelf3D);
 
 function Strip({
+  ambient,
+  drift,
   vinilos,
   targetRef,
   currentRef,
@@ -427,6 +444,8 @@ function Strip({
   hoverSpring,
   hoverLift,
 }: {
+  ambient: boolean;
+  drift: number;
   vinilos: Vinyl[];
   targetRef: React.MutableRefObject<number>;
   currentRef: React.MutableRefObject<number>;
@@ -486,13 +505,14 @@ function Strip({
       pointerXY.current.inside = false;
       hoveredRef.current = null;
     };
+    if (ambient) return;
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerleave", onLeave);
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerleave", onLeave);
     };
-  }, []);
+  }, [ambient]);
   const lastCurrent = useRef(0);
 
   const tweenRef = useRef({
@@ -502,7 +522,15 @@ function Strip({
     lastTarget: 0,
   });
 
-  useFrame(() => {
+  useFrame((_, delta) => {
+    // Wallpaper: one continuous slide, never settling on a record. Driving
+    // `current` straight off the clock keeps the speed even — the spring the
+    // interactive shelf uses would ease towards a target that never arrives.
+    if (ambient) {
+      targetRef.current += drift * Math.min(delta, 0.1);
+      currentRef.current = targetRef.current;
+      return;
+    }
     // while opened, snap directly to the new vinyl (no inter-vinyl animation)
     if (openTargetRef.current > 0) {
       currentRef.current = targetRef.current;

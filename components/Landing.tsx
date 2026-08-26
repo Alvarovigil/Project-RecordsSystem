@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SignInButton from "./SignInButton";
+import ShelfBackdrop from "./ShelfBackdrop";
 
 /**
  * The front door.
@@ -28,7 +29,7 @@ export default function Landing() {
           {/* the platter turns behind the wordmark, not around it */}
           <span
             aria-hidden
-            className="platter pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.55] md:h-[440px] md:w-[440px]"
+            className="platter pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.4] md:h-[440px] md:w-[440px]"
             style={{
               background:
                 "repeating-radial-gradient(circle at center, rgba(245,243,238,0.05) 0 1px, transparent 1px 4px), radial-gradient(circle at center, #f83a23 0 5%, #14100f 5% 30%, #0d0c0b 70%, transparent 72%)",
@@ -109,57 +110,17 @@ export default function Landing() {
 function Backdrop() {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 select-none">
-      <div className="absolute inset-x-0 top-[6vh] flex flex-col gap-6 opacity-[0.38] blur-[1.5px]">
-        <ShelfRow covers={ROW_A} className="shelf-drift" tilt={9} />
-        <ShelfRow covers={ROW_B} className="shelf-drift-slow" tilt={-7} />
+      {/* the product itself, running behind its own front door */}
+      <div className="absolute inset-0 opacity-[0.55]">
+        <ShelfBackdrop />
       </div>
 
       {/* the page has to stay readable on top of all that */}
-      <div className="absolute inset-0 bg-gradient-to-b from-ink/70 via-ink/92 to-ink" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(10,10,10,0.75)_75%)]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-ink/80 via-ink/60 to-ink" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(10,10,10,0.55)_0%,rgba(10,10,10,0.88)_70%)]" />
       {/* a single warm ember behind the mark, the only colour on the page */}
       <div className="absolute left-1/2 top-[26vh] h-[420px] w-[620px] -translate-x-1/2 rounded-full bg-[#f83a23]/[0.07] blur-[130px]" />
       <Grain />
-    </div>
-  );
-}
-
-function ShelfRow({
-  covers,
-  className,
-  tilt,
-}: {
-  covers: string[];
-  className: string;
-  tilt: number;
-}) {
-  return (
-    <div
-      className="overflow-hidden"
-      style={{
-        maskImage:
-          "linear-gradient(to right, transparent, #000 12%, #000 88%, transparent)",
-        WebkitMaskImage:
-          "linear-gradient(to right, transparent, #000 12%, #000 88%, transparent)",
-      }}
-    >
-      <div
-        className={`flex w-max gap-3 ${className}`}
-        style={{ transform: `rotate(${tilt / 6}deg)` }}
-      >
-        {/* the same covers twice: the loop is a translation of exactly half */}
-        {[...covers, ...covers].map((src, i) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={`${src}-${i}`}
-            src={src}
-            alt=""
-            loading="lazy"
-            className="h-[170px] w-[170px] shrink-0 object-cover shadow-[0_20px_50px_rgba(0,0,0,0.65)] md:h-[220px] md:w-[220px]"
-            style={{ transform: `perspective(1200px) rotateY(${tilt}deg)` }}
-          />
-        ))}
-      </div>
     </div>
   );
 }
@@ -176,28 +137,6 @@ function Grain() {
     />
   );
 }
-
-const ROW_A = [
-  "/covers/tame-impala-currents-7252111.jpg",
-  "/covers/fleetwood-mac-rumours-526351.jpg",
-  "/covers/eagles-hotel-california-1571555.jpg",
-  "/covers/rosalia-lux-35578378.jpg",
-  "/covers/led-zeppelin-led-zeppelin-iv-1015465.jpg",
-  "/covers/billie-eilish-hit-me-hard-and-soft-34773263.jpg",
-  "/covers/dire-straits-brothers-in-arms-2462721.jpg",
-  "/covers/gorillaz-demon-days-36145336.jpg",
-];
-
-const ROW_B = [
-  "/covers/etta-james-at-last-5466884.jpg",
-  "/covers/various-pulp-fiction-music-from-the-motion-picture-376354.jpg",
-  "/covers/rosalia-motomami-23206178.jpg",
-  "/covers/cypress-hill-black-sunday-12387973.jpg",
-  "/covers/bad-bunny-debi-tirar-mas-fotos-35474179.jpg",
-  "/covers/estopa-estopa-9267144.jpg",
-  "/covers/hans-zimmer-dune-part-two-original-motion-picture-soundtrack-29970571.jpg",
-  "/covers/elton-john-diamonds-13731060.jpg",
-];
 
 const FEATURES = [
   {
