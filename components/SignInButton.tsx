@@ -13,7 +13,7 @@ export default function SignInButton({ variant = "solid" }: { variant?: "solid" 
         onClick={signInWithGoogle}
         className="text-[13px] uppercase tracking-[0.04em] text-paper transition hover:text-paper/60 sm:text-[15px]"
       >
-        Entrar
+        Iniciar sesión
       </button>
     );
   }

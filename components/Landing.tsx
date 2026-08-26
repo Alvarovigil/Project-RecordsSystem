@@ -2,6 +2,7 @@ import Link from "next/link";
 import SignInButton from "./SignInButton";
 import ShelfBackdrop from "./ShelfBackdrop";
 import SoundGate from "./landing/SoundGate";
+import AboutProject from "./landing/AboutProject";
 import Reveal from "./landing/Reveal";
 
 /**
@@ -20,6 +21,7 @@ export default function Landing() {
     <main className="relative bg-ink text-paper">
       <Backdrop />
       <SoundGate />
+      <AboutProject />
 
       {/* ---------------------------------------------------------- screen 1 */}
       <section className="landing-hides relative z-10 flex min-h-[100svh] flex-col">
@@ -28,7 +30,7 @@ export default function Landing() {
             href="/demo"
             className="text-[13px] uppercase tracking-[0.04em] text-paper transition hover:text-paper/60 sm:text-[15px]"
           >
-            Ver una colección
+            Pasa sin llamar
           </Link>
 
           {/* the mark, centred over everything, sized to be looked at */}
@@ -45,12 +47,12 @@ export default function Landing() {
         </header>
 
         {/* the contents of the record, at the foot of the sleeve */}
-        <div className="mt-auto px-5 pb-24 text-center sm:px-8">
+        <div className="mt-auto px-5 pb-12 text-center sm:px-8 sm:pb-7">
           <p className="mono text-[10px] uppercase tracking-[0.3em] text-paper/50">
-            Esto va de tres cosas
+            Empieza por aquí
           </p>
           <ul className="mt-6 flex flex-col items-center leading-[0.92]">
-            {PILLARS.map((c) => (
+            {INDEX.map((c) => (
               <li key={c.id}>
                 <a
                   href={`#${c.id}`}
@@ -68,15 +70,27 @@ export default function Landing() {
       <div className="landing-hides relative z-10 bg-ink">
         {/* what this is, before what it does: three verbs mean nothing until
             somebody says out loud what they are three verbs of */}
-        <section className="scroll-mt-8 border-t border-paper/[0.07] px-5 py-24 sm:px-8 md:py-36">
+        <section
+          id="el-club"
+          className="scroll-mt-8 border-t border-paper/[0.07] px-5 py-24 sm:px-8 md:py-36"
+        >
           <div className="mx-auto max-w-[1100px]">
             <Reveal>
               <p className="mono text-[10px] uppercase tracking-[0.24em] text-paper/35">
-                Qué es esto
+                Sobre nosotros
               </p>
-              <h2 className="mt-7 max-w-[19ch] text-[34px] leading-[1.08] tracking-[-0.015em] sm:text-[46px] md:text-[58px]">
-                Rackr Club es el sitio donde vive tu colección de vinilos.
+              {/* the mark signs the section instead of naming it twice */}
+              <h2 className="mt-6">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo.svg"
+                  alt="Rackr Club"
+                  className="h-[58px] w-auto sm:h-[76px] md:h-[92px]"
+                />
               </h2>
+              <p className="mt-7 max-w-[24ch] text-[26px] leading-[1.15] tracking-[-0.01em] text-paper sm:text-[34px] md:max-w-[26ch] md:text-[40px]">
+                El sitio donde vive tu colección de vinilos.
+              </p>
             </Reveal>
 
             <div className="mt-14 grid gap-10 md:grid-cols-2 md:gap-16">
@@ -260,6 +274,14 @@ function Grain() {
   );
 }
 
+/** the first screen doubles as the table of contents */
+const INDEX = [
+  { id: "el-club", word: "El club" },
+  { id: "colecciona", word: "Colecciona" },
+  { id: "proyecta", word: "Proyecta" },
+  { id: "comparte", word: "Comparte" },
+];
+
 const NOT = [
   "No es una tienda: aquí no se compra ni se vende nada.",
   "No es una app de notas con portadas bonitas.",
@@ -269,7 +291,7 @@ const NOT = [
 
 const PILLARS = [
   {
-    id: "coleccion",
+    id: "colecciona",
     word: "Colecciona",
     kicker: "Tu colección, en un sitio y en tu orden",
     lead: "Escanea el código de barras y el disco ya está dentro.",
@@ -288,7 +310,7 @@ const PILLARS = [
     ],
   },
   {
-    id: "deseos",
+    id: "proyecta",
     word: "Proyecta",
     kicker: "Tu lista de deseos, aparte y con enlace",
     lead: "Una lista de deseos que se puede enseñar.",
@@ -306,7 +328,7 @@ const PILLARS = [
     ],
   },
   {
-    id: "comunidad",
+    id: "comparte",
     word: "Comparte",
     kicker: "Sigue a gente y llévate lo que veas",
     lead: "Los discos llevan a la gente.",

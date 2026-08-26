@@ -137,20 +137,29 @@ export default function SoundGate() {
    * Not "play the effect, then play the song": the two overlap. The music
    * starts while the needle is still settling and fades up through it, so
    * there is no seam to hear — which is also how it works on a real deck.
+   *
+   * Every change of record goes through here, not just the first one: taking
+   * the arm off and putting it down again is what actually happens between two
+   * records, and a preview cutting straight into the next one sounds like a
+   * playlist.
    */
-  const enter = useCallback(
-    (withSound: boolean) => {
-      setEntered(true);
-      if (!withSound) return;
+  const dropNeedle = useCallback(
+    (index: number) => {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.pause();
+        setPlaying(false);
+      }
 
       const needle = (needleRef.current ??= new Audio(NEEDLE));
+      needle.currentTime = 0;
       needle.volume = 0.9;
 
       let handedOver = false;
       const handOver = () => {
         if (handedOver) return;
         handedOver = true;
-        if (queue.current.length) playAt(cursor.current, true);
+        if (queue.current.length) playAt(index, true);
       };
 
       needle.ontimeupdate = () => {
@@ -165,6 +174,14 @@ export default function SoundGate() {
       void needle.play().catch(handOver);
     },
     [playAt],
+  );
+
+  const enter = useCallback(
+    (withSound: boolean) => {
+      setEntered(true);
+      if (withSound) dropNeedle(cursor.current);
+    },
+    [dropNeedle],
   );
 
   // the queue is ready as soon as the list is
@@ -185,20 +202,44 @@ export default function SoundGate() {
     audio.load();
   }, [tracks, shuffle]);
 
+  /**
+   * Warm the next record while this one plays.
+   *
+   * The proxy serves previews with a day of cache, so simply asking for the
+   * file puts it in the browser's HTTP cache. By the time the needle comes
+   * down on it, there is nothing left to download — which is the difference
+   * between the effect covering a hand-over and the effect covering a wait.
+   */
+  useEffect(() => {
+    const list = queue.current;
+    if (!current || !list.length) return;
+    const upcoming = list[(cursor.current + 1) % list.length];
+    if (!upcoming) return;
+    const warm = new Audio();
+    warm.preload = "auto";
+    warm.src = previewSrc(upcoming.previewUrl);
+    warm.load();
+    return () => {
+      warm.removeAttribute("src");
+      warm.load();
+    };
+  }, [current]);
+
   // a preview is thirty seconds: when it runs out, put the next one on
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    const onEnd = () => playAt(cursor.current + 1);
+    const onEnd = () => dropNeedle(cursor.current + 1);
     audio.addEventListener("ended", onEnd);
     return () => audio.removeEventListener("ended", onEnd);
-  }, [current, playAt]);
+  }, [current, dropNeedle]);
 
   const toggle = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !current) {
-      // never started (came in silent): start now, this click is the gesture
-      if (queue.current.length) playAt(cursor.current);
+      // never started (came in silent): this click is the gesture, so the
+      // record goes on properly, needle and all
+      dropNeedle(cursor.current);
       return;
     }
     if (audio.paused) {
@@ -207,9 +248,9 @@ export default function SoundGate() {
       audio.pause();
       setPlaying(false);
     }
-  }, [current, playAt]);
+  }, [current, dropNeedle]);
 
-  const next = useCallback(() => playAt(cursor.current + 1), [playAt]);
+  const next = useCallback(() => dropNeedle(cursor.current + 1), [dropNeedle]);
 
   useEffect(
     () => () => {
@@ -249,20 +290,20 @@ export default function SoundGate() {
       )}
 
       {entered && (
-        <div className="fixed bottom-5 left-5 z-[70] flex items-center gap-3 text-[13px] uppercase tracking-[0.04em] text-paper sm:text-[15px]">
-          <span aria-hidden className="mono tracking-[0.25em] text-paper/70">
+        <div className="fixed bottom-5 right-5 z-[70] flex max-w-[calc(100vw-2.5rem)] items-center gap-3 text-[13px] uppercase tracking-[0.04em] text-paper sm:text-[15px]">
+          <span aria-hidden className="mono shrink-0 tracking-[0.25em] text-paper/70">
             [ <Bars animate={playing} /> ]
           </span>
 
           {current ? (
-            <span className="max-w-[38vw] truncate sm:max-w-[300px]">
+            <span className="min-w-0 flex-1 truncate sm:max-w-[300px]">
               {current.artist} — {current.title}
             </span>
           ) : (
             <span>Sin sonido</span>
           )}
 
-          <span className="flex items-center gap-2.5">
+          <span className="flex shrink-0 items-center gap-2.5">
             <button
               onClick={toggle}
               aria-label={playing ? "Pausa" : "Reproducir"}
