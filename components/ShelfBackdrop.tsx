@@ -24,7 +24,7 @@ export default function ShelfBackdrop() {
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     // let the mark and the copy paint first; the shelf arrives a beat later
-    const t = setTimeout(() => setShow(true), 300);
+    const t = setTimeout(() => setShow(true), 120);
     return () => clearTimeout(t);
   }, []);
 
@@ -33,9 +33,9 @@ export default function ShelfBackdrop() {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-0 animate-[rise-in_1800ms_ease-out_both]"
+      className="pointer-events-none absolute inset-0 animate-[rise-in_900ms_ease-out_both]"
     >
-      <VinylShelf3D ambient drift={0.055} vinilos={SHELF} onOpen={() => {}} />
+      <VinylShelf3D ambient drift={0.11} vinilos={SHELF} onOpen={() => {}} />
     </div>
   );
 }

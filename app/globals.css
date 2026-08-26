@@ -150,3 +150,72 @@ body {
     animation: none;
   }
 }
+
+/* the door: everything behind it waits out of focus until someone comes in */
+.landing-blur {
+  transition:
+    filter 1600ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 1600ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 1600ms ease;
+}
+[data-landing="gate"] .landing-blur {
+  filter: blur(26px) saturate(0.75);
+  transform: scale(1.12);
+}
+[data-landing="gate"] .landing-hides {
+  opacity: 0;
+  pointer-events: none;
+}
+.landing-hides {
+  transition: opacity 1200ms ease 260ms;
+}
+[data-landing="gate"] body {
+  overflow: hidden;
+}
+
+/* sections that arrive as you reach them */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 1100ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 1100ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* The door fades in over the page rather than replacing it. Hidden by default,
+   so without JavaScript — where the attribute is never set and the buttons
+   could not work anyway — nobody ends up locked out. */
+.landing-gate {
+  display: flex;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 900ms ease,
+    visibility 0s linear 900ms;
+}
+[data-landing="gate"] .landing-gate {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 1000ms ease 300ms,
+    visibility 0s;
+}
+
+/* Jumping to a chapter should travel there, not teleport. Kept out of the way
+   of anyone who has asked the system for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}

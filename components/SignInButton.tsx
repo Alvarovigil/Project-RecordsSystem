@@ -11,7 +11,7 @@ export default function SignInButton({ variant = "solid" }: { variant?: "solid" 
     return (
       <button
         onClick={signInWithGoogle}
-        className="mono text-[10px] uppercase tracking-[0.2em] text-paper/50 transition hover:text-paper"
+        className="text-[13px] uppercase tracking-[0.04em] text-paper transition hover:text-paper/60 sm:text-[15px]"
       >
         Entrar
       </button>

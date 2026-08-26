@@ -13,6 +13,6 @@ export const SITE_URL =
       : "http://localhost:3000");
 
 export const SITE_NAME = "Rackr";
-export const SITE_TAGLINE = "Los discos que tienes, y quién más los tiene";
+export const SITE_TAGLINE = "Tu vida en discos";
 export const SITE_DESCRIPTION =
-  "Cataloga tu colección de vinilos, ordénala en listas y escúchala. Cada disco es una puerta: mira en qué listas de otras personas aparece.";
+  "Cataloga los vinilos que tienes, apunta los que te faltan y mira lo que guardan los demás. Sin anuncios y sin recomendaciones automáticas.";
