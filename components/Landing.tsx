@@ -30,7 +30,7 @@ export default function Landing() {
             href="/demo"
             className="text-[13px] uppercase tracking-[0.04em] text-paper transition hover:text-paper/60 sm:text-[15px]"
           >
-            Pasa sin llamar
+            Cotillea una colección
           </Link>
 
           {/* the mark, centred over everything, sized to be looked at */}
