@@ -11,7 +11,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/sup
  */
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
-  const next = req.nextUrl.searchParams.get("next") ?? "/inicio";
+  const next = req.nextUrl.searchParams.get("next") ?? "/coleccion";
   const fail = (reason: string) =>
     NextResponse.redirect(
       new URL(`/?auth=error&reason=${encodeURIComponent(reason)}`, req.nextUrl.origin),

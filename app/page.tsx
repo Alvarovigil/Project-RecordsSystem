@@ -11,11 +11,11 @@ export const dynamic = "force-dynamic";
  * lives on its own route with its own bundle.
  */
 export default async function Home() {
-  if (!isSupabaseConfigured) redirect("/inicio");
+  if (!isSupabaseConfigured) redirect("/coleccion");
 
   const supabase = getSupabaseServerClient();
   const { data } = (await supabase?.auth.getUser()) ?? { data: { user: null } };
-  if (data.user) redirect("/inicio");
+  if (data.user) redirect("/coleccion");
 
   return <Landing />;
 }

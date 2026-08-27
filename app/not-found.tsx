@@ -17,7 +17,7 @@ export default function NotFound() {
       </p>
       <div className="mt-2 flex items-center gap-5">
         <Link
-          href="/inicio"
+          href="/coleccion"
           className="bg-paper px-5 py-2 text-[13px] text-ink transition hover:bg-paper/85"
         >
           Ir al inicio

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { useDevice } from "@/hooks/useDevice";
 import { coverFor } from "@/lib/cover";
 import { usePlaybackContext } from "@/lib/playback-context";
 
@@ -10,20 +12,38 @@ import { usePlaybackContext } from "@/lib/playback-context";
  *
  * Hidden on the shelf, where the transport is part of the scene — two sets of
  * controls for the same sound is worse than one.
+ *
+ * On a phone it rides above the tab bar and publishes its own height as
+ * `--player-h`, so every scrolling surface can end above it. Guessing that
+ * offset is how the last row of a list ends up permanently unreachable — and
+ * only for the people who happen to be playing something.
  */
 export default function MiniPlayer() {
   const { nowPlaying, playing, loading, toggleCurrent } = usePlaybackContext();
   const pathname = usePathname();
+  const { isPhone } = useDevice();
 
-  // any shelf — yours or the demo — already carries the transport in the
-  // scene, and two sets of controls for the same sound is worse than one
-  const onShelf = pathname.startsWith("/coleccion") || pathname.startsWith("/demo");
+  // The phone shelf has no transport of its own in the scene, so the player is
+  // exactly what it needs; only the 3D desktop shelf hides it.
+  const onShelf =
+    !isPhone && (pathname.startsWith("/coleccion") || pathname.startsWith("/demo"));
+  const visible = Boolean(nowPlaying) && !onShelf;
+
+  useEffect(() => {
+    const root = document.documentElement.style;
+    root.setProperty("--player-h", visible && isPhone ? "58px" : "0px");
+    return () => root.setProperty("--player-h", "0px");
+  }, [visible, isPhone]);
+
   if (!nowPlaying || onShelf) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-paper/[0.08] bg-ink/92 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-[1180px] items-center gap-4 px-6 py-3">
-        <span className="h-11 w-11 shrink-0 overflow-hidden bg-paper/[0.06]">
+    <div
+      className="fixed inset-x-0 z-40 border-t border-line bg-ink/92 backdrop-blur-md"
+      style={{ bottom: isPhone ? "var(--tabbar-h)" : 0 }}
+    >
+      <div className="mx-auto flex w-full max-w-[1180px] items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6 sm:py-3">
+        <span className="h-10 w-10 shrink-0 overflow-hidden bg-paper/[0.06] sm:h-11 sm:w-11">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={coverFor(nowPlaying)} alt="" className="h-full w-full object-cover" />
         </span>
@@ -52,9 +72,11 @@ export default function MiniPlayer() {
           )}
         </button>
 
+        {/* on a phone the whole strip is the link back to the record; a
+            separate text link would be a 9px target next to a 44px one */}
         <Link
           href="/coleccion"
-          className="mono shrink-0 text-[10px] uppercase tracking-[0.16em] text-paper/35 transition hover:text-paper"
+          className="mono hidden shrink-0 text-[10px] uppercase tracking-[0.16em] text-paper/35 transition hover:text-paper sm:block"
         >
           Ver en mi colección
         </Link>
