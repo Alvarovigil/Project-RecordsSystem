@@ -10,6 +10,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Vinyl } from "@/lib/types";
 import type { SortMode } from "@/lib/collections";
 import type {
+  Collaborator,
   FeedEntry,
   FriendWithRecord,
   LibraryRepository,
@@ -17,7 +18,12 @@ import type {
   ListVisibility,
   ListWithRecord,
   NewListInput,
+  Notification,
   Profile,
+  ProfilePatch,
+  ProfileStats,
+  Relationship,
+  SavedList,
 } from "./types";
 
 const slugify = (s: string) =>
@@ -504,5 +510,304 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         lists: (lists ?? []).map((r) => r.list_id as string),
       };
     },
+
+    // ---- profiles ---------------------------------------------------------
+    async relationship(profileId): Promise<Relationship> {
+      const userId = await requireUser();
+      if (userId === profileId) return { following: false, followsYou: false, isYou: true };
+      // both directions in one round trip: the button and the badge next to it
+      // must never disagree, and two requests can land out of order
+      const { data } = await sb
+        .from("follows")
+        .select("follower_id, following_id")
+        .or(
+          `and(follower_id.eq.${userId},following_id.eq.${profileId}),` +
+            `and(follower_id.eq.${profileId},following_id.eq.${userId})`,
+        );
+      const rows = (data ?? []) as { follower_id: string; following_id: string }[];
+      return {
+        following: rows.some((r) => r.follower_id === userId),
+        followsYou: rows.some((r) => r.follower_id === profileId),
+        isYou: false,
+      };
+    },
+
+    async profileStats(profileId): Promise<ProfileStats> {
+      // counts only: head + exact tells Postgres to count without shipping rows
+      const [lists, followers, following] = await Promise.all([
+        sb
+          .from("lists")
+          .select("id", { count: "exact", head: true })
+          .eq("owner_id", profileId)
+          .eq("kind", "custom"),
+        sb
+          .from("follows")
+          .select("follower_id", { count: "exact", head: true })
+          .eq("following_id", profileId),
+        sb
+          .from("follows")
+          .select("following_id", { count: "exact", head: true })
+          .eq("follower_id", profileId),
+      ]);
+      const { data: collection } = await sb
+        .from("lists")
+        .select("item_count")
+        .eq("owner_id", profileId)
+        .eq("kind", "collection")
+        .maybeSingle();
+      return {
+        records: (collection?.item_count as number) ?? 0,
+        lists: lists.count ?? 0,
+        followers: followers.count ?? 0,
+        following: following.count ?? 0,
+      };
+    },
+
+    async updateProfile(patch: ProfilePatch) {
+      const userId = await requireUser();
+      const row: Record<string, unknown> = {};
+      if (patch.displayName !== undefined) row.display_name = patch.displayName;
+      if (patch.username !== undefined) row.username = patch.username;
+      if (patch.bio !== undefined) row.bio = patch.bio;
+      if (patch.avatarUrl !== undefined) row.avatar_url = patch.avatarUrl;
+      const { data, error } = await sb
+        .from("profiles")
+        .update(row)
+        .eq("id", userId)
+        .select("id, username, display_name, bio, avatar_url")
+        .single();
+      // the unique index on username is the real check; surface its refusal
+      // instead of pretending the save worked
+      if (error) throw new Error(error.message);
+      return toProfile(data);
+    },
+
+    async isUsernameAvailable(username) {
+      const clean = username.trim().toLowerCase();
+      if (!/^[a-z0-9_]{3,24}$/.test(clean)) return false;
+      const userId = await requireUser();
+      const { data } = await sb
+        .from("profiles")
+        .select("id")
+        .eq("username", clean)
+        .maybeSingle();
+      return !data || data.id === userId;
+    },
+
+    // ---- keeping other people's lists -------------------------------------
+    async savedLists(): Promise<SavedList[]> {
+      const userId = await requireUser();
+      const { data } = await sb
+        .from("list_follows")
+        .select("created_at, lists!inner(*, profiles!inner(username, display_name, avatar_url))")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      return ((data ?? []) as any[]).map((row) => ({
+        ...withOwner(row.lists),
+        savedAt: row.created_at as string,
+      }));
+    },
+
+    async saveList(listId) {
+      const userId = await requireUser();
+      await sb.from("list_follows").insert({ user_id: userId, list_id: listId });
+    },
+
+    async unsaveList(listId) {
+      const userId = await requireUser();
+      await sb.from("list_follows").delete().eq("user_id", userId).eq("list_id", listId);
+    },
+
+    async duplicateList(listId, title) {
+      const userId = await requireUser();
+      const { data: source } = await sb
+        .from("lists")
+        .select("title, description")
+        .eq("id", listId)
+        .single();
+      const name = title ?? `${source?.title ?? "Lista"} (copia)`;
+      const { data: created, error } = await sb
+        .from("lists")
+        .insert({
+          owner_id: userId,
+          title: name,
+          slug: slugify(name),
+          description: source?.description ?? "",
+          kind: "custom",
+        })
+        .select("*")
+        .single();
+      if (error) throw new Error(error.message);
+      const { data: items } = await sb
+        .from("list_items")
+        .select("release_id, position")
+        .eq("list_id", listId)
+        .order("position");
+      if (items?.length) {
+        await sb.from("list_items").insert(
+          items.map((i) => ({
+            list_id: created.id,
+            release_id: i.release_id,
+            position: i.position,
+            added_by: userId,
+          })),
+        );
+      }
+      return toList(created);
+    },
+
+    // ---- collaboration ----------------------------------------------------
+    async collaboratorsOf(listId): Promise<Collaborator[]> {
+      const [{ data: list }, { data: rows }] = await Promise.all([
+        sb
+          .from("lists")
+          .select("created_at, profiles!inner(id, username, display_name, avatar_url)")
+          .eq("id", listId)
+          .single(),
+        sb
+          .from("list_collaborators")
+          .select("role, status, created_at, profiles!inner(id, username, display_name, avatar_url)")
+          .eq("list_id", listId),
+      ]);
+      const owner: Collaborator[] = list
+        ? [
+            {
+              profile: toShallow((list as any).profiles),
+              role: "owner",
+              since: (list as any).created_at,
+            },
+          ]
+        : [];
+      return [
+        ...owner,
+        ...((rows ?? []) as any[])
+          .filter((r) => r.status !== "declined")
+          .map((r) => ({
+            profile: toShallow(r.profiles),
+            role: "editor" as const,
+            since: r.created_at as string,
+            pending: r.status === "pending",
+          })),
+      ];
+    },
+
+    async inviteCollaborator(listId, username) {
+      const userId = await requireUser();
+      const clean = username.trim().replace(/^@/, "").toLowerCase();
+      const { data: target } = await sb
+        .from("profiles")
+        .select("id")
+        .eq("username", clean)
+        .maybeSingle();
+      if (!target) return { ok: false, error: `No encontramos a @${clean}.` };
+      if (target.id === userId) return { ok: false, error: "Esta lista ya es tuya." };
+      const { error } = await sb
+        .from("list_collaborators")
+        .insert({ list_id: listId, user_id: target.id, invited_by: userId });
+      // 23505 is the primary key: they are already invited, which is not a
+      // failure worth a red message
+      if (error) {
+        return error.code === "23505"
+          ? { ok: false, error: `@${clean} ya está en esta lista.` }
+          : { ok: false, error: "No se pudo invitar." };
+      }
+      return { ok: true };
+    },
+
+    async removeCollaborator(listId, profileId) {
+      await sb.from("list_collaborators").delete().eq("list_id", listId).eq("user_id", profileId);
+    },
+
+    async leaveList(listId) {
+      const userId = await requireUser();
+      await sb.from("list_collaborators").delete().eq("list_id", listId).eq("user_id", userId);
+    },
+
+    async addedBy(listId, releaseSlug) {
+      const releaseId = await releaseIdOf(releaseSlug);
+      if (!releaseId) return null;
+      const { data } = await sb
+        .from("list_items")
+        .select("profiles(id, username, display_name)")
+        .eq("list_id", listId)
+        .eq("release_id", releaseId)
+        .maybeSingle();
+      const p = (data as any)?.profiles;
+      return p ? { id: p.id, username: p.username, displayName: p.display_name } : null;
+    },
+
+    // ---- notifications ----------------------------------------------------
+    async notifications(): Promise<Notification[]> {
+      const userId = await requireUser();
+      const { data } = await sb
+        .from("notifications")
+        .select(
+          "id, kind, actionable, read_at, created_at, list_id, " +
+            "profiles!notifications_actor_id_fkey(id, username, display_name, avatar_url), " +
+            "lists(title, slug), releases(slug, title, artist, cover_url)",
+        )
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(60);
+      return ((data ?? []) as any[]).map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        at: r.created_at,
+        read: Boolean(r.read_at),
+        actionable: r.actionable,
+        actor: toShallow(r.profiles),
+        listId: r.list_id ?? undefined,
+        listTitle: r.lists?.title,
+        listSlug: r.lists?.slug,
+        release: r.releases
+          ? {
+              slug: r.releases.slug,
+              title: r.releases.title,
+              artist: r.releases.artist,
+              cover: r.releases.cover_url,
+            }
+          : undefined,
+      }));
+    },
+
+    async markNotificationsRead() {
+      const userId = await requireUser();
+      await sb
+        .from("notifications")
+        .update({ read_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .is("read_at", null);
+    },
+
+    async respondToInvite(notificationId, accept) {
+      const userId = await requireUser();
+      const { data: n } = await sb
+        .from("notifications")
+        .select("list_id")
+        .eq("id", notificationId)
+        .single();
+      if (n?.list_id) {
+        await sb
+          .from("list_collaborators")
+          .update({ status: accept ? "accepted" : "declined" })
+          .eq("list_id", n.list_id)
+          .eq("user_id", userId);
+      }
+      // answered means answered: it stops being a fork in the road
+      await sb
+        .from("notifications")
+        .update({ actionable: false, read_at: new Date().toISOString() })
+        .eq("id", notificationId);
+    },
+  };
+}
+
+/** The shallow profile shape the community types pass around. */
+function toShallow(p: any) {
+  return {
+    id: p?.id,
+    username: p?.username,
+    displayName: p?.display_name,
+    avatarUrl: p?.avatar_url ?? null,
   };
 }

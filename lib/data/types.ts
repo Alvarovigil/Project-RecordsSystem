@@ -55,6 +55,81 @@ export type FeedEntry = {
   release: { slug: string; title: string; artist: string; cover: string | null };
 };
 
+/**
+ * Where you stand with someone.
+ *
+ * Both directions in one object because the interface needs both at once: the
+ * button says "Seguir" or "Siguiendo" from the first field, and the row under
+ * their name says "te sigue" from the second. Instagram taught everyone that
+ * "follows you" is the single most useful thing you can tell someone about a
+ * stranger — it converts a cold profile into a decision.
+ */
+export type Relationship = {
+  following: boolean;
+  followsYou: boolean;
+  /** you are looking at yourself; the whole follow apparatus disappears */
+  isYou: boolean;
+};
+
+/** The four numbers under a profile's name. */
+export type ProfileStats = {
+  records: number;
+  lists: number;
+  followers: number;
+  following: number;
+};
+
+/**
+ * A list you kept that someone else made.
+ *
+ * Distinguished from your own lists everywhere it appears, always by naming
+ * the owner rather than by a badge reading "guardada" — whose it is, is the
+ * useful fact; that you saved it is not.
+ */
+export type SavedList = ListWithRecord & {
+  savedAt: string;
+};
+
+/** Someone who can add to a list they do not own. */
+export type Collaborator = {
+  profile: Pick<Profile, "id" | "username" | "displayName" | "avatarUrl">;
+  role: "owner" | "editor";
+  since: string;
+  /** an invitation that hasn't been accepted yet */
+  pending?: boolean;
+};
+
+/**
+ * Something that happened *to you*, as opposed to the feed, which is what
+ * happened around you.
+ *
+ * The distinction is load-bearing: mixing an invitation you must answer into a
+ * river of activity is how invitations get missed. Anything with `actionable`
+ * set is a fork in a flow and must not be dismissable without an answer.
+ */
+export type NotificationKind = "follow" | "invite" | "added-to-list" | "saved-list";
+
+export type Notification = {
+  id: string;
+  kind: NotificationKind;
+  at: string;
+  read: boolean;
+  actor: Pick<Profile, "id" | "username" | "displayName" | "avatarUrl">;
+  listId?: string;
+  listTitle?: string;
+  listSlug?: string;
+  release?: { slug: string; title: string; artist: string; cover: string | null };
+  /** requires an answer (accept / decline), not just an acknowledgement */
+  actionable?: boolean;
+};
+
+export type ProfilePatch = {
+  displayName?: string;
+  username?: string;
+  bio?: string;
+  avatarUrl?: string | null;
+};
+
 export type NewListInput = {
   title: string;
   description?: string;
@@ -104,6 +179,45 @@ export interface LibraryRepository {
   listsOfProfile(profileId: string): Promise<ListWithRecord[]>;
   /** full records of any list you're allowed to read, owned by you or not */
   releasesOfList(listId: string): Promise<Vinyl[]>;
+
+  // ---- profiles -----------------------------------------------------------
+  /** where you stand with someone: both directions, plus "this is you" */
+  relationship(profileId: string): Promise<Relationship>;
+  /** the numbers under a profile's name */
+  profileStats(profileId: string): Promise<ProfileStats>;
+  /** edit your own profile; returns the saved result, not the request */
+  updateProfile(patch: ProfilePatch): Promise<Profile>;
+  /** is this handle free? the answer has to arrive while you're still typing */
+  isUsernameAvailable(username: string): Promise<boolean>;
+
+  // ---- keeping other people's lists ---------------------------------------
+  /** lists made by other people that you kept, newest first */
+  savedLists(): Promise<SavedList[]>;
+  saveList(listId: string): Promise<void>;
+  unsaveList(listId: string): Promise<void>;
+  /**
+   * Copy someone's list into one of your own.
+   *
+   * The escape hatch that makes a saved list safe to be read-only: you never
+   * have to choose between keeping a reference and being able to change it.
+   * The copy is yours, disconnected, and says where it came from.
+   */
+  duplicateList(listId: string, title?: string): Promise<List>;
+
+  // ---- collaboration ------------------------------------------------------
+  collaboratorsOf(listId: string): Promise<Collaborator[]>;
+  /** returns a plain reason on failure; the UI needs to say why, not just fail */
+  inviteCollaborator(listId: string, username: string): Promise<{ ok: boolean; error?: string }>;
+  removeCollaborator(listId: string, profileId: string): Promise<void>;
+  /** leave a list you collaborate on but do not own */
+  leaveList(listId: string): Promise<void>;
+  /** who put this record in this list — attribution inside a shared list */
+  addedBy(listId: string, releaseId: string): Promise<Pick<Profile, "id" | "username" | "displayName"> | null>;
+
+  // ---- notifications ------------------------------------------------------
+  notifications(): Promise<Notification[]>;
+  markNotificationsRead(): Promise<void>;
+  respondToInvite(notificationId: string, accept: boolean): Promise<void>;
 
   // ---- follow graph -------------------------------------------------------
   follow(kind: "profile" | "list", id: string): Promise<void>;

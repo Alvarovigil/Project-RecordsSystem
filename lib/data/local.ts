@@ -16,7 +16,7 @@ import {
   saveCollections,
   newCollection,
 } from "@/lib/collections";
-import { DEMO_LISTS, DEMO_PROFILE } from "@/lib/demo";
+import { DEMO_FRIENDS, DEMO_LISTS, DEMO_PROFILE } from "@/lib/demo";
 import {
   allUsers,
   friendsWithRecord,
@@ -28,6 +28,7 @@ import {
   saveFollows,
 } from "@/lib/community";
 import type {
+  Collaborator,
   FeedEntry,
   FriendWithRecord,
   LibraryRepository,
@@ -35,13 +36,73 @@ import type {
   ListVisibility,
   ListWithRecord,
   NewListInput,
+  Notification,
   Profile,
+  ProfilePatch,
+  ProfileStats,
+  Relationship,
+  SavedList,
 } from "./types";
+import {
+  collaboratorsOf as readCollaborators,
+  getAddedBy,
+  hasSeededNotifications,
+  isSaved,
+  listsIveJoined,
+  loadNotifications,
+  loadProfileOverrides,
+  loadSaved,
+  markAllRead,
+  markSeeded,
+  newId,
+  pushNotification,
+  saveNotifications,
+  saveProfileOverrides,
+  setAddedBy,
+  setCollaborators,
+  setSaved,
+} from "./local-community";
 
 const RELEASES_KEY = "vinilos.releases.v1";
 // Without an account you are borrowing the preview's identity: a collector who
 // already has lists, friends and taste. See lib/demo.ts.
-const LOCAL_PROFILE: Profile = DEMO_PROFILE;
+const BASE_PROFILE: Profile = DEMO_PROFILE;
+
+/** The preview collector, plus anything you edited about them. */
+function localProfile(): Profile {
+  const o = loadProfileOverrides();
+  return {
+    ...BASE_PROFILE,
+    ...(o.displayName ? { displayName: o.displayName } : {}),
+    ...(o.username ? { username: o.username } : {}),
+    ...(o.bio !== undefined ? { bio: o.bio } : {}),
+    ...(o.avatarUrl !== undefined ? { avatarUrl: o.avatarUrl } : {}),
+  };
+}
+
+/**
+ * Kept as a getter-backed object so the many existing references to
+ * `LOCAL_PROFILE.username` keep working while the value itself becomes
+ * editable. Replacing ~20 call sites with a function call would have been the
+ * same change written louder.
+ */
+const LOCAL_PROFILE: Profile = {
+  get id() {
+    return BASE_PROFILE.id;
+  },
+  get username() {
+    return localProfile().username;
+  },
+  get displayName() {
+    return localProfile().displayName;
+  },
+  get bio() {
+    return localProfile().bio;
+  },
+  get avatarUrl() {
+    return localProfile().avatarUrl;
+  },
+} as Profile;
 
 const slugify = (s: string) =>
   s
@@ -484,5 +545,265 @@ export function createLocalRepository(): LibraryRepository {
       const all = loadFollows();
       return { profiles: all.filter((id) => id.startsWith("u-")), lists: all.filter((id) => id.startsWith("cl-")) };
     },
+
+    // ---- profiles ---------------------------------------------------------
+    async relationship(profileId): Promise<Relationship> {
+      const isYou = profileId === LOCAL_PROFILE.id || profileId === LOCAL_PROFILE.username;
+      if (isYou) return { following: false, followsYou: false, isYou: true };
+      const follows = new Set(loadFollows());
+      const user = getUser(profileId);
+      return {
+        following: follows.has(profileId) || (user ? follows.has(user.id) : false),
+        // The placeholder community follows you back deterministically rather
+        // than randomly: a badge that appears and disappears between two
+        // renders of the same profile reads as a bug, and this one is meant to
+        // be designed against.
+        followsYou: user ? DEMO_FRIENDS.includes(user.id) : false,
+        isYou: false,
+      };
+    },
+
+    async profileStats(profileId): Promise<ProfileStats> {
+      const isYou = profileId === LOCAL_PROFILE.id || profileId === LOCAL_PROFILE.username;
+      const ids = readReleases().map((v) => v.id);
+      if (isYou) {
+        const cols = collectionsOf();
+        const wished = new Set(cols.find((c) => c.id === WISHLIST_ID)?.vinylIds ?? []);
+        const follows = loadFollows();
+        return {
+          records: ids.filter((id) => !wished.has(id)).length,
+          // the wishlist is yours alone and is not a "list" you publish
+          lists: cols.filter((c) => c.id !== WISHLIST_ID && c.id !== DEFAULT_ID).length,
+          followers: communityUsers().slice(0, 5).length,
+          following: follows.filter((f) => f.startsWith("u-")).length,
+        };
+      }
+      const lists = listsOfUser(profileId, ids);
+      const records = new Set(lists.flatMap((l) => l.vinylIds));
+      return {
+        records: records.size,
+        lists: lists.length,
+        followers: lists.reduce((n, l) => n + l.followers, 0),
+        following: 0,
+      };
+    },
+
+    async updateProfile(patch: ProfilePatch) {
+      saveProfileOverrides(patch);
+      return localProfile();
+    },
+
+    async isUsernameAvailable(username) {
+      const clean = username.trim().toLowerCase();
+      if (!clean) return false;
+      if (clean === BASE_PROFILE.username || clean === localProfile().username) return true;
+      return !communityUsers().some((u) => u.handle === clean);
+    },
+
+    // ---- keeping other people's lists -------------------------------------
+    async savedLists(): Promise<SavedList[]> {
+      // Saved and followed are the same act with two names; the storage keeps
+      // the timestamp so "recently saved" can be a real order rather than
+      // whatever order the registry happens to produce.
+      const stamps = new Map(loadSaved().map((s) => [s.listId, s.at]));
+      const ids = readReleases().map((v) => v.id);
+      const out: SavedList[] = [];
+      for (const listId of new Set([...loadFollows(), ...stamps.keys()])) {
+        if (!listId.startsWith("cl-")) continue;
+        const l = getGeneratedList(listId);
+        if (!l) continue;
+        out.push({ ...toCommunityList(l, l.ownerId), savedAt: stamps.get(listId) ?? l.updated });
+      }
+      // a list you were invited into is not "saved", but it does belong beside
+      // your own — that distinction is drawn in the interface, not here
+      void ids;
+      return out.sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+    },
+
+    async saveList(listId) {
+      setSaved(listId, true);
+      saveFollows([...new Set([...loadFollows(), listId])]);
+    },
+
+    async unsaveList(listId) {
+      setSaved(listId, false);
+      saveFollows(loadFollows().filter((x) => x !== listId));
+    },
+
+    async duplicateList(listId, title) {
+      const source = getGeneratedList(listId);
+      const sourceIds = source ? source.vinylIds : idsOf(listId);
+      const name = title ?? `${source?.title ?? "Lista"} (copia)`;
+      const created = newCollection(name);
+      const have = new Set(readReleases().map((v) => v.id));
+      // A copy that points at records you do not have would be a list of holes.
+      // Only what exists locally comes across; the rest is simply not there.
+      mutate((cols) => [...cols, { ...created, vinylIds: sourceIds.filter((id) => have.has(id)) }]);
+      return toList(created, 99, readReleases(), new Set());
+    },
+
+    // ---- collaboration ----------------------------------------------------
+    async collaboratorsOf(listId) {
+      const stored = readCollaborators(listId);
+      const community = getGeneratedList(listId);
+      const ownerId = community?.ownerId ?? LOCAL_PROFILE.id;
+      const owner = getUser(ownerId);
+      const ownerRow: Collaborator = {
+        profile: {
+          id: ownerId,
+          username: owner?.handle ?? LOCAL_PROFILE.username,
+          displayName: owner?.name ?? LOCAL_PROFILE.displayName,
+          avatarUrl: null,
+        },
+        role: "owner",
+        since: community?.updated ?? new Date(0).toISOString(),
+      };
+      // the owner is always first and can never be removed, so the interface
+      // never has to special-case an empty list of people
+      return [ownerRow, ...stored.filter((c) => c.role !== "owner")];
+    },
+
+    async inviteCollaborator(listId, username) {
+      const clean = username.trim().replace(/^@/, "").toLowerCase();
+      if (!clean) return { ok: false, error: "Escribe un nombre de usuario." };
+      const user = communityUsers().find((u) => u.handle === clean);
+      if (!user) return { ok: false, error: `No encontramos a @${clean}.` };
+      const current = readCollaborators(listId);
+      if (current.some((c) => c.profile.username === clean)) {
+        return { ok: false, error: `@${clean} ya está en esta lista.` };
+      }
+      setCollaborators(listId, [
+        ...current,
+        {
+          profile: { id: user.id, username: user.handle, displayName: user.name, avatarUrl: null },
+          role: "editor",
+          since: new Date().toISOString(),
+          // An invitation is pending until it is accepted. Showing someone as a
+          // collaborator the instant you type their name is a lie the interface
+          // tells that the backend will later contradict.
+          pending: true,
+        },
+      ]);
+      return { ok: true };
+    },
+
+    async removeCollaborator(listId, profileId) {
+      setCollaborators(
+        listId,
+        readCollaborators(listId).filter((c) => c.profile.id !== profileId),
+      );
+    },
+
+    async leaveList(listId) {
+      setCollaborators(
+        listId,
+        readCollaborators(listId).filter((c) => c.profile.id !== LOCAL_PROFILE.id),
+      );
+      setSaved(listId, false);
+      saveFollows(loadFollows().filter((x) => x !== listId));
+    },
+
+    async addedBy(listId, releaseId) {
+      const stored = getAddedBy(listId, releaseId);
+      if (stored) return stored;
+      // Nothing recorded means it predates attribution, which for your own
+      // lists means you. Guessing a collaborator here would invent history.
+      const community = getGeneratedList(listId);
+      if (!community) {
+        return { id: LOCAL_PROFILE.id, username: LOCAL_PROFILE.username, displayName: LOCAL_PROFILE.displayName };
+      }
+      const owner = getUser(community.ownerId);
+      return owner ? { id: owner.id, username: owner.handle, displayName: owner.name } : null;
+    },
+
+    // ---- notifications ----------------------------------------------------
+    async notifications() {
+      seedNotificationsOnce();
+      return loadNotifications().sort((a, b) => b.at.localeCompare(a.at));
+    },
+
+    async markNotificationsRead() {
+      markAllRead();
+    },
+
+    async respondToInvite(notificationId, accept) {
+      const all = loadNotifications();
+      const n = all.find((x) => x.id === notificationId);
+      // Answering removes the fork: an invitation you already accepted must not
+      // keep asking, and one you declined must not linger as a reproach.
+      saveNotifications(
+        all.map((x) => (x.id === notificationId ? { ...x, read: true, actionable: false } : x)),
+      );
+      if (!n?.listId) return;
+      if (accept) {
+        setCollaborators(n.listId, [
+          ...readCollaborators(n.listId).filter((c) => c.profile.id !== LOCAL_PROFILE.id),
+          {
+            profile: {
+              id: LOCAL_PROFILE.id,
+              username: LOCAL_PROFILE.username,
+              displayName: LOCAL_PROFILE.displayName,
+              avatarUrl: LOCAL_PROFILE.avatarUrl,
+            },
+            role: "editor",
+            since: new Date().toISOString(),
+          },
+        ]);
+      }
+    },
   };
+}
+
+/**
+ * Something in the inbox on the first visit.
+ *
+ * An empty notifications screen cannot be designed against — you never find out
+ * whether an invitation reads as an invitation until one is sitting there. Runs
+ * exactly once and then never again, so it can be dismissed for good.
+ */
+function seedNotificationsOnce() {
+  if (hasSeededNotifications()) return;
+  markSeeded();
+  const users = allUsers();
+  const marta = users.find((u) => u.id === "u-marta");
+  const teo = users.find((u) => u.id === "u-teo");
+  const ines = users.find((u) => u.id === "u-ines");
+  const hoursAgo = (h: number) => new Date(Date.now() - h * 36e5).toISOString();
+  const seeded: Notification[] = [];
+
+  if (marta) {
+    seeded.push({
+      id: newId("n"),
+      kind: "invite",
+      at: hoursAgo(3),
+      read: false,
+      actionable: true,
+      actor: { id: marta.id, username: marta.handle, displayName: marta.name, avatarUrl: null },
+      listId: "cl-invite-demo",
+      listTitle: "Compras de Record Store Day",
+      listSlug: "compras-de-record-store-day",
+    });
+  }
+  if (teo) {
+    seeded.push({
+      id: newId("n"),
+      kind: "follow",
+      at: hoursAgo(9),
+      read: false,
+      actor: { id: teo.id, username: teo.handle, displayName: teo.name, avatarUrl: null },
+    });
+  }
+  if (ines) {
+    seeded.push({
+      id: newId("n"),
+      kind: "saved-list",
+      at: hoursAgo(26),
+      read: true,
+      actor: { id: ines.id, username: ines.handle, displayName: ines.name, avatarUrl: null },
+      listId: "demo-noche",
+      listTitle: "El turno de noche",
+      listSlug: "el-turno-de-noche",
+    });
+  }
+  saveNotifications(seeded);
 }
