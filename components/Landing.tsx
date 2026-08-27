@@ -26,9 +26,14 @@ export default function Landing() {
       {/* ---------------------------------------------------------- screen 1 */}
       <section className="landing-hides relative z-10 flex min-h-[100svh] flex-col">
         <header className="flex items-start justify-between px-5 py-6 sm:px-8">
-          {/* not a link — the claim of the whole thing, held in the corner */}
-          <span className="max-w-[45vw] text-[13px] uppercase tracking-[0.04em] text-paper sm:max-w-none sm:text-[15px]">
-            Nadie colecciona solo
+          {/* Not a link — the claim of the whole thing, held in the corner.
+              Two sentences, and the full stop between them is doing the work:
+              it makes the second half land as a separate promise rather than
+              as a list of two nouns. Kept on one line where there is room and
+              allowed to break at the stop where there isn't, so the phrase
+              never splits mid-thought. */}
+          <span className="max-w-[45vw] text-balance text-[13px] uppercase tracking-[0.04em] text-paper sm:max-w-none sm:text-[15px]">
+            Your records. Your people.
           </span>
 
           {/* the mark, centred over everything, sized to be looked at */}
