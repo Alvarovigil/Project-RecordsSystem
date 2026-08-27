@@ -1,0 +1,21 @@
+{
+  "name": "Rackr",
+  "short_name": "Rackr",
+  "description": "Tu colección de vinilos, y la gente que colecciona contigo.",
+  "start_url": "/coleccion",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "lang": "es",
+  "categories": ["music", "social", "lifestyle"],
+  "icons": [
+    { "src": "/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/apple-icon.png", "sizes": "180x180", "type": "image/png" }
+  ],
+  "shortcuts": [
+    { "name": "Buscar un disco", "url": "/explorar?buscar=1" },
+    { "name": "Novedades", "url": "/feed" }
+  ]
+}
