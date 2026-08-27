@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import TopNav from "@/components/app/TopNav";
 import { useSession } from "@/hooks/useSession";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -48,8 +47,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-ink pb-28 text-paper">
-      <TopNav />
+    <main className="min-h-screen-d bg-surface pb-chrome text-paper">
       <div className="mx-auto w-full max-w-[560px] px-6 py-16">
         <h1 className="mt-2 text-[26px] leading-tight">Ajustes</h1>
 
