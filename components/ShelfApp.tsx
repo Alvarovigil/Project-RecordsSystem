@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import VinylShelf, { type VinylShelfHandle } from "@/components/VinylShelf3D";
+import dynamic from "next/dynamic";
+import type { VinylShelfHandle } from "@/components/VinylShelf3D";
 import MiniVinyl from "@/components/MiniVinyl";
 import VinylGrid from "@/components/VinylGrid";
 import SearchOverlay from "@/components/SearchOverlay";
@@ -20,6 +21,25 @@ import { BarcodeIcon, useCanScan } from "@/components/BarcodeScanner";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
 import { type Collection, type SortMode, sortedVinylIds } from "@/lib/collections";
+import { useDevice } from "@/hooks/useDevice";
+import MobileShelf from "@/components/mobile/MobileShelf";
+import RecordSheet from "@/components/mobile/RecordSheet";
+import MobileSearch from "@/components/mobile/MobileSearch";
+import { useToast } from "@/components/ui/Toast";
+import type { SavedList } from "@/lib/data/types";
+
+/**
+ * The 3D shelf, fetched only if it is going to be shown.
+ *
+ * three.js, react-three-fiber and drei are roughly 380 kB of the ~476 kB this
+ * route used to ship — and a phone never renders any of it, because the phone
+ * gets the crate stack instead. A static import would have made every mobile
+ * visitor download a renderer for a canvas that is never mounted, over the
+ * connection least able to afford it.
+ *
+ * `ssr: false` because it needs a WebGL context, which the server does not have.
+ */
+const VinylShelf = dynamic(() => import("@/components/VinylShelf3D"), { ssr: false });
 
 export default function ShelfApp({ authenticated = false }: { authenticated?: boolean }) {
   // set synchronously, before any data hook reads the backend
@@ -143,6 +163,21 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
     if (collectionsOpen) loadFollowed();
   }, [collectionsOpen, loadFollowed]);
 
+  const [saved, setSaved] = useState<SavedList[]>([]);
+  const [myProfileId, setMyProfileId] = useState("");
+  useEffect(() => {
+    repo
+      .getCurrentProfile()
+      .then((p) => setMyProfileId(p?.id ?? ""))
+      .catch(() => {});
+  }, [repo]);
+  useEffect(() => {
+    repo
+      .savedLists()
+      .then(setSaved)
+      .catch(() => setSaved([]));
+  }, [repo]);
+
   const [searchOpen, setSearchOpen] = useState(false);
   // scanning is its own errand — you arrive with a sleeve in your hand, not
   // with something to type — so the shelf opens the camera directly
@@ -217,6 +252,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
 
   // sound is its own concern, in its own hook
   const audio = usePlaybackContext();
+  const toast = useToast();
   const { nowPlaying, playing } = audio;
   const loadingPreview = audio.loading;
   const playPreview = audio.play;
@@ -356,6 +392,85 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
 
   const goPrev = () => skip(-1);
   const goNext = () => skip(1);
+
+  /**
+   * The fork.
+   *
+   * Not a breakpoint that rearranges this layout — a different implementation
+   * of the same screen. The 3D shelf, the flanking metadata columns and the
+   * three-corner transport are a desktop composition; a phone gets a crate you
+   * flick through and a sheet you throw away, built from the same data and the
+   * same actions. Deciding here, at the top, is what keeps either version from
+   * carrying dead code for the other.
+   */
+  const { isPhone, touch: isTouch } = useDevice();
+
+  if (isPhone) {
+    return (
+      <>
+        <MobileShelf
+          vinilos={vinilos}
+          collections={resolvedCollections}
+          activeListId={activeCollectionId}
+          activeName={activeCollection?.name ?? "Mi Colección"}
+          savedLists={saved}
+          nowPlayingId={nowPlaying?.id}
+          isPlaying={playing}
+          onOpen={setOpen}
+          onActivate={handleActivateCollection}
+          onSearch={() => openSearch()}
+          onPlay={(v) => (nowPlaying?.id === v.id ? audio.toggleCurrent() : playPreview(v))}
+          onCreateList={handleCreateCollection}
+          onRenameList={handleRenameCollection}
+          onDeleteList={handleDeleteCollection}
+          onSetSort={handleSetSort}
+          onSetVisibility={(id, visibility) => {
+            void repo.setListVisibility(id, visibility).then(() => void lib.refresh());
+          }}
+          visibilityOf={(id) => lib.lists.find((l) => l.id === id)?.visibility ?? "public"}
+          myId={myProfileId}
+          onRemoveFromList={(v) => {
+            handleRemoveVinylFromActive(v.id);
+            // the same undo every other removal in the app gets: a swipe is a
+            // fast gesture, and fast gestures are the ones you make by mistake
+            toast.undo(`${v.title} fuera de la lista`, () =>
+              handleSaveToList(v, activeCollectionId),
+            );
+          }}
+        />
+
+        <RecordSheet
+          vinyl={open}
+          onClose={() => setOpen(null)}
+          collections={resolvedCollections}
+          activeListId={activeCollectionId}
+          playing={playing && nowPlaying?.id === open?.id}
+          onTogglePlay={(v) => (nowPlaying?.id === v.id ? audio.toggleCurrent() : playPreview(v))}
+          onAddTo={(listId, v) => handleSaveToList(v, listId)}
+          onRemoveFromActive={(v) => handleRemoveVinylFromActive(v.id)}
+          onDelete={(v) => handleDeleteVinylPermanently(v.id)}
+        />
+
+        <MobileSearch
+          open={searchOpen}
+          autoScan={searchScanning}
+          onClose={() => {
+            setSearchOpen(false);
+            setSearchScanning(false);
+          }}
+          collections={resolvedCollections}
+          activeCollectionId={activeCollectionId}
+          allVinilos={allVinilos}
+          localVinilos={vinilos}
+          onJumpTo={setOpen}
+          onCreateList={handleCreateCollection}
+          onSaveToList={handleSaveToList}
+          onRemoveFromList={(vinylId, listId) => handleToggleVinyl(listId, vinylId)}
+          onDeleteVinyl={handleDeleteVinylPermanently}
+        />
+      </>
+    );
+  }
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-ink text-paper">
@@ -535,6 +650,24 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         transparent
         right={
           <div className="flex items-center gap-5">
+          {/* Scanning used to sit here as its own control. It already lives
+              inside the search, one press away and with the destination bar
+              around it — two doors into the same room, and the second one only
+              made the row longer. */}
+          <button
+            onClick={() => openSearch()}
+            className="group flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-paper/60 hover:text-paper transition"
+            aria-label="Buscar"
+          >
+            {/* a keyboard shortcut is a promise; on a tablet there is no
+                keyboard to keep it with */}
+            {!isTouch && (
+              <kbd className="mono inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-[3px] border border-paper/25 text-[11px] text-paper/60 normal-case tracking-normal group-hover:border-paper/60 group-hover:text-paper transition">
+                /
+              </kbd>
+            )}
+            <span>Buscar</span>
+          </button>
           {/* view switch: 3D shelf ↔ grid */}
           <div className="flex items-center border border-paper/20">
             {(["shelf", "grid"] as const).map((v) => (
@@ -565,27 +698,6 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
               </button>
             ))}
           </div>
-          {canScan && (
-            <button
-              onClick={() => openSearch(true)}
-              className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-paper/60 transition hover:text-paper"
-              aria-label="Escanear un código de barras"
-              title="Escanear un código de barras"
-            >
-              <BarcodeIcon size={16} />
-              <span className="hidden md:inline">Escanear</span>
-            </button>
-          )}
-          <button
-            onClick={() => openSearch()}
-            className="group flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-paper/60 hover:text-paper transition"
-            aria-label="Buscar"
-          >
-            <kbd className="mono inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-[3px] border border-paper/25 text-[11px] text-paper/60 normal-case tracking-normal group-hover:border-paper/60 group-hover:text-paper transition">
-              /
-            </kbd>
-            <span>Buscar</span>
-          </button>
           </div>
         }
       />

@@ -79,7 +79,7 @@ export default function VinylEditOverlay({
       {isInWishlist && onMoveToCollection && (
         <button
           onClick={onMoveToCollection}
-          className="pointer-events-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-5 py-3 rounded-md bg-ink/70 backdrop-blur-sm border border-paper/25 text-paper text-[13px] uppercase tracking-[0.18em] hover:bg-ink/90 hover:border-paper/60 transition opacity-0 group-hover:opacity-100"
+          className="pointer-events-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-5 py-3 rounded-md bg-ink/70 backdrop-blur-sm border border-paper/25 text-paper text-[13px] uppercase tracking-[0.18em] hover:bg-ink/90 hover:border-paper/60 transition reveal-on-hover"
         >
           Añadir a mi colección
         </button>
@@ -89,7 +89,7 @@ export default function VinylEditOverlay({
         <button
           onClick={() => setMenuOpen((v) => !v)}
           className={`flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 backdrop-blur-sm border border-paper/20 text-paper/70 hover:text-paper hover:border-paper/60 transition-opacity ${
-            menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            menuOpen ? "opacity-100" : "reveal-on-hover"
           }`}
           aria-label="Editar vinilo"
         >

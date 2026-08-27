@@ -102,7 +102,7 @@ export default function VinylGrid({
                       : `Reproducir ${v.title}`
                   }
                   className={`absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-paper/25 bg-ink/70 text-paper backdrop-blur-sm transition focus:opacity-100 ${
-                    sounding ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                    sounding ? "opacity-100" : "reveal-on-hover"
                   }`}
                 >
                   {sounding && isPlaying ? (

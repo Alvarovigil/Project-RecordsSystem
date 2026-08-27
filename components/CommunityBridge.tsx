@@ -367,7 +367,7 @@ function ListView({
                   />
                   <button
                     onClick={() => (owned ? onOpenOwn(v) : onSave(v))}
-                    className="absolute inset-0 flex items-end justify-center bg-gradient-to-t from-ink/85 via-transparent to-transparent p-2 opacity-0 transition group-hover:opacity-100"
+                    className="reveal-on-hover absolute inset-0 flex items-end justify-center bg-gradient-to-t from-ink/85 via-transparent to-transparent p-2 transition"
                   >
                     <span className="mono text-[9px] uppercase tracking-[0.16em] text-paper">
                       {owned ? "Ver en mi colección" : "Guardar"}

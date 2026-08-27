@@ -326,7 +326,7 @@ export default function CollectionsOverlay({
 
                       {/* per-row actions, revealed on hover */}
                       {renameId !== c.id && (
-                        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-0.5 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+                        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-0.5 reveal-on-hover transition">
                           <RowAction
                             label="Editar discos"
                             onClick={() => {
@@ -422,7 +422,7 @@ export default function CollectionsOverlay({
                           }}
                           aria-label="Dejar de seguir"
                           title="Dejar de seguir"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 mono text-[9px] uppercase tracking-[0.16em] text-paper/25 opacity-0 transition hover:text-paper group-hover:opacity-100"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 mono reveal-on-hover text-[9px] uppercase tracking-[0.16em] text-paper/25 transition hover:text-paper"
                         >
                           Dejar
                         </button>
@@ -701,7 +701,7 @@ function EditPanel({
                       onToggleVinyl(editing.id, v.id);
                     }
                   }}
-                  className="text-[11px] uppercase tracking-[0.16em] text-paper/30 hover:text-red-400 transition px-2 opacity-0 group-hover:opacity-100"
+                  className="reveal-on-hover text-[11px] uppercase tracking-[0.16em] text-paper/30 hover:text-red-400 transition px-2"
                   aria-label={isLibrary ? "Eliminar permanentemente" : "Quitar"}
                 >
                   {isLibrary ? "Eliminar" : "Quitar"}

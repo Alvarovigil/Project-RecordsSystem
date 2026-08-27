@@ -6,20 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import type { Vinyl } from "@/lib/types";
 import type { Collection } from "@/lib/collections";
 import { DestinationBar, RowSave } from "./SaveToList";
-import { getRepository, type ListWithRecord, type Profile } from "@/lib/data";
 import BarcodeScanner, { BarcodeIcon, useCanScan } from "./BarcodeScanner";
-
-type SearchResult = {
-  id: number;
-  title: string;
-  year?: number;
-  country?: string;
-  label?: string;
-  genre?: string;
-  cover_image?: string;
-  thumb?: string;
-  format?: string[];
-};
+import { useCatalogueSearch, type DiscogsResult as SearchResult } from "@/hooks/useCatalogueSearch";
 
 type Props = {
   open: boolean;
@@ -63,17 +51,24 @@ export default function SearchOverlay({
   // the chosen destination sticks between saves, like a pinboard would
   const [targetId, setTargetId] = useState(activeCollectionId);
   useEffect(() => setTargetId(activeCollectionId), [activeCollectionId]);
-  // what a save actually did, so Deshacer can undo exactly that: a record that
-  // was new to the library must leave it again, not just leave the list
-  const [savedIn, setSavedIn] = useState<
-    Record<string, { listId: string; vinylId: string; wasNew: boolean }>
-  >({});
   const [mode, setMode] = useState<"vinyls" | "people">("vinyls");
   const [q, setQ] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [adding, setAdding] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // The searching itself is shared with the phone screen: same two sources,
+  // same undo bookkeeping. Only the body around it differs.
+  const {
+    localResults,
+    addable,
+    people,
+    communityLists,
+    loading,
+    adding,
+    savedIn,
+    addFromCatalogue,
+    noteSave,
+    forgetSave,
+  } = useCatalogueSearch({ query: q, mode, localVinilos, allVinilos });
   const [scanning, setScanning] = useState(false);
   const canScan = useCanScan();
 
@@ -87,106 +82,22 @@ export default function SearchOverlay({
       setScanning(true);
     } else if (open) setTimeout(() => inputRef.current?.focus(), 50);
     else {
+      // clearing the query is enough: the hook derives every result set from
+      // it, so there is nothing else left holding yesterday's search
       setQ("");
-      setResults([]);
       setMode("vinyls");
       setScanning(false);
     }
   }, [open, autoScan]);
 
-  // Discogs runs alongside the local filter, not instead of it: one search box
-  // answers both "do I have this?" and "can I get this?"
-  useEffect(() => {
-    if (mode !== "vinyls" || !q.trim()) {
-      setResults([]);
-      return;
-    }
-    let cancelled = false;
-    const handle = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const r = await fetch(`/api/discogs/search?q=${encodeURIComponent(q)}`);
-        const data = await r.json();
-        if (cancelled) return;
-        setResults(data.results ?? []);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
-    };
-  }, [q, mode]);
-
-  // local filter — instant, no network
-  const norm = (s: string) =>
-    s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-  const localResults =
-    mode === "vinyls" && q.trim()
-      ? localVinilos.filter((v) => {
-          const t = norm(`${v.title} ${v.artist}`);
-          return t.includes(norm(q.trim()));
-        })
-      : [];
-
   // Saving keeps the search open on purpose: adding several records in a row
   // is the common case, and a closing overlay would punish it.
-  const add = async (r: SearchResult, listId: string) => {
-    setAdding(r.id);
-    try {
-      const res = await fetch(`/api/discogs/release`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ releaseId: r.id }),
-      });
-      const data = await res.json();
-      if (data.vinyl) {
-        const wasNew = !allVinilos.some((v) => v.id === data.vinyl.id);
-        onSaveToList(data.vinyl, listId);
-        setSavedIn((m) => ({
-          ...m,
-          [`d${r.id}`]: { listId, vinylId: data.vinyl.id, wasNew },
-        }));
-      }
-    } finally {
-      setAdding(null);
-    }
-  };
-
-  // people and lists, searched together: you rarely know which one you want
-  const [people, setPeople] = useState<Profile[]>([]);
-  const [communityLists, setCommunityLists] = useState<ListWithRecord[]>([]);
-  useEffect(() => {
-    if (mode !== "people" || !q.trim()) {
-      setPeople([]);
-      setCommunityLists([]);
-      return;
-    }
-    let cancelled = false;
-    const handle = setTimeout(async () => {
-      setLoading(true);
-      const repo = getRepository();
-      const [p, l] = await Promise.all([repo.searchProfiles(q), repo.searchLists(q)]);
-      if (cancelled) return;
-      setPeople(p);
-      setCommunityLists(l);
-      setLoading(false);
-    }, 250);
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
-    };
-  }, [q, mode]);
+  const add = (r: SearchResult, listId: string) =>
+    addFromCatalogue(r, listId, onSaveToList);
 
   // one cursor over the visible list: ↑↓ to move, ↵ to act on it
   const [cursor, setCursor] = useState(0);
   useEffect(() => setCursor(0), [q, mode]);
-  // Discogs results that are already on a shelf of yours would be a second copy
-  // of the row above; the local section already speaks for them.
-  const addable = results.filter(
-    (r) => !localResults.some((v) => v.discogsId === r.id),
-  );
   // one cursor walks both sections in reading order
   const rows: Array<{ kind: "local"; v: Vinyl } | { kind: "add"; r: SearchResult }> = [
     ...localResults.map((v) => ({ kind: "local" as const, v })),
@@ -445,18 +356,11 @@ export default function SearchOverlay({
                     savedIn={savedIn[v.id]?.listId ?? null}
                     onSave={(listId: string) => {
                       onSaveToList(v, listId);
-                      setSavedIn((m) => ({
-                        ...m,
-                        [v.id]: { listId, vinylId: v.id, wasNew: false },
-                      }));
+                      noteSave(v.id, { listId, vinylId: v.id, wasNew: false });
                     }}
                     onUndo={(listId: string) => {
                       onRemoveFromList(v.id, listId);
-                      setSavedIn((m) => {
-                        const next = { ...m };
-                        delete next[v.id];
-                        return next;
-                      });
+                      forgetSave(v.id);
                     }}
                   />
                 </li>
@@ -518,11 +422,7 @@ export default function SearchOverlay({
                         if (saved.wasNew) onDeleteVinyl(saved.vinylId);
                         else onRemoveFromList(saved.vinylId, listId);
                       }
-                      setSavedIn((m) => {
-                        const next = { ...m };
-                        delete next[`d${r.id}`];
-                        return next;
-                      });
+                      forgetSave(`d${r.id}`);
                     }}
                   />
                 </li>
