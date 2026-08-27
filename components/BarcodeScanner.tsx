@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import type { Vinyl } from "@/lib/types";
 import type { Collection } from "@/lib/collections";
 import { DestinationBar } from "./SaveToList";
@@ -298,10 +299,36 @@ export default function BarcodeScanner({
     if (s.match) void addMatch(s.key, s.match, targetRef.current);
   };
 
+  /**
+   * Clearing a card is not undoing what it did.
+   *
+   * Swiping away a notification on a phone dismisses the message, it does not
+   * reverse the event — and a scanner where a careless swipe silently removed a
+   * record from your shelf would be unusable. The code stays in `seen`, so the
+   * camera doesn't immediately re-scan the sleeve still in front of it.
+   */
+  const dismiss = (key: string) => setScans((list) => list.filter((x) => x.key !== key));
+
   if (!open) return null;
 
+  // Only the newest few stay open. A notification centre that never collapses
+  // is a list, and a list over a viewfinder is a wall.
+  const OPEN = 3;
+  const visible = scans.slice(0, OPEN);
+  const buried = Math.max(0, scans.length - OPEN);
+
   return (
-    <div className="fixed inset-0 z-[70] bg-black">
+    /**
+     * A column, not a pile of absolutely-positioned pieces.
+     *
+     * The old layout put the viewfinder at top-1/2 and grew the results upward
+     * from the bottom to 38vh; with a few scans they sat on top of each other,
+     * and on a short screen the hint text landed inside the frame. Nothing here
+     * is positioned against the viewport any more — the header takes what it
+     * needs, the cards take what they need, and the viewfinder takes what is
+     * left. Overlap stops being something to tune and becomes impossible.
+     */
+    <div className="fixed inset-0 z-[70] flex flex-col bg-black">
       <video
         ref={videoRef}
         playsInline
@@ -310,10 +337,50 @@ export default function BarcodeScanner({
       />
       <div className="absolute inset-0 bg-black/35" />
 
-      {/* viewfinder */}
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-[60%] justify-center">
+      {/* ------------------------------------------------------------ header */}
+      <div
+        className="relative z-10 flex shrink-0 items-center gap-3 bg-gradient-to-b from-black/85 to-transparent px-3 pb-10"
+        style={{ paddingTop: "max(12px, var(--safe-top))" }}
+      >
+        <button
+          onClick={onClose}
+          aria-label="Cerrar el escáner"
+          className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-paper backdrop-blur-md"
+        >
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+
+        {/* the destination gets the middle and is allowed to truncate; the two
+            round controls beside it never move, so nothing can collide */}
+        <div className="flex min-w-0 flex-1 justify-center">
+          <DestinationBar
+            collections={collections}
+            targetId={targetId}
+            onTargetChange={onTargetChange}
+            onCreateList={onCreateList}
+          />
+        </div>
+
+        <button
+          onClick={toggleTorch}
+          aria-label="Linterna"
+          aria-pressed={torchOn}
+          className={`pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full backdrop-blur-md transition ${
+            !torchable ? "invisible" : torchOn ? "bg-paper text-ink" : "bg-white/10 text-paper"
+          }`}
+        >
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path d="M8 1 L3.5 9 H7.5 L6.5 15 L12.5 6.5 H8.5 Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" fill={torchOn ? "currentColor" : "none"} />
+          </svg>
+        </button>
+      </div>
+
+      {/* -------------------------------------------------------- viewfinder */}
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-6">
         <div
-          className={`relative h-[150px] w-[270px] transition-colors duration-200 ${
+          className={`relative aspect-[9/5] w-full max-w-[300px] transition-colors duration-200 ${
             flash ? "bg-paper/15" : ""
           }`}
         >
@@ -328,65 +395,45 @@ export default function BarcodeScanner({
           )}
           <span className="absolute inset-x-4 top-1/2 h-px bg-paper/50" />
         </div>
-      </div>
-      <p className="pointer-events-none absolute inset-x-0 top-1/2 mt-[40px] text-center text-[13px] text-paper/70">
-        {error ? "" : "Apunta al código de barras de la contraportada"}
-      </p>
-
-      {/* top bar: leaving, destination, light */}
-      <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 bg-gradient-to-b from-black/80 to-transparent px-4 pb-8 pt-[max(14px,env(safe-area-inset-top))]">
-        <button
-          onClick={onClose}
-          aria-label="Cerrar el escáner"
-          className="flex h-9 w-9 items-center justify-center text-paper/80 transition hover:text-paper"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-            <path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" strokeWidth="1.3" />
-          </svg>
-        </button>
-        <div className="min-w-0">
-          <DestinationBar
-            collections={collections}
-            targetId={targetId}
-            onTargetChange={onTargetChange}
-            onCreateList={onCreateList}
-          />
-        </div>
-        <button
-          onClick={toggleTorch}
-          aria-label="Linterna"
-          className={`flex h-9 w-9 items-center justify-center transition ${
-            torchable ? (torchOn ? "text-paper" : "text-paper/50 hover:text-paper") : "invisible"
-          }`}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-            <path d="M8 1 L3.5 9 H7.5 L6.5 15 L12.5 6.5 H8.5 Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" fill={torchOn ? "currentColor" : "none"} />
-          </svg>
-        </button>
+        <p className="mt-5 text-center text-sub text-paper/70">
+          {error ?? "Apunta al código de barras de la contraportada"}
+        </p>
       </div>
 
-      {/* the run so far: newest on top, each row still undoable */}
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/85 to-transparent pb-[max(14px,env(safe-area-inset-bottom))] pt-10">
-        {error && (
-          <p className="px-5 pb-3 text-[13px] text-paper/70">{error}</p>
+      {/* ------------------------------------------------- the notifications */}
+      {/* Newest on top, floating over the camera, never pushing the viewfinder.
+          Capped at three because the fourth is already history — the run's
+          total lives in the button below. */}
+      <div className="relative z-20 shrink-0 px-3">
+        {buried > 0 && (
+          <p className="pb-2 text-center text-caption text-paper/40">
+            y {buried} {buried === 1 ? "más" : "más"} antes
+          </p>
         )}
-
-        <div data-scrollable className="max-h-[38vh] overflow-y-auto px-4">
-          {scans.slice(0, 8).map((s) => (
-            <ScanRow
+        <AnimatePresence initial={false}>
+          {visible.map((s, i) => (
+            <ScanCard
               key={s.key}
               scan={s}
+              depth={i}
               onUndo={() => undo(s)}
               onAddAnyway={() => addAnyway(s)}
+              onDismiss={() => dismiss(s.key)}
               onManual={() => {
                 onSearchManually(s.code);
                 onClose();
               }}
             />
           ))}
-        </div>
+        </AnimatePresence>
+      </div>
 
-        {typing ? (
+      {/* ----------------------------------------------------------- controls */}
+      <div
+        className="relative z-10 shrink-0 bg-gradient-to-t from-black via-black/85 to-transparent px-3 pt-8"
+        style={{ paddingBottom: "max(12px, var(--safe-bottom))" }}
+      >
+        {typing && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -395,31 +442,31 @@ export default function BarcodeScanner({
               if (value) void handleCode(value);
               input.value = "";
             }}
-            className="mx-4 mt-3 flex items-center gap-3 border-b border-paper/25"
+            className="mb-3 flex items-center gap-2 rounded-lg bg-white/10 px-3 backdrop-blur-md"
           >
             <input
               name="code"
               autoFocus
               inputMode="numeric"
-              placeholder="Teclea el código de barras…"
-              className="flex-1 bg-transparent py-3 text-[15px] text-paper outline-none placeholder:text-paper/35"
+              placeholder="Teclea el código de barras"
+              className="h-12 flex-1 bg-transparent text-body text-paper outline-none placeholder:text-paper/35"
             />
-            <button type="submit" className="mono py-3 text-[10px] uppercase tracking-[0.2em] text-paper/60">
+            <button type="submit" className="pressable shrink-0 px-2 py-3 text-sub font-medium text-paper">
               Buscar
             </button>
           </form>
-        ) : null}
+        )}
 
-        <div className="mt-3 flex items-center justify-between px-5">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setTyping((v) => !v)}
-            className="mono text-[10px] uppercase tracking-[0.2em] text-paper/45 transition hover:text-paper"
+            className="pressable h-12 flex-1 rounded-lg bg-white/10 text-sub font-medium text-paper backdrop-blur-md"
           >
             {typing ? "Volver a la cámara" : "Escribir el código"}
           </button>
           <button
             onClick={onClose}
-            className="mono text-[10px] uppercase tracking-[0.2em] text-paper transition hover:text-paper/70"
+            className="pressable h-12 flex-1 rounded-lg bg-paper text-sub font-semibold text-ink"
           >
             {addedCount > 0
               ? `Listo · ${addedCount} ${addedCount === 1 ? "añadido" : "añadidos"}`
@@ -431,53 +478,108 @@ export default function BarcodeScanner({
   );
 }
 
-function ScanRow({
+/**
+ * One scan, as a notification.
+ *
+ * The model is the iOS notification and it is the right one here: something
+ * happened while your attention was on the camera, it needs to be seen without
+ * taking over, and you should be able to get rid of it with the thumb already
+ * holding the phone.
+ *
+ * What that means concretely:
+ *
+ * - **A card on a blurred material**, not a row with a rule under it. It reads
+ *   as floating over the viewfinder rather than as a list the camera is sitting
+ *   on top of.
+ * - **Swipe either way to clear it**, and clearing is not undoing — a careless
+ *   swipe must never remove a record from your shelf. Undo stays an explicit
+ *   button, exactly as it was.
+ * - **The stack recedes.** The second and third cards sit slightly smaller and
+ *   dimmer, so the newest one is obviously the newest without needing a label.
+ * - **It arrives from below and leaves sideways**, so the two motions never
+ *   read as the same event.
+ */
+function ScanCard({
   scan,
+  depth,
   onUndo,
   onAddAnyway,
+  onDismiss,
   onManual,
 }: {
   scan: Scan;
+  depth: number;
   onUndo: () => void;
   onAddAnyway: () => void;
+  onDismiss: () => void;
   onManual: () => void;
 }) {
   const { match, status } = scan;
+
+  const action =
+    status === "added"
+      ? { label: "Deshacer", run: onUndo }
+      : status === "duplicate"
+        ? { label: "Añadir igual", run: onAddAnyway }
+        : status === "notfound" || status === "error"
+          ? { label: "Buscar a mano", run: onManual }
+          : null;
+
+  const line =
+    status === "looking"
+      ? "Buscando…"
+      : status === "added"
+        ? `Añadido a ${scan.listName ?? "tu lista"}`
+        : status === "duplicate"
+          ? "Ya lo tienes"
+          : status === "notfound"
+            ? scan.code
+            : "No se pudo añadir";
+
+  const onDragEnd = (_: unknown, info: PanInfo) => {
+    // distance or a flick: a fast throw is a decision even when it is short
+    if (Math.abs(info.offset.x) > 110 || Math.abs(info.velocity.x) > 500) onDismiss();
+  };
+
   return (
-    <div className="flex items-center gap-3 border-b border-paper/10 py-2.5 last:border-b-0">
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 24, scale: 0.96 }}
+      animate={{ opacity: 1 - depth * 0.22, y: 0, scale: 1 - depth * 0.035 }}
+      exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.16 } }}
+      transition={{ type: "spring", damping: 30, stiffness: 420 }}
+      drag="x"
+      dragDirectionLock
+      dragSnapToOrigin
+      dragElastic={0.5}
+      onDragEnd={onDragEnd}
+      style={{ transformOrigin: "bottom center" }}
+      className="mb-2 flex touch-pan-y items-center gap-3 rounded-lg bg-white/[0.14] px-3 py-2.5 backdrop-blur-2xl last:mb-0"
+    >
       {match?.thumb ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={match.thumb} alt="" className="h-11 w-11 shrink-0 rounded-sm object-cover" />
+        <img src={match.thumb} alt="" className="h-11 w-11 shrink-0 rounded-md object-cover" />
       ) : (
-        <div className="h-11 w-11 shrink-0 rounded-sm bg-paper/10" />
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white/10 text-paper/40">
+          <BarcodeIcon size={16} />
+        </span>
       )}
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-[14px] text-paper/90">
+
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sub font-medium text-paper">
           {match?.title ?? (status === "notfound" ? "Sin ficha para ese código" : scan.code)}
-        </div>
-        <div className="mono mt-0.5 truncate text-[10px] uppercase tracking-[0.16em] text-paper/45">
-          {status === "looking" && "Buscando…"}
-          {status === "added" && `Añadido a ${scan.listName ?? "tu lista"}`}
-          {status === "duplicate" && "Ya lo tienes"}
-          {status === "notfound" && scan.code}
-          {status === "error" && "No se pudo añadir"}
-        </div>
-      </div>
-      {status === "added" && (
-        <button onClick={onUndo} className="mono shrink-0 text-[10px] uppercase tracking-[0.18em] text-paper/50 transition hover:text-paper">
-          Deshacer
+        </span>
+        <span className="mt-0.5 block truncate text-caption text-paper/55">{line}</span>
+      </span>
+
+      {action && (
+        <button
+          onClick={action.run}
+          className="pressable shrink-0 rounded-full bg-white/15 px-3 py-1.5 text-caption font-medium text-paper"
+        >
+          {action.label}
         </button>
       )}
-      {status === "duplicate" && (
-        <button onClick={onAddAnyway} className="mono shrink-0 text-[10px] uppercase tracking-[0.18em] text-paper/50 transition hover:text-paper">
-          Añadir igual
-        </button>
-      )}
-      {(status === "notfound" || status === "error") && (
-        <button onClick={onManual} className="mono shrink-0 text-[10px] uppercase tracking-[0.18em] text-paper/50 transition hover:text-paper">
-          Buscar a mano
-        </button>
-      )}
-    </div>
+    </motion.div>
   );
 }
