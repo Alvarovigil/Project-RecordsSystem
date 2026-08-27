@@ -2,9 +2,97 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ================================================================ tokens
+   The identity, in one place.
+
+   Every colour, radius, duration and step in the interface resolves to one of
+   these. Nothing downstream is allowed to invent a value: components read
+   tokens, tailwind.config.ts maps utilities onto them, and a rebrand is an
+   edit to this block rather than an archaeology expedition through the tree.
+
+   Named by ROLE, not by appearance. `--surface-raised` survives a redesign;
+   `--dark-grey-2` becomes a lie the first time the palette moves. */
+
 :root {
+  /* --- brand ---------------------------------------------------------- */
+  /* The two that carry the whole thing: the black of a sleeve and the off
+     white of a printed label. Kept as raw values because everything else is
+     expressed as a transparency of one of them. */
   --ink: #0a0a0a;
   --paper: #f5f3ee;
+  --ink-rgb: 10 10 10;
+  --paper-rgb: 245 243 238;
+
+  /* The one saturated colour in the system. Used for what is live or unread,
+     never for decoration — its scarcity is what makes it legible. */
+  --accent: #f83a23;
+
+  /* --- surfaces ------------------------------------------------------- */
+  /* Elevation by value, not by shadow: on a near-black ground a shadow says
+     nothing, and a lighter plane says "this is on top" immediately. */
+  --surface: var(--ink);
+  --surface-raised: #101010;
+  --surface-overlay: #141414;
+  --surface-sunken: #060606;
+
+  /* --- content -------------------------------------------------------- */
+  /* Four steps, and four is enough. More greys means every screen invents its
+     own hierarchy and none of them agree. */
+  --text: rgb(var(--paper-rgb));
+  --text-secondary: rgb(var(--paper-rgb) / 0.62);
+  --text-muted: rgb(var(--paper-rgb) / 0.42);
+  --text-faint: rgb(var(--paper-rgb) / 0.26);
+
+  /* --- lines ---------------------------------------------------------- */
+  --line: rgb(var(--paper-rgb) / 0.10);
+  --line-strong: rgb(var(--paper-rgb) / 0.22);
+  --line-focus: rgb(var(--paper-rgb) / 0.75);
+
+  /* --- fills ---------------------------------------------------------- */
+  --fill-subtle: rgb(var(--paper-rgb) / 0.05);
+  --fill: rgb(var(--paper-rgb) / 0.08);
+  --fill-strong: rgb(var(--paper-rgb) / 0.14);
+
+  /* --- radius --------------------------------------------------------- */
+  /* This product is square on purpose — sleeves, cards, labels. The radii
+     that exist are for things a hand touches, where a hard corner reads as
+     unfinished rather than as rigour. */
+  --r-none: 0px;
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 14px;
+  --r-sheet: 18px;
+  --r-full: 999px;
+
+  /* --- type ----------------------------------------------------------- */
+  /* A small scale, used strictly. Body is 15px because this is an app you
+     read at arm's length, not a document. */
+  --t-display: 30px;
+  --t-title: 21px;
+  --t-heading: 17px;
+  --t-body: 15px;
+  --t-sub: 13px;
+  --t-caption: 11px;
+  --t-micro: 10px;
+  /* The one tracked, uppercase register, reserved for labels that name a
+     region. Never for anything you click. */
+  --track-label: 0.18em;
+
+  /* --- motion --------------------------------------------------------- */
+  /* Three durations. Anything slower than 320ms in an interface you use every
+     day becomes a wait; anything under 120ms is not perceived as movement. */
+  --d-fast: 140ms;
+  --d-base: 220ms;
+  --d-slow: 320ms;
+  /* Decelerating: things arrive quickly and settle. The default ease-in-out
+     makes an interface feel like it is thinking about it. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* --- touch ---------------------------------------------------------- */
+  /* Nothing a finger must hit is smaller than this. It is a floor, not a
+     suggestion, and it applies to the hit area — not to the ink. */
+  --tap: 44px;
 }
 
 html,
@@ -218,4 +306,146 @@ body {
   html {
     scroll-behavior: smooth;
   }
+}
+
+/* ==================================================================== app
+   Being an app, not a page.
+
+   Everything below is the difference between a website someone opened on a
+   phone and something that behaves like it was installed. It is small, and it
+   is the part that is always missing. */
+
+:root {
+  /* The notch, the home indicator, the rounded corners. Named once here so no
+     component has to remember the env() incantation, and so a value can be
+     traded for a design decision (the tab bar wants more than the raw inset). */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* The bottom bar's real height, so scrollable surfaces can end above it
+     instead of hiding their last row underneath. */
+  --tabbar-h: calc(54px + var(--safe-bottom));
+  /* The player, when there is one riding above the tab bar. Set to 0 by
+     default and raised by the player itself, so padding is never guessed. */
+  --player-h: 0px;
+}
+
+/* A tap should feel like a press, not like a click that highlights a box.
+   Applied at the root because a stray highlight anywhere breaks the illusion
+   everywhere. */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (pointer: coarse) {
+  /* Rubber-banding the whole document is the single loudest "this is a web
+     page" signal on iOS. Individual scrollers opt back in below. */
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  /* Safari zooms the page when a field with text under 16px takes focus, and
+     never zooms back out. Not a preference — a trap. */
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* A scroller that keeps its momentum and refuses to drag the page behind it.
+   Put this on any list inside a sheet or a panel. */
+.scroll-y {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Full height that survives the browser's disappearing toolbar. 100vh on iOS
+   is measured against the LARGEST viewport, so a 100vh element is always a
+   toolbar taller than the screen. */
+.h-screen-d {
+  height: 100vh;
+  height: 100dvh;
+}
+.min-h-screen-d {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* The floor every fixed bottom control sits on. */
+.pb-safe {
+  padding-bottom: var(--safe-bottom);
+}
+.pt-safe {
+  padding-top: var(--safe-top);
+}
+/* Room at the end of a scrolling page for the bars that float over it. */
+.pb-chrome {
+  padding-bottom: calc(var(--tabbar-h) + var(--player-h) + 16px);
+}
+
+/* Hover styling that a finger can never trigger. Tailwind's hover: fires on
+   touch as a sticky state after the tap, which leaves rows looking selected
+   long after you moved on. Anything that MEANS something on hover is gated on
+   this class instead. */
+@media (hover: hover) and (pointer: fine) {
+  .hoverable {
+    --can-hover: 1;
+  }
+}
+
+/* A control that only appears on hover must simply BE there when there is no
+   hover to appear on. The default is visible; only a device that can actually
+   hover is allowed to hide it and reveal it back. Written this way round on
+   purpose — the other way round (`opacity: 0`, revealed by `:hover`) is what
+   makes edit and delete buttons permanently invisible on a tablet, and it is
+   invisible to whoever wrote it, because their pointer works. */
+.reveal-on-hover {
+  opacity: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .reveal-on-hover {
+    opacity: 0;
+    transition: opacity var(--d-fast) ease;
+  }
+  .group:hover .reveal-on-hover,
+  .reveal-on-hover:focus-within,
+  .reveal-on-hover:focus-visible,
+  .reveal-on-hover:has(:focus-visible) {
+    opacity: 1;
+  }
+}
+
+/* A press that answers. On touch there is no hover to acknowledge the touch,
+   so the acknowledgement has to be the press itself. */
+.pressable {
+  transition: transform 140ms cubic-bezier(0.2, 0, 0.2, 1), opacity 140ms ease;
+  touch-action: manipulation;
+}
+.pressable:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pressable:active {
+    transform: none;
+  }
+}
+
+/* Sheets and drawers: the drag handle, and the spring they travel on. */
+.sheet-grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(245, 243, 238, 0.28);
+}
+
+/* While a sheet owns the screen, nothing behind it may scroll or be reached. */
+body[data-sheet-open="1"] {
+  overflow: hidden;
+  touch-action: none;
 }
