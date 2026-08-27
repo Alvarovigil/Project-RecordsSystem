@@ -5,6 +5,8 @@ import type { Session } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { resetRepository, setAuthenticated } from "@/lib/data";
 import type { Profile } from "@/lib/data/types";
+import { FAKE_SESSION, FAKE_USER } from "@/lib/dev-session";
+import { DEMO_PROFILE } from "@/lib/demo";
 
 /**
  * Who is using the app.
@@ -81,12 +83,15 @@ export function useSession() {
     window.location.href = "/";
   }, [supabase]);
 
+  // building the signed-in interface without signing in: see lib/dev-session.ts
+  const faking = FAKE_SESSION && !session;
+
   return {
-    available: Boolean(supabase),
-    loading,
+    available: Boolean(supabase) || faking,
+    loading: faking ? false : loading,
     session,
-    user: session?.user ?? null,
-    profile,
+    user: faking ? FAKE_USER : session?.user ?? null,
+    profile: faking ? DEMO_PROFILE : profile,
     signInWithGoogle,
     signOut,
   };

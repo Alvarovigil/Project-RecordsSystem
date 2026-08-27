@@ -7,3 +7,6 @@ node_modules
 
 # TypeScript incremental build cache
 tsconfig.tsbuildinfo
+
+# estado local de la CLI de Supabase (contiene el ref del proyecto y la URL del pooler)
+supabase/.temp/
