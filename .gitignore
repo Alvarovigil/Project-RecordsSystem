@@ -10,3 +10,11 @@ tsconfig.tsbuildinfo
 
 # estado local de la CLI de Supabase (contiene el ref del proyecto y la URL del pooler)
 supabase/.temp/
+# enlace local con el proyecto de Vercel
+.vercel
+
+# ningún fichero de entorno real, pero los de ejemplo sí viajan: son la
+# documentación de qué variables hacen falta
+.env*
+!.env.example
+!.env.local.example
