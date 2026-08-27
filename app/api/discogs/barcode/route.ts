@@ -1,6 +1,15 @@
 import { NextRequest } from "next/server";
 
-const TOKEN = process.env.DISCOGS_TOKEN;
+/**
+ * Read at request time, never at module scope.
+ *
+ * `const TOKEN = process.env.DISCOGS_TOKEN` runs once, when the module is first
+ * loaded — and whatever it saw then is what this route believes forever. On
+ * Vercel that captured an undefined, and every Discogs call in production
+ * failed with "DISCOGS_TOKEN missing": no search, no barcode, no way to add a
+ * record at all. A function call costs nothing and cannot go stale.
+ */
+const token = () => process.env.DISCOGS_TOKEN;
 const UA = "VinilosApp/0.1 +local";
 
 type DiscogsResult = {
@@ -22,7 +31,7 @@ async function byBarcode(code: string) {
   url.searchParams.set("type", "release");
   url.searchParams.set("per_page", "50");
   const r = await fetch(url, {
-    headers: { "User-Agent": UA, Authorization: `Discogs token=${TOKEN}` },
+    headers: { "User-Agent": UA, Authorization: `Discogs token=${token()}` },
     next: { revalidate: 3600 },
   });
   if (!r.ok) return [] as DiscogsResult[];
@@ -44,7 +53,7 @@ function variants(raw: string) {
 }
 
 export async function GET(req: NextRequest) {
-  if (!TOKEN) {
+  if (!token()) {
     return Response.json({ error: "DISCOGS_TOKEN missing" }, { status: 500 });
   }
   const code = req.nextUrl.searchParams.get("code")?.trim();

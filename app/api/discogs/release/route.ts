@@ -4,7 +4,16 @@ import { resolve } from "node:path";
 import type { Vinyl } from "@/lib/types";
 import { downloadDeezerPreview } from "@/lib/preview";
 
-const TOKEN = process.env.DISCOGS_TOKEN;
+/**
+ * Read at request time, never at module scope.
+ *
+ * `const TOKEN = process.env.DISCOGS_TOKEN` runs once, when the module is first
+ * loaded — and whatever it saw then is what this route believes forever. On
+ * Vercel that captured an undefined, and every Discogs call in production
+ * failed with "DISCOGS_TOKEN missing": no search, no barcode, no way to add a
+ * record at all. A function call costs nothing and cannot go stale.
+ */
+const token = () => process.env.DISCOGS_TOKEN;
 const UA = "VinilosApp/0.1 +local";
 const DATA_PATH = resolve(process.cwd(), "data/vinilos.json");
 const COVERS_DIR = resolve(process.cwd(), "public/covers");
@@ -55,14 +64,14 @@ async function searchItunesPreview(artist: string, album: string): Promise<strin
 }
 
 export async function POST(req: NextRequest) {
-  if (!TOKEN) {
+  if (!token()) {
     return Response.json({ error: "DISCOGS_TOKEN missing" }, { status: 500 });
   }
   const { releaseId } = await req.json();
   if (!releaseId) return Response.json({ error: "releaseId required" }, { status: 400 });
 
   const r = await fetch(`https://api.discogs.com/releases/${releaseId}`, {
-    headers: { "User-Agent": UA, Authorization: `Discogs token=${TOKEN}` },
+    headers: { "User-Agent": UA, Authorization: `Discogs token=${token()}` },
   });
   if (!r.ok) return Response.json({ error: `discogs ${r.status}` }, { status: r.status });
   const release = await r.json();
