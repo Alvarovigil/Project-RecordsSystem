@@ -26,7 +26,7 @@ import { useUnreadCount } from "@/hooks/useNotifications";
 
 const TABS = [
   { href: "/coleccion", label: "Colección", icon: Disc },
-  { href: "/feed", label: "Feed", icon: Waves },
+  { href: "/actividad", label: "Actividad", icon: Waves },
   { href: "/explorar", label: "Explorar", icon: Glass },
 ] as const;
 
@@ -72,9 +72,9 @@ export default function TabBar() {
                 >
                   {t.label}
                 </span>
-                {t.href === "/feed" && unread > 0 && (
+                {t.href === "/actividad" && unread > 0 && (
                   <span
-                    aria-label={`${unread} novedades`}
+                    aria-label={`${unread} avisos sin ver`}
                     className="absolute right-[calc(50%-18px)] top-[9px] h-[7px] w-[7px] rounded-full bg-[#f83a23]"
                   />
                 )}

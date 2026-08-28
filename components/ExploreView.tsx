@@ -68,7 +68,10 @@ export default function ExploreView() {
 
   useEffect(() => {
     setRecents(readRecents());
-    repo.listReleases().then(setLibrary).catch(() => {});
+    repo
+      .listReleases()
+      .then(setLibrary)
+      .catch(() => {});
   }, [repo]);
 
   // The same searching the shelf does, so "¿lo tengo?" and "¿puedo tenerlo?"
@@ -131,7 +134,10 @@ export default function ExploreView() {
   const remember = useCallback((q: string) => {
     const clean = q.trim();
     if (clean.length < 2) return;
-    const next = [clean, ...readRecents().filter((r) => r !== clean)].slice(0, MAX_RECENTS);
+    const next = [clean, ...readRecents().filter((r) => r !== clean)].slice(
+      0,
+      MAX_RECENTS,
+    );
     localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
     setRecents(next);
   }, []);
@@ -150,7 +156,10 @@ export default function ExploreView() {
    * for somebody else's list anyway. Every crate on this page came out empty.
    */
   const [covers, setCovers] = useState<Record<string, string[]>>({});
-  const coversOf = useCallback((l: ListWithRecord) => covers[l.id] ?? [], [covers]);
+  const coversOf = useCallback(
+    (l: ListWithRecord) => covers[l.id] ?? [],
+    [covers],
+  );
 
   useEffect(() => {
     if (lists.length === 0) return;
@@ -179,66 +188,98 @@ export default function ExploreView() {
 
   return (
     <Page width="full">
-      <PageHeader title="Explorar" subtitle="Discos, listas y gente que colecciona." />
+      {/* On a wide screen the field rides up beside the title: the page is
+          1900px of horizontal room and the heading was using a fifth of it
+          while the search — the actual instrument of this screen — sat alone
+          on its own line. On a phone there is no room to share, so it stays
+          where it was, sticky under the title. */}
+      <div className="sm:flex sm:items-end sm:justify-between sm:gap-10">
+        <PageHeader
+          title="Explorar"
+          subtitle="Discos, listas y gente que colecciona."
+        />
 
-      {/* the field is the screen; everything under it answers to it */}
-      <div className="sticky top-0 z-20 -mx-5 bg-surface/95 px-5 pb-3 pt-1 backdrop-blur-sm sm:-mx-8 sm:px-8">
-        {/* The page runs edge to edge; the field does not.
+        {/* the field is the screen; everything under it answers to it */}
+        <div className="sticky top-0 z-20 -mx-5 bg-surface/95 px-5 pb-3 pt-1 backdrop-blur-sm sm:static sm:-mx-0 sm:ml-auto sm:w-[min(420px,38vw)] sm:shrink-0 sm:bg-transparent sm:px-0 sm:pb-6 sm:pt-0 sm:backdrop-blur-none">
+          {/* The page runs edge to edge; the field does not.
             Stretched across a full-width page it became a 1900px box for a
             twenty-character query, and its clear button ended up a screen away
             from the text it clears. A search field wants the measure of what
             gets typed into it, not the measure of the page. */}
-        <div className="relative max-w-[680px]">
-          <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-content-faint">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <circle cx="7" cy="7" r="4.8" stroke="currentColor" strokeWidth="1.3" />
-              <path d="M10.6 10.6 L14 14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-            </svg>
-          </span>
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onBlur={() => remember(query)}
-            enterKeyHint="search"
-            type="search"
-            autoCapitalize="none"
-            autoCorrect="off"
-            aria-label="Buscar discos, listas o personas"
-            placeholder="Busca discos, listas o personas"
-            className="h-12 w-full border-b border-line-strong bg-transparent pl-7 pr-10 text-body text-paper outline-none transition-colors placeholder:text-content-faint focus:border-line-focus"
-          />
-          {searching && (
-            <button
-              onClick={() => {
-                setQuery("");
-                inputRef.current?.focus();
-              }}
-              aria-label="Borrar búsqueda"
-              className="pressable absolute right-0 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center text-content-muted hover:text-paper"
-            >
-              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          <div className="relative w-full max-w-[680px] sm:max-w-none">
+            <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-content-faint">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden
+              >
+                <circle
+                  cx="7"
+                  cy="7"
+                  r="4.8"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                />
+                <path
+                  d="M10.6 10.6 L14 14"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                />
               </svg>
-            </button>
+            </span>
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onBlur={() => remember(query)}
+              enterKeyHint="search"
+              type="search"
+              autoCapitalize="none"
+              autoCorrect="off"
+              aria-label="Buscar discos, listas o personas"
+              placeholder="Busca discos, listas o personas"
+              className="h-12 w-full border-b border-line-strong bg-transparent pl-7 pr-10 text-body text-paper outline-none transition-colors placeholder:text-content-faint focus:border-line-focus"
+            />
+            {searching && (
+              <button
+                onClick={() => {
+                  setQuery("");
+                  inputRef.current?.focus();
+                }}
+                aria-label="Borrar búsqueda"
+                className="pressable absolute right-0 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center text-content-muted hover:text-paper"
+              >
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                  <path
+                    d="M2 2 L12 12 M12 2 L2 12"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {searching && (
+            <div className="mt-3 max-w-[680px] overflow-x-auto sm:max-w-none">
+              <Segmented
+                size="sm"
+                value={scope}
+                onChange={setScope}
+                segments={[
+                  { value: "all", label: "Todo" },
+                  { value: "records", label: "Discos", count: counts.records },
+                  { value: "lists", label: "Listas", count: counts.lists },
+                  { value: "people", label: "Gente", count: counts.people },
+                ]}
+              />
+            </div>
           )}
         </div>
-
-        {searching && (
-          <div className="mt-3 max-w-[680px] overflow-x-auto">
-            <Segmented
-              size="sm"
-              value={scope}
-              onChange={setScope}
-              segments={[
-                { value: "all", label: "Todo" },
-                { value: "records", label: "Discos", count: counts.records },
-                { value: "lists", label: "Listas", count: counts.lists },
-                { value: "people", label: "Gente", count: counts.people },
-              ]}
-            />
-          </div>
-        )}
       </div>
 
       {/* ------------------------------------------------ nothing typed yet */}
@@ -248,7 +289,10 @@ export default function ExploreView() {
             <Section title="Búsquedas recientes">
               <ul className="flex flex-wrap gap-2">
                 {recents.map((r) => (
-                  <li key={r} className="flex items-center rounded-full bg-fill">
+                  <li
+                    key={r}
+                    className="flex items-center rounded-full bg-fill"
+                  >
                     <button
                       onClick={() => setQuery(r)}
                       className="pressable py-2 pl-3.5 pr-1.5 text-sub text-content-secondary hover:text-paper"
@@ -261,7 +305,12 @@ export default function ExploreView() {
                       className="pressable flex h-8 w-7 items-center justify-center text-content-faint hover:text-paper"
                     >
                       <svg width="9" height="9" viewBox="0 0 14 14" fill="none">
-                        <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                        <path
+                          d="M2 2 L12 12 M12 2 L2 12"
+                          stroke="currentColor"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                        />
                       </svg>
                     </button>
                   </li>
@@ -281,7 +330,10 @@ export default function ExploreView() {
                 compact
                 title="Todavía no hay listas que enseñarte"
                 body="O nadie ha publicado una lista pública, o no hemos podido leerlas. Prueba a recargar; si sigue vacío, busca algo concreto."
-                action={{ label: "Recargar", onClick: () => window.location.reload() }}
+                action={{
+                  label: "Recargar",
+                  onClick: () => window.location.reload(),
+                }}
               />
             ) : (
               <ul className="grid grid-cols-2 gap-x-9 gap-y-14 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
@@ -315,28 +367,39 @@ export default function ExploreView() {
               title={`Nada para «${query}»`}
               body="Prueba con menos palabras, o solo con el nombre del artista. Para un disco que todavía no tienes, el código de barras acierta más que el título."
               action={{ label: "Escanear un código", href: "/coleccion" }}
-              secondary={{ label: "Borrar búsqueda", onClick: () => setQuery("") }}
+              secondary={{
+                label: "Borrar búsqueda",
+                onClick: () => setQuery(""),
+              }}
             />
           ) : (
             <div className="space-y-9">
               {show("records") && records.length > 0 && (
-                <ResultBlock title="En tu colección" onAll={() => setScope("records")} showAll={scope === "all"}>
+                <ResultBlock
+                  title="En tu colección"
+                  onAll={() => setScope("records")}
+                  showAll={scope === "all"}
+                >
                   <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
-                    {(scope === "all" ? records.slice(0, 6) : records).map((v) => (
-                      <li key={v.id}>
-                        <Link
-                          href="/coleccion"
-                          onClick={() => remember(query)}
-                          className="pressable block"
-                        >
-                          <Cover vinyl={v} alt={v.title} />
-                          <span className="mt-2 block truncate text-sub text-paper">{v.title}</span>
-                          <span className="block truncate text-caption text-content-muted">
-                            {v.artist}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
+                    {(scope === "all" ? records.slice(0, 6) : records).map(
+                      (v) => (
+                        <li key={v.id}>
+                          <Link
+                            href="/coleccion"
+                            onClick={() => remember(query)}
+                            className="pressable block"
+                          >
+                            <Cover vinyl={v} alt={v.title} />
+                            <span className="mt-2 block truncate text-sub text-paper">
+                              {v.title}
+                            </span>
+                            <span className="block truncate text-caption text-content-muted">
+                              {v.artist}
+                            </span>
+                          </Link>
+                        </li>
+                      ),
+                    )}
                   </ul>
                 </ResultBlock>
               )}
@@ -353,20 +416,32 @@ export default function ExploreView() {
                   {/* rows in columns once there is room: a single file of them
                       across a full-width page is mostly empty space */}
                   <ul className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3 [&>li]:border-b [&>li]:border-line">
-                    {(scope === "all" ? addable.slice(0, 6) : addable.slice(0, 24)).map((r) => {
+                    {(scope === "all"
+                      ? addable.slice(0, 6)
+                      : addable.slice(0, 24)
+                    ).map((r) => {
                       const done = Boolean(catalogue.savedIn[`d${r.id}`]);
                       return (
                         <li key={r.id} className="flex items-center gap-3 py-3">
                           <span className="h-12 w-12 shrink-0 overflow-hidden rounded-sm bg-fill-subtle">
                             {r.thumb && (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={r.thumb} alt="" loading="lazy" className="h-full w-full object-cover" />
+                              <img
+                                src={r.thumb}
+                                alt=""
+                                loading="lazy"
+                                className="h-full w-full object-cover"
+                              />
                             )}
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-body text-paper">{r.title}</span>
+                            <span className="block truncate text-body text-paper">
+                              {r.title}
+                            </span>
                             <span className="block truncate text-sub text-content-muted">
-                              {[r.year, r.country, r.format?.join(", ")].filter(Boolean).join(" · ")}
+                              {[r.year, r.country, r.format?.join(", ")]
+                                .filter(Boolean)
+                                .join(" · ")}
                             </span>
                           </span>
                           <button
@@ -375,28 +450,61 @@ export default function ExploreView() {
                               const v = await catalogue.addFromCatalogue(
                                 r,
                                 lib.activeListId,
-                                (vinyl, listId) => void lib.saveToList(vinyl, listId),
+                                (vinyl, listId) =>
+                                  void lib.saveToList(vinyl, listId),
                               );
-                              if (!v) return toast.show("No se pudo añadir.", { tone: "error" });
+                              if (!v)
+                                return toast.show("No se pudo añadir.", {
+                                  tone: "error",
+                                });
                               toast.show(`${v.title} · guardado`, {
                                 media: { src: r.thumb ?? coverFor(v) },
-                                action: { label: "Ver", onClick: () => router.push("/coleccion") },
+                                action: {
+                                  label: "Ver",
+                                  onClick: () => router.push("/coleccion"),
+                                },
                               });
-                              repo.listReleases().then(setLibrary).catch(() => {});
+                              repo
+                                .listReleases()
+                                .then(setLibrary)
+                                .catch(() => {});
                             }}
                             disabled={catalogue.adding === r.id || done}
                             aria-label={`Añadir ${r.title} a tu colección`}
                             className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line-strong text-paper disabled:opacity-40"
                           >
                             {done ? (
-                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-                                <path d="M2.5 7.5 L5.5 10.5 L11.5 3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 14 14"
+                                fill="none"
+                                aria-hidden
+                              >
+                                <path
+                                  d="M2.5 7.5 L5.5 10.5 L11.5 3.5"
+                                  stroke="currentColor"
+                                  strokeWidth="1.6"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
                               </svg>
                             ) : catalogue.adding === r.id ? (
                               <span className="h-3.5 w-3.5 animate-spin rounded-full border-[1.6px] border-current border-t-transparent" />
                             ) : (
-                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-                                <path d="M7 2 V12 M2 7 H12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 14 14"
+                                fill="none"
+                                aria-hidden
+                              >
+                                <path
+                                  d="M7 2 V12 M2 7 H12"
+                                  stroke="currentColor"
+                                  strokeWidth="1.6"
+                                  strokeLinecap="round"
+                                />
                               </svg>
                             )}
                           </button>
@@ -408,7 +516,11 @@ export default function ExploreView() {
               )}
 
               {show("lists") && lists.length > 0 && (
-                <ResultBlock title="Listas" onAll={() => setScope("lists")} showAll={scope === "all"}>
+                <ResultBlock
+                  title="Listas"
+                  onAll={() => setScope("lists")}
+                  showAll={scope === "all"}
+                >
                   <ul className="grid grid-cols-2 gap-x-9 gap-y-14 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
                     {(scope === "all" ? lists.slice(0, 4) : lists).map((l) => (
                       <li key={l.id}>
@@ -420,13 +532,22 @@ export default function ExploreView() {
               )}
 
               {show("people") && people.length > 0 && (
-                <ResultBlock title="Gente" onAll={() => setScope("people")} showAll={scope === "all"}>
+                <ResultBlock
+                  title="Gente"
+                  onAll={() => setScope("people")}
+                  showAll={scope === "all"}
+                >
                   <ul className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3 [&>li]:border-b [&>li]:border-line">
-                    {(scope === "all" ? people.slice(0, 4) : people).map((p) => (
-                      <li key={p.id}>
-                        <PersonRow profile={p} subtitle={p.bio || `@${p.username}`} />
-                      </li>
-                    ))}
+                    {(scope === "all" ? people.slice(0, 4) : people).map(
+                      (p) => (
+                        <li key={p.id}>
+                          <PersonRow
+                            profile={p}
+                            subtitle={p.bio || `@${p.username}`}
+                          />
+                        </li>
+                      ),
+                    )}
                   </ul>
                 </ResultBlock>
               )}
@@ -440,7 +561,10 @@ export default function ExploreView() {
                     compact
                     title="Aquí no hay resultados"
                     body="Puede que lo que buscas esté en otra pestaña."
-                    action={{ label: "Buscar en todo", onClick: () => setScope("all") }}
+                    action={{
+                      label: "Buscar en todo",
+                      onClick: () => setScope("all"),
+                    }}
                   />
                 )}
             </div>
@@ -465,7 +589,9 @@ function ResultBlock({
   return (
     <section>
       <div className="flex items-baseline justify-between border-b border-line pb-2">
-        <h2 className="text-caption uppercase tracking-label text-content-muted">{title}</h2>
+        <h2 className="text-caption uppercase tracking-label text-content-muted">
+          {title}
+        </h2>
         {showAll && (
           <button
             onClick={onAll}

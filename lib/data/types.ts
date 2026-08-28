@@ -45,14 +45,32 @@ export type FriendWithRecord = {
   viaListTitle: string;
 };
 
-/** One thing that happened: someone put a record in a list. */
-export type FeedEntry = {
+export type ShallowProfile = Pick<Profile, "id" | "username" | "displayName" | "avatarUrl">;
+
+/**
+ * One thing that happened near you.
+ *
+ * Four verbs, one shape. The alternative — a type per verb — pushes the union
+ * into every consumer and makes grouping (lib/activity.ts) a switch statement
+ * over four almost-identical branches. What varies between verbs is which of
+ * the optional objects is filled in, and that is exactly what the fields say.
+ *
+ * `mine` means the OBJECT is yours: your list was saved, you were followed.
+ * It is not "I did this" — your own actions never appear in your activity.
+ */
+export type ActivityKind = "added" | "list-created" | "list-saved" | "followed";
+
+export type ActivityEvent = {
+  /** stable across refetches: kind + actor + object + timestamp */
+  id: string;
+  kind: ActivityKind;
   at: string;
-  actor: Pick<Profile, "id" | "username" | "displayName" | "avatarUrl">;
-  listId: string;
-  listTitle: string;
-  listSlug: string;
-  release: { slug: string; title: string; artist: string; cover: string | null };
+  actor: ShallowProfile;
+  list?: { id: string; title: string; slug: string; ownerId: string; ownerHandle: string };
+  /** the person on the receiving end, when the object is a person */
+  target?: ShallowProfile;
+  release?: { slug: string; title: string; artist: string; cover: string | null };
+  mine: boolean;
 };
 
 /**
@@ -169,8 +187,8 @@ export interface LibraryRepository {
   /** what to show someone who hasn't searched for anything yet */
   popularLists(): Promise<ListWithRecord[]>;
   suggestedProfiles(): Promise<Profile[]>;
-  /** what the people and lists you follow have been adding */
-  feed(): Promise<FeedEntry[]>;
+  /** everything moving around you: additions, new lists, saves, follows */
+  activity(): Promise<ActivityEvent[]>;
 
   // ---- community ----------------------------------------------------------
   listsWithRelease(releaseId: string): Promise<ListWithRecord[]>;

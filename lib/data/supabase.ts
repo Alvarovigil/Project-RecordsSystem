@@ -11,7 +11,7 @@ import type { Vinyl } from "@/lib/types";
 import type { SortMode } from "@/lib/collections";
 import type {
   Collaborator,
-  FeedEntry,
+  ActivityEvent,
   FriendWithRecord,
   LibraryRepository,
   List,
@@ -449,25 +449,50 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       return ((data ?? []) as any[]).map(withOwner);
     },
 
-    async feed() {
-      const { data } = await sb.rpc("feed_for_me", { max_rows: 40 });
+    async activity(): Promise<ActivityEvent[]> {
+      // One round trip for four verbs: see supabase/migrations/0011_activity.sql.
+      // Grouping happens in lib/activity.ts, on rows, not in SQL — the rule for
+      // what counts as "one thing that happened" is a design decision and it
+      // belongs where it can be read and changed.
+      const { data } = await sb.rpc("activity_for_me", { max_rows: 160 });
       return ((data ?? []) as any[]).map((r) => ({
-        at: r.added_at,
+        // the tuple that identifies the event; there is no id column because
+        // none of the four source tables has one
+        id: `${r.kind}:${r.actor_id}:${r.list_id ?? r.target_id ?? ""}:${r.release_slug ?? ""}:${r.at}`,
+        kind: r.kind,
+        at: r.at,
         actor: {
           id: r.actor_id,
           username: r.actor_handle,
           displayName: r.actor_name,
           avatarUrl: r.actor_avatar,
         },
-        listId: r.list_id,
-        listTitle: r.list_title,
-        listSlug: r.list_slug,
-        release: {
-          slug: r.release_slug,
-          title: r.release_title,
-          artist: r.release_artist,
-          cover: r.release_cover,
-        },
+        list: r.list_id
+          ? {
+              id: r.list_id,
+              title: r.list_title,
+              slug: r.list_slug,
+              ownerId: r.list_owner_id,
+              ownerHandle: r.list_owner_handle,
+            }
+          : undefined,
+        target: r.target_id
+          ? {
+              id: r.target_id,
+              username: r.target_handle,
+              displayName: r.target_name,
+              avatarUrl: r.target_avatar,
+            }
+          : undefined,
+        release: r.release_slug
+          ? {
+              slug: r.release_slug,
+              title: r.release_title,
+              artist: r.release_artist,
+              cover: r.release_cover,
+            }
+          : undefined,
+        mine: Boolean(r.mine),
       }));
     },
 

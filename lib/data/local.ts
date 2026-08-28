@@ -29,7 +29,7 @@ import {
 } from "@/lib/community";
 import type {
   Collaborator,
-  FeedEntry,
+  ActivityEvent,
   FriendWithRecord,
   LibraryRepository,
   List,
@@ -444,53 +444,88 @@ export function createLocalRepository(): LibraryRepository {
       return out;
     },
 
-    async feed() {
-      // Placeholder activity from what you follow. Lists are resolved through
-      // the registry, not by scanning profiles: the same list has a different
-      // generated id depending on whether you met it through a record or
-      // through its owner.
+    async activity(): Promise<ActivityEvent[]> {
+      // The placeholder layer has no event log — nothing here ever happened —
+      // so activity is derived from the same generated community the rest of
+      // the local backend uses, with times spread backwards from now. It is a
+      // rehearsal of the real screen, and it has to contain all four verbs or
+      // it stops being useful for building the thing.
       const followed = loadFollows();
       const all = readReleases();
       const ids = all.map((v) => v.id);
+      const hoursAgo = (h: number) => new Date(Date.now() - h * 36e5).toISOString();
+      const out: ActivityEvent[] = [];
 
-      const fromLists = followed
-        .map(getGeneratedList)
-        .filter((l): l is NonNullable<typeof l> => !!l)
-        .map((l) => toCommunityList(l, l.ownerId));
-
-      const fromPeople = followed
-        .filter((id) => id.startsWith("u-"))
-        .flatMap((userId) => listsOfUser(userId, ids).map((l) => toCommunityList(l, userId)));
+      const followedUsers = followed.filter((id) => id.startsWith("u-"));
+      const lists = [
+        ...followed.map(getGeneratedList).filter((l): l is NonNullable<typeof l> => !!l),
+        ...followedUsers.flatMap((userId) => listsOfUser(userId, ids)),
+      ];
 
       const seen = new Set<string>();
-      const lists = [...fromLists, ...fromPeople].filter((l) =>
-        seen.has(l.id) ? false : (seen.add(l.id), true),
-      );
+      let clock = 1;
+      for (const l of lists) {
+        if (seen.has(l.id)) continue;
+        seen.add(l.id);
+        const cl = toCommunityList(l, l.ownerId);
+        // a handful of records added in one sitting: consecutive hours, so the
+        // grouping window in lib/activity.ts has something real to chew on
+        for (const releaseId of l.vinylIds.slice(0, 4)) {
+          const release = all.find((v) => v.id === releaseId);
+          if (!release) continue;
+          out.push({
+            id: `added:${l.id}:${releaseId}`,
+            kind: "added",
+            at: hoursAgo(clock),
+            actor: cl.owner,
+            list: { id: cl.id, title: cl.title, slug: cl.slug, ownerId: cl.owner.id, ownerHandle: cl.owner.username },
+            release: { slug: release.id, title: release.title, artist: release.artist, cover: release.cover },
+            mine: false,
+          });
+        }
+        clock += 7;
+      }
 
-      const entries = lists.flatMap((l) =>
-        ((l as ListWithRecord & { vinylIds?: string[] }).vinylIds ?? [])
-          .slice(0, 4)
-          .map((releaseId, i) => {
-            const release = all.find((v) => v.id === releaseId);
-            if (!release) return null;
-            return {
-              at: new Date(Date.now() - (i + 1) * 36e5).toISOString(),
-              actor: l.owner,
-              listId: l.id,
-              listTitle: l.title,
-              listSlug: l.slug,
-              release: {
-                slug: release.id,
-                title: release.title,
-                artist: release.artist,
-                cover: release.cover,
-              },
-            };
-          })
-          .filter(Boolean),
-      ) as FeedEntry[];
+      // somebody kept one of yours, and somebody kept somebody else's
+      const ownFirst = ownLists(all)[0];
+      const keepers = communityUsers().slice(0, 3);
+      if (ownFirst) {
+        keepers.forEach((u, i) =>
+          out.push({
+            id: `saved:${ownFirst.id}:${u.id}`,
+            kind: "list-saved",
+            at: hoursAgo(2 + i),
+            actor: { id: u.id, username: u.handle, displayName: u.name, avatarUrl: null },
+            list: {
+              id: ownFirst.id,
+              title: ownFirst.title,
+              slug: ownFirst.slug,
+              ownerId: LOCAL_PROFILE.id,
+              ownerHandle: LOCAL_PROFILE.username,
+            },
+            mine: true,
+          }),
+        );
+      }
 
-      return entries.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 40);
+      // and the gossip: who the people you follow have started following
+      communityUsers()
+        .filter((u) => followedUsers.includes(u.id))
+        .slice(0, 3)
+        .forEach((u, i) => {
+          const target = communityUsers().find((o) => o.id !== u.id);
+          if (!target) return;
+          out.push({
+            id: `followed:${u.id}:${target.id}`,
+            kind: "followed",
+            at: hoursAgo(5 + i * 3),
+            actor: { id: u.id, username: u.handle, displayName: u.name, avatarUrl: null },
+            target: { id: target.id, username: target.handle, displayName: target.name, avatarUrl: null },
+            mine: false,
+          });
+        });
+
+      return out.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 80);
     },
 
     async popularLists() {

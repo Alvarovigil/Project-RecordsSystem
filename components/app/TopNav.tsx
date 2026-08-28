@@ -43,7 +43,7 @@ export default function TopNav({
     preview
       ? { href: "/demo", label: "Colección" }
       : { href: "/coleccion", label: "Colección" },
-    { href: "/feed", label: "Feed" },
+    { href: "/actividad", label: "Actividad" },
     { href: "/explorar", label: "Explorar" },
     // your own profile lives under the avatar on the right; naming it twice in
     // one bar just makes the row longer. Signed out there is no avatar menu to
