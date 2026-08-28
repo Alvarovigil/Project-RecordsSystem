@@ -344,7 +344,8 @@ export default function SoundGate() {
 
           <button
             onClick={() => enter(false)}
-            className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-[0.05em] text-paper/60 underline-offset-4 transition hover:text-paper hover:underline sm:text-[13px]"
+            style={{ bottom: "calc(var(--safe-bottom) + 32px)" }}
+            className="absolute left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-[0.05em] text-paper/60 underline-offset-4 transition hover:text-paper hover:underline sm:text-[13px]"
           >
             Entrar en silencio
           </button>
@@ -366,7 +367,8 @@ export default function SoundGate() {
            * one the rest of the product already uses.
            */
           // centred at the foot of a phone, back in its corner from sm up
-          className="fixed bottom-6 left-1/2 z-[70] flex max-w-[calc(100vw-2.5rem)] -translate-x-1/2 items-center gap-2 rounded-full bg-ink/55 px-3.5 py-2 backdrop-blur-xl transition-[gap] duration-slow ease-out sm:bottom-5 sm:left-auto sm:right-5 sm:translate-x-0 text-[11px] uppercase tracking-[0.05em] text-paper/80 sm:bottom-5 sm:text-[13px]">
+          style={{ bottom: "calc(var(--safe-bottom) + 24px)" }}
+          className="fixed left-1/2 z-[70] flex max-w-[calc(100vw-2.5rem)] -translate-x-1/2 items-center gap-2 rounded-full bg-ink/55 px-3.5 py-2 backdrop-blur-xl transition-[gap] duration-slow ease-out sm:bottom-5 sm:left-auto sm:right-5 sm:translate-x-0 text-[11px] uppercase tracking-[0.05em] text-paper/80 sm:bottom-5 sm:text-[13px]">
           {/* The brackets were a frame around three bars that already read as a
               meter; two more characters, and they held the label at arm's
               length from the thing it is labelling. */}

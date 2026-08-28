@@ -45,7 +45,10 @@ export default function Landing() {
        * is on the door, in the tab and on every shared card, and the way in is
        * the button in the middle of the screen that says Empezar gratis.
        */}
-      <header className="landing-dims pointer-events-none fixed inset-x-0 top-0 z-[60] hidden items-start justify-between px-5 pt-[68px] sm:flex sm:px-8 sm:pt-6">
+      <header
+        className="landing-dims pointer-events-none fixed inset-x-0 top-0 z-[60] hidden items-start justify-between px-5 sm:flex sm:px-8"
+        style={{ paddingTop: "calc(var(--safe-top) + 24px)" }}
+      >
         {/* Not a link — the claim of the whole thing, held in the corner.
             Two sentences, and the full stop between them is doing the work:
             it makes the second half land as a separate promise rather than
@@ -416,7 +419,17 @@ function StickyMark() {
        * Dimming for the gate is done on this same class in CSS, where it is a
        * deliberate, temporary state rather than a permanent tax.
        */
-      className="landing-dims pointer-events-none fixed left-1/2 top-4 z-[60] -translate-x-1/2 sm:top-5"
+      className="landing-dims pointer-events-none fixed left-1/2 z-[60] -translate-x-1/2"
+      /**
+       * Below the notch, not under it.
+       *
+       * Installed to a home screen this page runs edge to edge — that is the
+       * point of viewport-fit=cover and the translucent status bar — so a mark
+       * pinned to `top: 16px` ends up behind the dynamic island. The safe-area
+       * inset is zero in a browser tab and the height of the island in the
+       * installed app, which is exactly the difference that needs measuring.
+       */
+      style={{ top: "calc(var(--safe-top) + 16px)" }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {/**
