@@ -7,6 +7,8 @@ import Confirm from "@/components/ui/Confirm";
 import { useToast, ToastIcon } from "@/components/ui/Toast";
 import CollaboratorsSheet from "@/components/community/CollaboratorsSheet";
 import { SORT_LABELS, type SortMode, type Collection } from "@/lib/collections";
+import { coverFor } from "@/lib/cover";
+import type { Vinyl } from "@/lib/types";
 import type { ListVisibility } from "@/lib/data/types";
 
 /**
@@ -36,6 +38,8 @@ export default function ListEditSheet({
   onDelete,
   onSetSort,
   onSetVisibility,
+  records,
+  onRemoveRecord,
 }: {
   open: boolean;
   onClose: () => void;
@@ -48,10 +52,13 @@ export default function ListEditSheet({
   onDelete: (id: string) => void;
   onSetSort: (id: string, sortBy: SortMode) => void;
   onSetVisibility: (id: string, v: ListVisibility) => void;
+  /** what is inside the list, in its own order */
+  records: Vinyl[];
+  onRemoveRecord: (listId: string, vinylId: string) => void;
 }) {
   const toast = useToast();
   const [name, setName] = useState("");
-  const [pane, setPane] = useState<"root" | "sort" | "visibility">("root");
+  const [pane, setPane] = useState<"root" | "sort" | "visibility" | "records">("root");
   const [deleting, setDeleting] = useState(false);
   const [sharing, setSharing] = useState(false);
 
@@ -79,9 +86,17 @@ export default function ListEditSheet({
           commitName();
           onClose();
         }}
-        title={pane === "root" ? "Lista" : pane === "sort" ? "Ordenar por" : "Quién puede verla"}
+        title={
+          pane === "root"
+            ? "Lista"
+            : pane === "sort"
+              ? "Ordenar por"
+              : pane === "records"
+                ? "Discos"
+                : "Quién puede verla"
+        }
         subtitle={pane === "root" ? `${list.vinylIds.length} discos` : list.name}
-        size="auto"
+        size={pane === "records" ? "tall" : "auto"}
         width={400}
         action={
           pane !== "root" ? (
@@ -108,6 +123,16 @@ export default function ListEditSheet({
             </div>
 
             <div className="mt-3 border-t border-line py-1">
+              {/* The desktop panel edits a list's contents behind a pencil that
+                  appears on hover. There is no hover here, and without a door
+                  of its own the only way to take a record out on a phone was to
+                  open the record itself and go looking — so the list you are
+                  already editing gets its own row. */}
+              <SheetRow
+                label="Discos"
+                detail={`${list.vinylIds.length}`}
+                onClick={() => setPane("records")}
+              />
               <SheetRow
                 label="Ordenar por"
                 detail={SORT_LABELS[(list.sortBy ?? "custom") as SortMode]}
@@ -134,6 +159,51 @@ export default function ListEditSheet({
               </p>
             )}
           </>
+        )}
+
+        {pane === "records" && (
+          <div className="pb-2">
+            {records.length === 0 ? (
+              <p className="px-5 py-6 text-sub leading-relaxed text-content-muted">
+                Esta lista está vacía. Busca un disco y guárdalo aquí.
+              </p>
+            ) : (
+              <ul className="divide-y divide-line">
+                {records.map((v) => (
+                  <li key={v.id} className="flex items-center gap-3 px-5 py-2.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={coverFor(v)}
+                      alt=""
+                      loading="lazy"
+                      className="h-10 w-10 shrink-0 rounded-sm object-cover"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sub text-paper">{v.title}</span>
+                      <span className="block truncate text-caption text-content-muted">
+                        {v.artist}
+                      </span>
+                    </span>
+                    {/* One press, and the undo lives in the toast. A confirm
+                        dialogue per record turns tidying a list into forty
+                        dialogues. */}
+                    <button
+                      onClick={() => onRemoveRecord(list.id, v.id)}
+                      aria-label={`Quitar ${v.title} de ${list.name}`}
+                      className="pressable flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-content-muted transition-colors hover:border-[#ff6b57] hover:text-[#ff6b57]"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden>
+                        <path d="M2 6h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="border-t border-line px-5 py-3.5 text-caption leading-relaxed text-content-muted">
+              Quitarlos de aquí no los borra de tu colección.
+            </p>
+          </div>
         )}
 
         {pane === "sort" && (

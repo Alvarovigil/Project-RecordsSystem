@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Segmented from "@/components/ui/Segmented";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
@@ -22,6 +22,7 @@ import Avatar from "@/components/ui/Avatar";
 import { coverFor } from "@/lib/cover";
 import { useImagesReady } from "@/hooks/useImagesReady";
 import { listTitleFor } from "@/lib/list-title";
+import { useRepository } from "@/hooks/useRepository";
 import type { Collection } from "@/lib/collections";
 import type { ListVisibility, SavedList } from "@/lib/data/types";
 import type { SortMode } from "@/lib/collections";
@@ -73,6 +74,9 @@ export default function MobileShelf({
   myId,
   onRemoveFromList,
   onUnsaveList,
+  onOpenSaved,
+  onRemoveRecordFromList,
+  readOnly = false,
 }: {
   vinilos: Vinyl[];
   /** every record you own, so a list can show what is in it */
@@ -97,6 +101,12 @@ export default function MobileShelf({
   onRemoveFromList: (v: Vinyl) => void;
   /** stop keeping somebody else's list */
   onUnsaveList: (listId: string) => void;
+  /** open a kept list on this shelf, the way one of yours opens */
+  onOpenSaved: (list: SavedList) => void;
+  /** take a record out of a list from the list's own editor */
+  onRemoveRecordFromList: (listId: string, vinylId: string) => void;
+  /** the shelf is showing somebody else's list, so it cannot be edited */
+  readOnly?: boolean;
 }) {
   /**
    * The two ways of looking at the same records — the phone's version of the
@@ -141,6 +151,27 @@ export default function MobileShelf({
         .pop()?.cover ?? null,
   );
   const listsReady = useImagesReady(listCovers);
+
+  /**
+   * A cover for each kept list.
+   *
+   * Your own lists can pull one out of the library in memory; somebody else's
+   * records were never downloaded, so the crate would be an empty square. One
+   * request for all of them, and only when there are any.
+   */
+  const [savedCovers, setSavedCovers] = useState<Record<string, string[]>>({});
+  const repo = useRepository();
+  useEffect(() => {
+    if (savedLists.length === 0) return;
+    let alive = true;
+    repo
+      .coversOfLists(savedLists.map((l) => l.id))
+      .then((c) => alive && setSavedCovers(c))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [repo, savedLists]);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
 
@@ -322,30 +353,52 @@ export default function MobileShelf({
             <p className="border-t border-line px-5 pb-2 pt-4 text-caption uppercase tracking-label text-content-muted">
               Guardadas de otra gente
             </p>
-            <div className="pb-1">
+            {/* The same card as your own lists, and it opens the same way:
+                onto this shelf, not out to a web page. A kept list IS a shelf
+                you can browse — sending someone to a profile instead is the
+                moment they stop feeling like it is theirs to look at. Whose it
+                is stays said, in the line under the name, where it belongs. */}
+            <ul className="flex flex-col gap-1 px-3 pb-2 pt-3">
               {savedLists.map((l) => (
-                <div key={l.id} className="flex items-center">
-                  <Link
-                    href={`/u/${l.owner.username}/${l.slug}`}
-                    className="pressable flex min-w-0 flex-1 items-center gap-3 py-3 pl-5 pr-2"
+                <li key={l.id} className="relative">
+                  <button
+                    onClick={() => {
+                      onOpenSaved(l);
+                      setSwitching(false);
+                    }}
+                    className="pressable flex w-full items-center gap-3 rounded-md bg-fill-subtle py-2.5 pl-3 pr-12 text-left"
                   >
-                    <Avatar
-                      name={l.owner.displayName}
-                      handle={l.owner.username}
-                      src={l.owner.avatarUrl}
-                      size="sm"
-                    />
+                    <span className="flex h-11 w-11 shrink-0 overflow-hidden rounded-sm bg-fill">
+                      {(savedCovers[l.id] ?? [])[0] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={(savedCovers[l.id] ?? [])[0]}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <Avatar
+                          name={l.owner.displayName}
+                          handle={l.owner.username}
+                          src={l.owner.avatarUrl}
+                          size="md"
+                        />
+                      )}
+                    </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-body text-paper">{listTitleFor(l, false)}</span>
-                      <span className="block truncate text-caption text-content-muted">
-                        de {l.owner.displayName}
+                      <span className="block truncate text-body text-paper">
+                        {listTitleFor(l, false)}
+                      </span>
+                      <span className="mt-0.5 block truncate text-caption text-content-muted">
+                        de {l.owner.displayName} · {l.itemCount}{" "}
+                        {l.itemCount === 1 ? "disco" : "discos"}
                       </span>
                     </span>
-                  </Link>
+                  </button>
                   <button
                     onClick={() => setListMenu(l)}
                     aria-label={`Opciones de ${listTitleFor(l, false)}`}
-                    className="pressable flex h-tap w-tap shrink-0 items-center justify-center text-content-muted"
+                    className="pressable absolute right-0 top-1/2 flex h-tap w-tap -translate-y-1/2 items-center justify-center text-content-muted"
                   >
                     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
                       <circle cx="8" cy="3.2" r="1.35" fill="currentColor" />
@@ -353,9 +406,9 @@ export default function MobileShelf({
                       <circle cx="8" cy="12.8" r="1.35" fill="currentColor" />
                     </svg>
                   </button>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           </>
         )}
       </Sheet>
@@ -406,6 +459,16 @@ export default function MobileShelf({
         onDelete={onDeleteList}
         onSetSort={onSetSort}
         onSetVisibility={onSetVisibility}
+        // resolved here rather than in the sheet: this screen already holds the
+        // library, and the sheet should not have to know where records live
+        records={
+          editing
+            ? editing.vinylIds
+                .map((id) => allVinilos.find((v) => v.id === id))
+                .filter((v): v is Vinyl => Boolean(v))
+            : []
+        }
+        onRemoveRecord={onRemoveRecordFromList}
       />
     </div>
   );

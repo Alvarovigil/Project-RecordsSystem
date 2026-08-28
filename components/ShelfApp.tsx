@@ -517,7 +517,8 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           allVinilos={allVinilos}
           collections={resolvedCollections}
           activeListId={activeCollectionId}
-          activeName={activeCollection?.name ?? "Mi Colección"}
+          // a kept list open on the shelf names itself, and says whose it is
+          activeName={foreign ? foreign.list.title : activeCollection?.name ?? "Mi Colección"}
           savedLists={saved}
           nowPlayingId={nowPlaying?.id}
           isPlaying={playing}
@@ -536,6 +537,9 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           myId={myProfileId}
           // the handler already confirms it, with the same undo a swipe deserves
           onRemoveFromList={(v) => handleRemoveVinylFromActive(v.id)}
+          onOpenSaved={(l) => void openForeign(l)}
+          onRemoveRecordFromList={(listId, vinylId) => handleToggleVinyl(listId, vinylId)}
+          readOnly={readOnly}
           onUnsaveList={(id) => {
             // both lists of kept lists: the phone reads `saved`, the desktop
             // panel reads `followed`, and one of them going stale is how a
