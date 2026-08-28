@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Page, PageHeader, Section } from "@/components/app/AppShell";
+import { Page, Section } from "@/components/app/AppShell";
 import { Cover } from "@/components/ui/Avatar";
 import EmptyState, { CoverGridSkeleton } from "@/components/ui/EmptyState";
 import CatalogueNotice from "@/components/ui/CatalogueNotice";
@@ -189,21 +189,20 @@ export default function ExploreView() {
   return (
     <Page width="full">
       {/**
-       * The title in the middle, and the field directly under it.
+       * The field is the top of the page, because it is the page.
        *
-       * It sat in the top-right corner beside the heading, which is where a
-       * secondary control goes — and search is not secondary here, it is the
-       * entire screen. Centred under the title it reads as the instrument it
-       * is, and it keeps the shape of the room: the shelf names itself in the
-       * middle and so does this.
+       * There was a title above it saying "Explorar" over a subtitle saying
+       * what could be searched — under a navigation bar with the word
+       * Explorar in it, marked as the place you are. A heading that repeats
+       * the tab you just pressed is a line of type that costs the screen its
+       * first eighty pixels and tells you something you already knew. The
+       * placeholder says what can be typed; the bar says where you are.
        *
        * It is a field now rather than an underline. A rule under some grey
        * placeholder text is a typographic idea of a search box; people look
        * for something with edges, and on a page this wide a lone line does not
        * read as a place to type at all.
        */}
-      <PageHeader centered title="Explorar" subtitle="Discos, listas y gente que colecciona." />
-
       <div className="sticky top-0 z-20 -mx-5 bg-surface/95 px-5 pb-3 pt-1 backdrop-blur-sm sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-7 sm:pt-0 sm:backdrop-blur-none">
         <div className="mx-auto w-full max-w-[560px]">
           <div className="relative w-full border-b border-line transition-colors focus-within:border-line-strong">

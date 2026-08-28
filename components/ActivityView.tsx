@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Page, PageHeader } from "@/components/app/AppShell";
+import { Page } from "@/components/app/AppShell";
 import Avatar, { Cover } from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
@@ -54,8 +54,10 @@ export default function ActivityView() {
 
   return (
     <Page width="full">
-      <PageHeader centered title="Actividad" subtitle="Lo que se mueve alrededor de tu colección." />
-
+      {/* No heading. The bar already says Actividad and marks it as where you
+          are; repeating it here would cost the top of the screen to tell you
+          something you pressed a button to do. The first day label does the
+          orienting instead, and it is information rather than a title. */}
       {invites.length > 0 && (
         <ul className="mb-9 space-y-3">
           {invites.map((n) => (
