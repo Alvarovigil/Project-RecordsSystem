@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ListHoverCard from "@/components/community/ListHoverCard";
 import SharedMark from "@/components/ui/SharedMark";
+import Select from "@/components/ui/Select";
 import { useRepository } from "@/hooks/useRepository";
 import type { Collaborator } from "@/lib/data/types";
 import CollaboratorsSheet from "@/components/community/CollaboratorsSheet";
@@ -752,11 +753,44 @@ function EditPanel({
   const [overIdx, setOverIdx] = useState<number | null>(null);
   const sortBy = editing.sortBy ?? "custom";
 
+  const [addQuery, setAddQuery] = useState("");
+  const [addGenre, setAddGenre] = useState("");
+
   const orderedIds = sortedVinylIds(editing, allVinilos);
   const orderedVinilos = orderedIds
     .map((id) => allVinilos.find((v) => v.id === id))
     .filter((v): v is Vinyl => !!v);
-  const notInCol = allVinilos.filter((v) => !editing.vinylIds.includes(v.id));
+  const outside = allVinilos.filter((v) => !editing.vinylIds.includes(v.id));
+
+  /**
+   * Finding a record among everything you own, from inside the list.
+   *
+   * "Añadir discos" listed the entire library — thirty-one rows here, and
+   * three hundred for anybody with a real collection — so adding the record
+   * you had in mind meant scrolling past everything you did not. A field and a
+   * genre are the two cuts that work on a music library: you either know what
+   * it is called, or you know what kind of night you are building.
+   *
+   * The genres are the ones actually present in what is left to add, with
+   * their counts. A dropdown offering a genre that yields nothing is a menu
+   * that lies.
+   */
+  const genres = useMemo(() => {
+    const count = new Map<string, number>();
+    for (const v of outside) if (v.genre) count.set(v.genre, (count.get(v.genre) ?? 0) + 1);
+    return [...count.entries()].sort((a, b) => b[1] - a[1]);
+  }, [outside]);
+
+  const notInCol = useMemo(() => {
+    const norm = (t: string) =>
+      t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const q = norm(addQuery.trim());
+    return outside.filter(
+      (v) =>
+        (!addGenre || v.genre === addGenre) &&
+        (!q || norm(`${v.title} ${v.artist}`).includes(q)),
+    );
+  }, [outside, addQuery, addGenre]);
 
   return (
     <>
@@ -824,36 +858,16 @@ function EditPanel({
         )}
 
         <div className="flex items-center justify-between gap-4 py-3">
-          <label
-            htmlFor="sort-select"
-            className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40"
-          >
-            Orden
-          </label>
-          <div className="relative flex items-center">
-            <select
-              id="sort-select"
-              value={sortBy}
-              onChange={(e) => onSetSort(editing.id, e.target.value as SortMode)}
-              className="cursor-pointer appearance-none bg-transparent pr-4 text-right text-[13px] text-paper outline-none"
-            >
-              {(Object.keys(SORT_LABELS) as SortMode[]).map((m) => (
-                <option key={m} value={m} className="bg-[#0a0a0a]">
-                  {SORT_LABELS[m]}
-                </option>
-              ))}
-            </select>
-            <svg
-              className="pointer-events-none absolute right-0 text-paper/40"
-              width="8"
-              height="8"
-              viewBox="0 0 8 8"
-              fill="none"
-              aria-hidden
-            >
-              <path d="M1 2.5 L4 5.5 L7 2.5" stroke="currentColor" strokeWidth="1.1" />
-            </svg>
-          </div>
+          <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">Orden</span>
+          <Select
+            label="Orden de la lista"
+            value={sortBy}
+            onChange={(m) => onSetSort(editing.id, m)}
+            options={(Object.keys(SORT_LABELS) as SortMode[]).map((m) => ({
+              value: m,
+              label: SORT_LABELS[m],
+            }))}
+          />
         </div>
       </div>
 
@@ -956,7 +970,7 @@ function EditPanel({
         </ul>
 
         {/* add more */}
-        {notInCol.length > 0 && !isLibrary && (
+        {outside.length > 0 && !isLibrary && (
           <>
             {/* same rhythm as the section above: label left, count right */}
             <div className="mt-6 flex items-baseline justify-between border-t border-paper/[0.07] px-6 pb-2 pt-5">
@@ -965,8 +979,37 @@ function EditPanel({
               </span>
               <span className="mono text-[10px] tracking-[0.16em] text-paper/30">
                 {notInCol.length}
+                {notInCol.length !== outside.length && (
+                  <span className="text-paper/20"> / {outside.length}</span>
+                )}
               </span>
             </div>
+
+            <div className="flex items-center gap-2 px-6 pb-3">
+              <input
+                value={addQuery}
+                onChange={(e) => setAddQuery(e.target.value)}
+                placeholder="Buscar en tu colección"
+                aria-label="Buscar un disco para añadir"
+                className="h-8 min-w-0 flex-1 border-b border-paper/[0.12] bg-transparent text-[12px] text-paper outline-none transition-colors placeholder:text-paper/30 focus:border-paper/40"
+              />
+              <div className="shrink-0">
+                <Select
+                  label="Filtrar por género"
+                  value={addGenre}
+                  onChange={setAddGenre}
+                  options={[
+                    { value: "", label: "Todos los géneros" },
+                    ...genres.map(([g, n]) => ({ value: g, label: g, hint: String(n) })),
+                  ]}
+                />
+              </div>
+            </div>
+            {notInCol.length === 0 && (
+              <p className="px-6 pb-2 text-[12px] text-paper/35">
+                Nada que coincida. {addGenre && "Prueba con otro género."}
+              </p>
+            )}
             <ul className="px-3">
               {notInCol.map((v) => (
                 <li key={v.id}>

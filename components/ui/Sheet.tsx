@@ -114,21 +114,20 @@ export default function Sheet({
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               style={{ width, maxHeight: "min(78vh, 720px)" }}
               /**
-               * Rounded, and lit from inside its own edge.
+               * Square, barely outlined, and made of frosted glass.
                *
-               * This app is square on purpose — sleeves, crates, labels — but
-               * that rule is about the artwork and the furniture, not about a
-               * panel that floats above them. A hard-cornered dialog reads as
-               * a system alert from another decade, and it disagreed with the
-               * phone, whose sheets have been rounded to the device's own
-               * radius for a while now.
+               * The square corners are the product's own rule — sleeves,
+               * crates, labels — and a dialog is not exempt from it just
+               * because it floats. What it does get is depth: the panel is
+               * translucent and blurs what is behind it, so it reads as a
+               * sheet of glass laid over the shelf rather than a rectangle
+               * pasted on top of it, and the edge can then be almost nothing.
                *
-               * The inset ring is the other half: a single hairline of light
-               * along the top edge, the way a real surface catches it, which
-               * is what stops a dark panel on a dark ground from looking like
-               * a hole cut in the page.
+               * A 5% hairline is enough to find the boundary once the blur has
+               * already separated the two planes. Any more and the outline
+               * becomes the loudest thing in a panel whose job is to be quiet.
                */
-              className="relative flex max-w-[92vw] flex-col overflow-hidden rounded-[16px] bg-surface-raised shadow-overlay ring-1 ring-inset ring-paper/[0.08]"
+              className="relative flex max-w-[92vw] flex-col overflow-hidden bg-surface-raised/80 shadow-overlay ring-1 ring-inset ring-paper/[0.05] backdrop-blur-2xl"
             >
               {!bare && <Header id={titleId} title={title} subtitle={subtitle} action={action} onClose={onClose} />}
               {children}
