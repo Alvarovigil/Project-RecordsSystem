@@ -26,6 +26,19 @@ import type {
   SavedList,
 } from "./types";
 
+/**
+ * Every embed of `profiles` names its foreign key, and has to.
+ *
+ * Adding list_collaborators gave `lists` a second path to `profiles` — owner,
+ * and collaborator — and PostgREST will not guess between them: it refuses the
+ * query outright with PGRST201. Which meant that the moment collaboration
+ * shipped, every community read on this backend stopped working. Not returning
+ * less; erroring. The screens saw an empty array and reported, in good faith,
+ * that people had no lists.
+ *
+ * Naming the constraint is not verbosity, it is the only unambiguous way to
+ * ask. And it stays correct the next time another table points at profiles.
+ */
 const slugify = (s: string) =>
   s
     .normalize("NFD")
@@ -373,7 +386,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     async listsOfProfile(profileId): Promise<ListWithRecord[]> {
       const { data } = await sb
         .from("lists")
-        .select("*, profiles!inner(username, display_name, avatar_url)")
+        .select("*, profiles!lists_owner_id_fkey!inner(username, display_name, avatar_url)")
         .eq("owner_id", profileId)
         .eq("visibility", "public")
         .order("position");
@@ -408,7 +421,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       if (!query.trim()) return [];
       const { data } = await sb
         .from("lists")
-        .select("*, profiles!inner(username, display_name, avatar_url)")
+        .select("*, profiles!lists_owner_id_fkey!inner(username, display_name, avatar_url)")
         .eq("visibility", "public")
         .ilike("title", `%${query.trim()}%`)
         .order("item_count", { ascending: false })
@@ -441,7 +454,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     async popularLists() {
       const { data } = await sb
         .from("lists")
-        .select("*, profiles!inner(username, display_name, avatar_url)")
+        .select("*, profiles!lists_owner_id_fkey!inner(username, display_name, avatar_url)")
         .eq("visibility", "public")
         .gt("item_count", 0)
         .order("item_count", { ascending: false })
@@ -462,7 +475,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       const userId = await requireUser();
       const { data } = await sb
         .from("list_follows")
-        .select("lists!inner(*, profiles!inner(username, display_name, avatar_url))")
+        .select("lists!inner(*, profiles!lists_owner_id_fkey!inner(username, display_name, avatar_url))")
         .eq("user_id", userId);
       return ((data ?? []) as any[]).map((row) => withOwner(row.lists));
     },
@@ -601,7 +614,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       const userId = await requireUser();
       const { data } = await sb
         .from("list_follows")
-        .select("created_at, lists!inner(*, profiles!inner(username, display_name, avatar_url))")
+        .select("created_at, lists!inner(*, profiles!lists_owner_id_fkey!inner(username, display_name, avatar_url))")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       return ((data ?? []) as any[]).map((row) => ({
@@ -663,12 +676,12 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       const [{ data: list }, { data: rows }] = await Promise.all([
         sb
           .from("lists")
-          .select("created_at, profiles!inner(id, username, display_name, avatar_url)")
+          .select("created_at, profiles!lists_owner_id_fkey!inner(id, username, display_name, avatar_url)")
           .eq("id", listId)
           .single(),
         sb
           .from("list_collaborators")
-          .select("role, status, created_at, profiles!inner(id, username, display_name, avatar_url)")
+          .select("role, status, created_at, profiles!list_collaborators_user_id_fkey!inner(id, username, display_name, avatar_url)")
           .eq("list_id", listId),
       ]);
       const owner: Collaborator[] = list
@@ -730,7 +743,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       if (!releaseId) return null;
       const { data } = await sb
         .from("list_items")
-        .select("profiles(id, username, display_name)")
+        .select("profiles!list_items_added_by_fkey(id, username, display_name)")
         .eq("list_id", listId)
         .eq("release_id", releaseId)
         .maybeSingle();
