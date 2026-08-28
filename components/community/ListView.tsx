@@ -9,6 +9,9 @@ import EmptyState, { CoverGridSkeleton } from "@/components/ui/EmptyState";
 import SaveListButton from "./SaveListButton";
 import FollowButton from "./FollowButton";
 import CollaboratorsSheet, { CollaboratorFaces } from "./CollaboratorsSheet";
+import RecordSheet from "@/components/mobile/RecordSheet";
+import { useLibrary } from "@/hooks/useLibrary";
+import { usePlaybackContext } from "@/lib/playback-context";
 import { useRepository } from "@/hooks/useRepository";
 import { useRelationship } from "@/hooks/useRelationship";
 import type { ListWithRecord } from "@/lib/data/types";
@@ -50,6 +53,11 @@ export default function ListView({
   const [items, setItems] = useState<Vinyl[] | null>(null);
   const [attribution, setAttribution] = useState<Record<string, string>>({});
   const [sharing, setSharing] = useState(false);
+  /** the record whose sheet is open, wherever you found it */
+  const [open, setOpen] = useState<Vinyl | null>(null);
+  const lib = useLibrary();
+  const audio = usePlaybackContext();
+  const { nowPlaying, playing } = audio;
   const { rel } = useRelationship(ownerId);
   const isOwner = rel?.isYou ?? false;
 
@@ -210,22 +218,92 @@ export default function ListView({
           />
         ) : (
           <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-4 lg:grid-cols-5">
-            {items.map((v) => (
-              <li key={v.id}>
-                <Cover vinyl={v} alt={v.title} />
-                <p className="mt-2 truncate text-sub text-paper">{v.title}</p>
-                <p className="truncate text-caption text-content-muted">{v.artist}</p>
-                {/* attribution only where it means something: on a shared list */}
-                {attribution[v.id] && (
-                  <p className="mt-1 truncate text-caption text-content-faint">
-                    lo puso {attribution[v.id]}
-                  </p>
-                )}
-              </li>
-            ))}
+            {items.map((v) => {
+              const sounding = nowPlaying?.id === v.id;
+              return (
+                <li key={v.id} className="group relative">
+                  {/**
+                   * The same tile as the collection's grid, because it is the
+                   * same object. A record on somebody else's list was a
+                   * picture with a caption — you could not play it, open it or
+                   * take it. But what you want when you see a record you like
+                   * on a stranger's shelf is exactly what you want on your
+                   * own, and the answer should not depend on whose page you
+                   * happen to be standing on.
+                   */}
+                  <button
+                    onClick={() => setOpen(v)}
+                    className="block w-full text-left"
+                    aria-label={`${v.artist} — ${v.title}`}
+                  >
+                    <span
+                      className={`relative block aspect-square w-full overflow-hidden bg-fill-subtle outline-offset-2 transition ${
+                        sounding ? "outline outline-1 outline-paper/70" : ""
+                      }`}
+                    >
+                      <Cover vinyl={v} alt={v.title} />
+                    </span>
+                  </button>
+
+                  {v.previewUrl && (
+                    <button
+                      onClick={() => (sounding ? audio.toggleCurrent() : audio.play(v))}
+                      aria-label={sounding && playing ? `Pausar ${v.title}` : `Escuchar ${v.title}`}
+                      className={`pressable absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-line-strong bg-ink/70 text-paper backdrop-blur-sm transition focus:opacity-100 ${
+                        sounding ? "opacity-100" : "reveal-on-hover"
+                      }`}
+                    >
+                      {sounding && playing ? (
+                        <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+                          <rect x="3" y="2" width="3" height="10" fill="currentColor" />
+                          <rect x="8" y="2" width="3" height="10" fill="currentColor" />
+                        </svg>
+                      ) : (
+                        <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+                          <path d="M3 2 L12 7 L3 12 Z" fill="currentColor" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+
+                  <button onClick={() => setOpen(v)} className="block w-full text-left" tabIndex={-1}>
+                    <span className="mt-2 block truncate text-sub text-paper">{v.title}</span>
+                    <span className="block truncate text-caption text-content-muted">{v.artist}</span>
+                  </button>
+
+                  {/* attribution only where it means something: on a shared list */}
+                  {attribution[v.id] && (
+                    <p className="mt-1 truncate text-caption text-content-faint">
+                      lo puso {attribution[v.id]}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
+
+      {/* Playing, and saving into a list of your own, work here exactly as
+          they do on your own shelf. Taking a record OUT is the one thing that
+          does not: those two rows act on your collection, and this is not it. */}
+      <RecordSheet
+        vinyl={open}
+        onClose={() => setOpen(null)}
+        canEdit={false}
+        collections={lib.lists.map((l) => ({
+          id: l.id,
+          name: l.title,
+          vinylIds: lib.idsOf(l.id),
+          kind: l.kind,
+        }))}
+        activeListId=""
+        playing={playing && nowPlaying?.id === open?.id}
+        onTogglePlay={(v) => (nowPlaying?.id === v.id ? audio.toggleCurrent() : audio.play(v))}
+        onAddTo={(listId, v) => void lib.saveToList(v, listId)}
+        onRemoveFromActive={() => {}}
+        onDelete={() => {}}
+      />
 
       {list && (
         <CollaboratorsSheet

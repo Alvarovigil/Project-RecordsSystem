@@ -39,6 +39,7 @@ export default function RecordSheet({
   onAddTo,
   onRemoveFromActive,
   onDelete,
+  canEdit = true,
 }: {
   vinyl: Vinyl | null;
   onClose: () => void;
@@ -49,6 +50,16 @@ export default function RecordSheet({
   onAddTo: (listId: string, v: Vinyl) => void;
   onRemoveFromActive: (v: Vinyl) => void;
   onDelete: (v: Vinyl) => void;
+  /**
+   * False on somebody else's list.
+   *
+   * The two ways of removing a record act on YOUR shelf, and offering them
+   * over a list you are only visiting is offering to do something to a place
+   * you are not in. Everything else — listening, saving it into one of your
+   * own lists — is exactly the same act wherever you found the record, which
+   * is the point of this sheet being one sheet.
+   */
+  canEdit?: boolean;
 }) {
   const repo = useRepository();
   const toast = useToast();
@@ -340,6 +351,7 @@ export default function RecordSheet({
               </section>
             )}
 
+            {canEdit && (
             <section className="mt-9 border-t border-line pt-2">
               <SheetRow
                 label="Quitar de esta lista"
@@ -351,6 +363,7 @@ export default function RecordSheet({
               />
               <SheetRow label="Borrar de mi colección" danger onClick={() => setDeleting(true)} />
             </section>
+            )}
           </div>
         </div>
       </Sheet>
