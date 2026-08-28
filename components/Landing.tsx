@@ -123,7 +123,7 @@ export default function Landing() {
                   ))}
                 </ul>
                 <p className="mt-6 max-w-[42ch] text-[15px] leading-relaxed text-paper/50">
-                  Tu estantería no es un muro que se mueve solo: si pasas dos
+                  Tu colección no es un muro que se mueve solo: si pasas dos
                   meses sin entrar, te espera exactamente igual de ordenada.
                 </p>
               </Reveal>
@@ -301,7 +301,7 @@ const PILLARS = [
     body: "Entra con su portada, su ficha y un trozo que suena, sin que teclees el título ni lo busques en tres webs. Después lo colocas donde quieras: el turno de noche, los domingos largos, los que no pondrías con gente delante. Tu colección, con tu lógica rara.",
     points: [
       { label: "Escanear", text: "Apuntas con la cámara y sigue abierta: puedes vaciar una balda de una sentada." },
-      { label: "Ordenar", text: "Listas propias y el orden que decidas. Nadie te reordena la estantería por detrás." },
+      { label: "Ordenar", text: "Listas propias y el orden que decidas. Nadie te reordena la colección por detrás." },
       { label: "Sonar", text: "Cada disco trae un adelanto. Una colección muda es un inventario." },
     ],
     aside: "Y sí: por fin vas a saber si ese disco ya lo tienes. Todos hemos comprado alguno dos veces; casi nadie lo cuenta.",

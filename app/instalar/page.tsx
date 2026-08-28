@@ -43,7 +43,7 @@ export default function InstalarPage() {
         </span>
 
         <h1 className="mt-9 text-center text-display font-medium leading-tight text-paper">
-          Tu estantería,
+          Tu colección,
           <br />
           en la pantalla de inicio
         </h1>

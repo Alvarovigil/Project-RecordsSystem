@@ -149,7 +149,7 @@ export default function ListView({
                 Compartir
               </Button>
               <Button variant="ghost" href="/coleccion">
-                Editar en mi estantería
+                Editar en mi colección
               </Button>
             </>
           ) : (
@@ -174,12 +174,12 @@ export default function ListView({
             title={isOwner ? "Esta lista todavía está vacía" : "Aquí no hay discos todavía"}
             body={
               isOwner
-                ? "Abre tu estantería y arrastra discos a esta lista, o guárdalos desde el buscador."
+                ? "Abre tu colección y arrastra discos a esta lista, o guárdalos desde el buscador."
                 : "Quien la hizo no ha añadido nada por ahora. Guárdala y te enterarás cuando lo haga."
             }
             action={
               isOwner
-                ? { label: "Ir a mi estantería", href: "/coleccion" }
+                ? { label: "Ir a mi colección", href: "/coleccion" }
                 : { label: "Explorar otras listas", href: "/explorar" }
             }
           />
