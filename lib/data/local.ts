@@ -392,10 +392,12 @@ export function createLocalRepository(): LibraryRepository {
       const out: Record<string, string[]> = {};
       for (const id of listIds) {
         const ids = id.startsWith("cl-") ? (getGeneratedList(id)?.vinylIds ?? []) : idsOf(id);
-        out[id] = ids
+        // vinylIds is insertion order, so the last three added are the tail
+        out[id] = [...ids]
+          .reverse()
           .map((r) => all.find((v) => v.id === r))
           .filter((v): v is Vinyl => Boolean(v))
-          .slice(0, 4)
+          .slice(0, 3)
           .map((v) => v.cover ?? "")
           .filter(Boolean);
       }

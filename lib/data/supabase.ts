@@ -397,16 +397,18 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       if (listIds.length === 0) return {};
       const { data } = await sb
         .from("list_items")
-        .select("list_id, position, releases!inner(cover_url)")
+        .select("list_id, added_at, releases!inner(cover_url)")
         .in("list_id", listIds)
-        .order("position")
+        // newest first: the crate shows what went in last, which is the only
+        // ordering that makes a preview worth looking at twice
+        .order("added_at", { ascending: false })
         .limit(400);
       const out: Record<string, string[]> = {};
       for (const row of (data ?? []) as any[]) {
         const url = row.releases?.cover_url;
         if (!url) continue;
         const bucket = (out[row.list_id] ??= []);
-        if (bucket.length < 4) bucket.push(url);
+        if (bucket.length < 3) bucket.push(url);
       }
       return out;
     },

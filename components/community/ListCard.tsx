@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Avatar, { Cover } from "@/components/ui/Avatar";
+import Avatar from "@/components/ui/Avatar";
+import Crate from "@/components/ui/Crate";
 import type { ListWithRecord } from "@/lib/data/types";
 
 /**
@@ -26,33 +27,22 @@ export default function ListCard({
     owner?: ListWithRecord["owner"];
     followers?: number;
   };
-  /** up to four sleeves; a list with no artwork still has to have a shape */
+  /** newest first; the crate shows three */
   covers?: string[];
   mine?: boolean;
   href?: string;
 }) {
   const to = href ?? (list.owner ? `/u/${list.owner.username}/${list.slug}` : `/coleccion`);
-  const four = covers.slice(0, 4);
 
   return (
     <Link
       href={to}
       className="pressable group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-line-focus"
     >
-      {/* a mosaic of four, or one sleeve — never an icon standing in for the
-          contents, which tells you nothing about the list */}
-      <span className="relative block aspect-square w-full overflow-hidden bg-fill-subtle">
-        {four.length > 1 ? (
-          <span className="grid h-full w-full grid-cols-2 grid-rows-2">
-            {four.map((c, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={c} alt="" loading="lazy" className="h-full w-full object-cover" />
-            ))}
-          </span>
-        ) : (
-          <Cover src={four[0] ?? null} />
-        )}
-      </span>
+      {/* A crate with the last three records in it, rather than a grid of four
+          thumbnails. The grid told you a list had images in it; this tells you
+          it is a stack of records, which is what it is. */}
+      <Crate covers={covers} />
 
       <span className="mt-2.5 block">
         <span className="block truncate text-body font-medium text-paper">{list.title}</span>

@@ -9,6 +9,7 @@ import Button from "@/components/ui/Button";
 import ListEditSheet from "./ListEditSheet";
 import EmptyState from "@/components/ui/EmptyState";
 import ListCard from "@/components/community/ListCard";
+import Crate from "@/components/ui/Crate";
 import Avatar from "@/components/ui/Avatar";
 import { coverFor } from "@/lib/cover";
 import type { Collection } from "@/lib/collections";
@@ -432,12 +433,14 @@ function ListsView({
   vinilos: Vinyl[];
   onActivate: (id: string) => void;
 }) {
+  // newest first: vinylIds is insertion order, so the tail is what went in last
   const coversOf = useCallback(
     (ids: string[]) =>
-      ids
+      [...ids]
+        .reverse()
         .map((id) => vinilos.find((v) => v.id === id))
         .filter((v): v is Vinyl => Boolean(v))
-        .slice(0, 4)
+        .slice(0, 3)
         .map(coverFor),
     [vinilos],
   );
@@ -456,14 +459,7 @@ function ListsView({
         {mine.map((c) => (
           <li key={c.id}>
             <button onClick={() => onActivate(c.id)} className="pressable block w-full text-left">
-              <span className="relative block aspect-square w-full overflow-hidden bg-fill-subtle">
-                <span className="grid h-full w-full grid-cols-2 grid-rows-2">
-                  {coversOf(c.vinylIds).map((src, i) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img key={i} src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
-                  ))}
-                </span>
-              </span>
+              <Crate covers={coversOf(c.vinylIds)} />
               <span className="mt-2.5 block truncate text-body font-medium text-paper">{c.name}</span>
               <span className="mt-0.5 block text-sub text-content-muted">
                 {c.vinylIds.length} discos
