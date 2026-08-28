@@ -47,15 +47,47 @@ export default async function AdminHome({
           </div>
         </header>
 
+        {/* A total tells you how big the thing is. It says nothing about which
+            way it is going, which is the only question you actually have when
+            you open a panel — so the last seven days ride under the number. */}
         <section className="mt-8 grid grid-cols-2 gap-px bg-paper/[0.07] sm:grid-cols-3 lg:grid-cols-6">
-          {Object.entries(LABELS).map(([key, label]) => (
-            <div key={key} className="bg-ink px-4 py-5">
-              <div className="mono text-[9px] uppercase tracking-[0.18em] text-paper/35">
-                {label}
+          {Object.entries(LABELS).map(([key, label]) => {
+            const delta =
+              key === "profiles"
+                ? overview.growth.signups7
+                : key === "list_items"
+                  ? overview.growth.added7
+                  : null;
+            return (
+              <div key={key} className="bg-ink px-4 py-5">
+                <div className="mono text-[9px] uppercase tracking-[0.18em] text-paper/35">
+                  {label}
+                </div>
+                <div className="mt-2 text-[26px] leading-none">{overview.counts[key] ?? 0}</div>
+                {delta !== null && (
+                  <div className="mono mt-2 text-[9px] uppercase tracking-[0.16em] text-paper/30">
+                    {delta > 0 ? `+${delta} en 7 días` : "sin novedad en 7 días"}
+                  </div>
+                )}
               </div>
-              <div className="mt-2 text-[26px] leading-none">{overview.counts[key] ?? 0}</div>
-            </div>
-          ))}
+            );
+          })}
+        </section>
+
+        {/* Two windows beside each other: whether this week looks like the
+            month it sits in. A ratio a person can read at a glance beats a
+            chart nobody scrolls to. */}
+        <section className="mt-px grid grid-cols-2 gap-px bg-paper/[0.07]">
+          <Window
+            label="Altas"
+            week={overview.growth.signups7}
+            month={overview.growth.signups30}
+          />
+          <Window
+            label="Discos guardados"
+            week={overview.growth.added7}
+            month={overview.growth.added30}
+          />
         </section>
 
         <section className="mt-12">
@@ -133,5 +165,28 @@ function NoService() {
         entorno para poder leer todos los datos.
       </p>
     </main>
+  );
+}
+
+/**
+ * One measure, two windows.
+ *
+ * Seven days against thirty, with the week's share of the month spelled out.
+ * If the last week holds a quarter of the month it is steady; much more and
+ * something is happening; much less and something stopped.
+ */
+function Window({ label, week, month }: { label: string; week: number; month: number }) {
+  const share = month > 0 ? Math.round((week / month) * 100) : 0;
+  return (
+    <div className="bg-ink px-4 py-5">
+      <div className="mono text-[9px] uppercase tracking-[0.18em] text-paper/35">{label}</div>
+      <div className="mt-2 flex items-baseline gap-3">
+        <span className="text-[26px] leading-none">{week}</span>
+        <span className="text-[13px] text-paper/40">esta semana</span>
+      </div>
+      <div className="mono mt-2 text-[9px] uppercase tracking-[0.16em] text-paper/30">
+        {month} en 30 días{month > 0 ? ` · la semana es el ${share}%` : ""}
+      </div>
+    </div>
   );
 }

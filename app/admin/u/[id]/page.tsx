@@ -1,16 +1,29 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { isAdminRequest } from "@/lib/admin/auth";
-import { getUserDetail } from "@/lib/admin/queries";
+import { getAccount, getUserDetail } from "@/lib/admin/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminUser({ params }: { params: { id: string } }) {
+export default async function AdminUser({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { done?: string; error?: string };
+}) {
   if (!isAdminRequest()) redirect("/admin/login");
 
-  const detail = await getUserDetail(params.id);
+  const [detail, account] = await Promise.all([
+    getUserDetail(params.id),
+    getAccount(params.id),
+  ]);
   if (!detail) notFound();
   const { profile, lists, items, followers, following } = detail;
+  const suspended = Boolean(account?.bannedUntil);
+
+  const fecha = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" }) : "—";
 
   const itemsOf = (listId: string) => items.filter((i) => i.list_id === listId);
 
@@ -43,22 +56,82 @@ export default async function AdminUser({ params }: { params: { id: string } }) 
               </p>
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap items-start gap-3">
             <Link
               href={`/u/${profile.username}`}
               className="border border-paper/20 px-4 py-2 text-[12px] text-paper/70 transition hover:border-paper/50 hover:text-paper"
             >
               Ver perfil público
             </Link>
+
+            {/* Suspending comes first and looks ordinary, because it is the
+                action you almost always want: reversible, and it leaves the
+                collection standing. */}
             <form action="/api/admin/actions" method="post">
-              <input type="hidden" name="action" value="delete-user" />
+              <input type="hidden" name="action" value={suspended ? "unsuspend-user" : "suspend-user"} />
               <input type="hidden" name="userId" value={profile.id} />
-              <button className="border border-red-500/30 px-4 py-2 text-[12px] text-red-400/80 transition hover:border-red-500/60 hover:text-red-400">
-                Eliminar usuario
+              <button className="border border-paper/20 px-4 py-2 text-[12px] text-paper/70 transition hover:border-paper/50 hover:text-paper">
+                {suspended ? "Reactivar cuenta" : "Suspender cuenta"}
               </button>
             </form>
+
+            {/* Deleting is folded away and asks you to type the handle. The
+                server checks it too — this is the reminder, not the lock. */}
+            <details className="group">
+              <summary className="cursor-pointer list-none border border-red-500/25 px-4 py-2 text-[12px] text-red-400/70 transition hover:border-red-500/50 hover:text-red-400">
+                Eliminar cuenta…
+              </summary>
+              <form
+                action="/api/admin/actions"
+                method="post"
+                className="mt-2 w-[280px] border border-red-500/25 bg-[#160c0c] p-3"
+              >
+                <input type="hidden" name="action" value="delete-user" />
+                <input type="hidden" name="userId" value={profile.id} />
+                <p className="text-[12px] leading-relaxed text-paper/60">
+                  Se borran el perfil, {lists.length} {lists.length === 1 ? "lista" : "listas"},
+                  sus discos y todo su grafo de seguimiento. No se puede deshacer.
+                </p>
+                <label className="mono mt-3 block text-[9px] uppercase tracking-[0.18em] text-paper/40">
+                  Escribe {profile.username} para confirmar
+                </label>
+                <input
+                  name="confirm"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="mt-1.5 h-9 w-full border border-paper/20 bg-transparent px-2 text-[13px] text-paper outline-none focus:border-paper/60"
+                />
+                <button className="mt-2 w-full bg-red-500/80 px-3 py-2 text-[12px] font-medium text-white transition hover:bg-red-500">
+                  Eliminar definitivamente
+                </button>
+              </form>
+            </details>
           </div>
         </header>
+
+        {searchParams.error === "confirmacion" && (
+          <p role="alert" className="mt-4 border border-red-500/30 bg-red-500/5 px-4 py-3 text-[13px] text-red-400">
+            El nombre no coincidía, así que no se ha borrado nada.
+          </p>
+        )}
+        {searchParams.done && (
+          <p className="mt-4 border border-paper/15 px-4 py-3 text-[13px] text-paper/70">
+            Cuenta {searchParams.done}.
+          </p>
+        )}
+
+        {/* the account, as opposed to the profile: what you need to answer an
+            email about it */}
+        <section className="mt-8 grid grid-cols-2 gap-px bg-paper/[0.07] sm:grid-cols-4">
+          <Fact label="Correo" value={account?.email ?? "—"} />
+          <Fact label="Entra con" value={account?.provider ?? "—"} />
+          <Fact label="Última visita" value={fecha(account?.lastSignInAt)} />
+          <Fact
+            label="Estado"
+            value={suspended ? "Suspendida" : account?.confirmed ? "Activa" : "Sin confirmar"}
+            tone={suspended ? "warn" : "normal"}
+          />
+        </section>
 
         <div className="mt-8 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
           <section>
@@ -139,5 +212,27 @@ export default async function AdminUser({ params }: { params: { id: string } }) 
         </div>
       </div>
     </main>
+  );
+}
+
+function Fact({
+  label,
+  value,
+  tone = "normal",
+}: {
+  label: string;
+  value: string;
+  tone?: "normal" | "warn";
+}) {
+  return (
+    <div className="bg-ink px-4 py-4">
+      <div className="mono text-[9px] uppercase tracking-[0.18em] text-paper/35">{label}</div>
+      <div
+        className={`mt-1.5 truncate text-[14px] ${tone === "warn" ? "text-[#ff6b57]" : "text-paper/85"}`}
+        title={value}
+      >
+        {value}
+      </div>
+    </div>
   );
 }

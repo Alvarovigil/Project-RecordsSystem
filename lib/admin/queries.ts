@@ -17,6 +17,43 @@ export type AdminUser = {
   following: number;
 };
 
+/**
+ * The account behind the profile.
+ *
+ * `profiles` is the public half — a name, a handle, a bio. Everything you
+ * actually need to answer a support email lives in `auth.users`: the address
+ * it was opened with, whether it was ever confirmed, when they last came back,
+ * and whether they are currently suspended. A panel that shows only the public
+ * half can tell you who someone is and nothing about their account.
+ */
+export type AdminAccount = {
+  email: string | null;
+  provider: string | null;
+  confirmed: boolean;
+  createdAt: string | null;
+  lastSignInAt: string | null;
+  /** an ISO date while a suspension is in force, null when active */
+  bannedUntil: string | null;
+};
+
+export async function getAccount(id: string): Promise<AdminAccount | null> {
+  const sb = getSupabaseAdminClient();
+  if (!sb) return null;
+  const { data, error } = await sb.auth.admin.getUserById(id);
+  if (error || !data.user) return null;
+  const u = data.user as typeof data.user & { banned_until?: string | null };
+  return {
+    email: u.email ?? null,
+    provider: (u.app_metadata?.provider as string) ?? null,
+    confirmed: Boolean(u.email_confirmed_at ?? u.confirmed_at),
+    createdAt: u.created_at ?? null,
+    lastSignInAt: u.last_sign_in_at ?? null,
+    // Supabase writes a far-future date to ban; a past one has simply expired
+    bannedUntil:
+      u.banned_until && new Date(u.banned_until) > new Date() ? u.banned_until : null,
+  };
+}
+
 export async function getOverview() {
   const sb = getSupabaseAdminClient();
   if (!sb) return null;
@@ -36,9 +73,33 @@ export async function getOverview() {
     .order("created_at", { ascending: false })
     .limit(5);
 
+  /**
+   * A total tells you the size of the thing; it tells you nothing about where
+   * it is going. Two windows are enough to see that without building charts:
+   * the last seven days against the last thirty.
+   */
+  const since = (days: number) =>
+    new Date(Date.now() - days * 864e5).toISOString();
+
+  const window = async (table: "profiles" | "list_items", column: string, days: number) => {
+    const { count } = await sb
+      .from(table)
+      .select("*", { count: "exact", head: true })
+      .gte(column, since(days));
+    return count ?? 0;
+  };
+
+  const [signups7, signups30, added7, added30] = await Promise.all([
+    window("profiles", "created_at", 7),
+    window("profiles", "created_at", 30),
+    window("list_items", "added_at", 7),
+    window("list_items", "added_at", 30),
+  ]);
+
   return {
     counts: Object.fromEntries(counts) as Record<string, number>,
     recent: recent ?? [],
+    growth: { signups7, signups30, added7, added30 },
   };
 }
 
