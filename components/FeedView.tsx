@@ -76,12 +76,13 @@ export default function FeedView() {
               {groups.map((g) => (
                 <li key={`${g.actor.id}-${g.listId}-${g.at}`}>
                   <div className="flex items-center gap-3">
-                    <Link href={`/u/${g.actor.username}`} className="pressable shrink-0">
+                    <Link href={`/u/${g.actor.username}`} className="group pressable shrink-0">
                       <Avatar
                         name={g.actor.displayName}
                         handle={g.actor.username}
                         src={g.actor.avatarUrl}
                         size="sm"
+                        interactive
                       />
                     </Link>
                     {/* the page runs edge to edge, the sentence does not: a
@@ -142,12 +143,13 @@ export default function FeedView() {
                   key={n.id}
                   className={`flex gap-3 py-4 ${n.read ? "" : "-mx-3 rounded-sm bg-fill-subtle px-3"}`}
                 >
-                  <Link href={`/u/${n.actor.username}`} className="pressable shrink-0 pt-0.5">
+                  <Link href={`/u/${n.actor.username}`} className="group pressable shrink-0 pt-0.5">
                     <Avatar
                       name={n.actor.displayName}
                       handle={n.actor.username}
                       src={n.actor.avatarUrl}
                       size="md"
+                      interactive
                     />
                   </Link>
                   <div className="min-w-0 flex-1">

@@ -27,6 +27,7 @@ export default function Avatar({
   src,
   size = "md",
   ring = false,
+  interactive = false,
 }: {
   name: string;
   handle?: string;
@@ -34,6 +35,13 @@ export default function Avatar({
   size?: AvatarSize;
   /** marks "there is something new here" — stories-style, used sparingly */
   ring?: boolean;
+  /**
+   * The avatar leads somewhere, so it should answer a pointer.
+   *
+   * A face is not a button and nothing about it invites a click; without some
+   * response people simply do not try. Set by whatever wraps it in a link.
+   */
+  interactive?: boolean;
 }) {
   const px = SIZES[size];
   const seed = handle || name || "?";
@@ -59,7 +67,11 @@ export default function Avatar({
         fontSize: Math.max(9, Math.round(px * 0.34)),
         boxShadow: ring ? "0 0 0 2px var(--surface), 0 0 0 3.5px var(--accent)" : undefined,
       }}
-      className="inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-medium leading-none"
+      className={`inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-medium leading-none ${
+        interactive
+          ? "transition duration-fast group-hover:brightness-110 group-hover:ring-2 group-hover:ring-paper/25"
+          : ""
+      }`}
     >
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element

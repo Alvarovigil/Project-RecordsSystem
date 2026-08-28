@@ -30,16 +30,19 @@ export default function PersonRow({
   compact?: boolean;
 }) {
   return (
-    <div className="group relative flex items-center gap-3">
+    <div className="relative flex items-center gap-3">
+      {/* the group is the link, not the row: the follow button sits in the same
+          row and hovering it should not light up a face it does not lead to */}
       <Link
         href={`/u/${profile.username}`}
-        className="pressable flex min-w-0 flex-1 items-center gap-3 py-2.5"
+        className="group pressable flex min-w-0 flex-1 items-center gap-3 py-2.5"
       >
         <Avatar
           name={profile.displayName}
           handle={profile.username}
           src={profile.avatarUrl}
           size={compact ? "sm" : "md"}
+          interactive
         />
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
