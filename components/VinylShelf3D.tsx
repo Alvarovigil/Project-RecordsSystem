@@ -402,15 +402,26 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
    */
   const lights = vertical
     ? {
-        ambient: 1.9,
-        light1X: 3,
-        light1Y: 11,
-        light1Z: 9,
-        light1Intensity: 4,
+        /**
+         * Lit like a room, not like a photo shoot.
+         *
+         * The rack's lamps are strong because a sleeve stood on edge shows you
+         * almost nothing and needs the help. Lying open toward the camera it
+         * shows you everything, and the same intensities blew the white covers
+         * out to paper — the printing disappeared and the cardboard read as
+         * plastic. Most of the light is ambient now, with one soft key from
+         * above to keep the edges of the stack readable, and the second lamp
+         * only fills the shadow it casts.
+         */
+        ambient: 1.15,
+        light1X: 2.5,
+        light1Y: 9,
+        light1Z: 8,
+        light1Intensity: 1.5,
         light2X: -4,
-        light2Y: 8,
-        light2Z: 11,
-        light2Intensity: 3.4,
+        light2Y: 5,
+        light2Z: 10,
+        light2Intensity: 0.9,
       }
     : {
     ambient: 1.6,
@@ -455,6 +466,8 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   const WHEEL_R = 9;
   /** distance along the rim from one sleeve to the next, in world units */
   const WHEEL_STEP = 1.5;
+  /** every sleeve leans this much further forward than the rim does */
+  const WHEEL_LEAN = 0.16;
   /** how far above the axle the camera sits, in radians */
   const CENITAL = 0.18;
   // horizontally the strip sits below the eye line so the covers read against
@@ -475,8 +488,11 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   const fogNear = vertical ? 9 : 6;
   const fogFar = vertical ? 20 : 11;
   // glossier than the cardboard sides so light catches highlights on the cover
-  const coverRoughness = 0.35;
-  const coverMetalness = 0.05;
+  // Flat to the camera, the clearcoat highlight lands square in the middle of
+  // the artwork; angled away on the rack it never does. So the pile gets a
+  // duller finish — matte sleeve rather than gallery glass.
+  const coverRoughness = vertical ? 0.62 : 0.35;
+  const coverMetalness = vertical ? 0 : 0.05;
   const cardboardRoughness = 0.9;
   // A real LP sleeve is about 5mm across a 315mm face — roughly 1 in 63. This
   // was 1 in 100, thinner than any record ever pressed, which left the spine
@@ -612,7 +628,12 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       if (!dragging) return;
       const dx = axisOf(e) - startX;
       if (Math.abs(dx) > 4) moved = true;
-      target.current = clampToList(startT - dx * 0.01);
+      // The records go where the finger goes. Dragging down on a rack pulls
+      // the row rightwards past you, which is why the horizontal sign is
+      // negative; dragging down on a pile pushes the pile down, and inverting
+      // that is the difference between holding an object and operating a
+      // control.
+      target.current = clampToList(startT + (vertical ? dx : -dx) * 0.01);
     };
     const onUp = () => {
       if (!dragging) return;
@@ -671,7 +692,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
         dpr={ambient ? 1 : [1, 1.5]}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.2,
+          toneMappingExposure: vertical ? 0.98 : 1.2,
           powerPreference: "high-performance",
           antialias: true,
         }}
@@ -717,6 +738,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
             vertical={vertical}
             wheelR={WHEEL_R}
             wheelStep={WHEEL_STEP}
+            wheelLean={WHEEL_LEAN}
             drift={drift}
             vinilos={vinilos}
             targetRef={target}
@@ -758,6 +780,7 @@ function Strip({
   vertical,
   wheelR,
   wheelStep,
+  wheelLean,
   drift,
   vinilos,
   targetRef,
@@ -787,6 +810,7 @@ function Strip({
   vertical: boolean;
   wheelR: number;
   wheelStep: number;
+  wheelLean: number;
   drift: number;
   vinilos: Vinyl[];
   targetRef: React.MutableRefObject<number>;
@@ -946,6 +970,7 @@ function Strip({
             vertical={vertical}
             wheelR={wheelR}
             wheelStep={wheelStep}
+            wheelLean={wheelLean}
             baseIndex={i + c * N}
             modulus={modulus}
             currentRef={currentRef}
@@ -978,6 +1003,7 @@ function Sleeve({
   vertical,
   wheelR,
   wheelStep,
+  wheelLean,
   baseIndex,
   modulus,
   currentRef,
@@ -1003,6 +1029,7 @@ function Sleeve({
   vertical: boolean;
   wheelR: number;
   wheelStep: number;
+  wheelLean: number;
   baseIndex: number;
   modulus: number;
   currentRef: React.MutableRefObject<number>;
@@ -1267,7 +1294,16 @@ function Sleeve({
         r * sin + (SLEEVE_H / 2) * cos - SLEEVE_H / 2,
         r * cos - (SLEEVE_H / 2) * sin - wheelR,
       );
-      meshGroupRef.current.rotation.set(-phi, 0, 0);
+      /**
+       * A constant lean on top of the wheel's own angle.
+       *
+       * Sitting exactly tangent, the record at the front is dead vertical and
+       * the pile reads as a wall of squares. Tipping every sleeve a little
+       * further forward — the top toward you — is what a row of records
+       * leaning on each other in a crate actually does, and it puts a sliver
+       * of the cardboard edge back in view under each one.
+       */
+      meshGroupRef.current.rotation.set(-phi + wheelLean, 0, 0);
       phiRef.current = phi;
     } else {
       meshGroupRef.current.position.x = x;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import Avatar from "@/components/ui/Avatar";
@@ -55,6 +55,25 @@ export default function RecordSheet({
   const [elsewhere, setElsewhere] = useState<ListWithRecord[]>([]);
   const [picking, setPicking] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  /**
+   * Whether the artwork has scrolled out of the way.
+   *
+   * Read from an observer on a sentinel rather than from scroll offsets: the
+   * sheet is dragged as well as scrolled, and a number compared against a
+   * threshold flickers at exactly the moment a finger is holding it still.
+   */
+  const [scrolled, setScrolled] = useState(false);
+  const sentinel = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!vinyl || !el) return;
+    const io = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), {
+      rootMargin: "-72px 0px 0px 0px",
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [vinyl]);
 
   useEffect(() => {
     if (!vinyl) return;
@@ -67,35 +86,138 @@ export default function RecordSheet({
 
   if (!vinyl) return null;
 
+  /**
+   * Tracks grouped by the side they are printed on.
+   *
+   * Discogs writes positions as "A1", "B3", sometimes "1" and sometimes
+   * nothing at all — so the side is the leading letter when there is one, and
+   * everything else falls into a single unlabelled group rather than inventing
+   * a side that the pressing does not have.
+   */
+  const sides = Object.entries(
+    vinyl.tracklist.reduce<Record<string, typeof vinyl.tracklist>>((acc, t) => {
+      const side = /^[A-Z]/.test(t.position ?? "") ? t.position![0] : "?";
+      (acc[side] ??= []).push(t);
+      return acc;
+    }, {}),
+  ).sort(([a], [b]) => a.localeCompare(b));
+
   const inLists = collections.filter(
     (c) => c.id !== activeListId && c.vinylIds.includes(vinyl.id),
   );
 
   return (
     <>
-      <Sheet open={Boolean(vinyl)} onClose={onClose} size="full" bare>
+      {/* Short of the top on purpose. A sheet that reaches the ceiling is a
+          screen — you have navigated somewhere — and this is a record you have
+          picked up off a shelf that is still there behind it. The strip of
+          shelf left showing is what says so, and it is also what tells you
+          that throwing the sheet down puts you back. */}
+      <Sheet open={Boolean(vinyl)} onClose={onClose} size="tall" bare>
         {/* the grabber has to exist even in a bare sheet: it is the only thing
             telling you this is draggable */}
-        <div className="sticky top-0 z-10 flex justify-center bg-surface-raised/95 pb-2 pt-2.5 backdrop-blur-sm">
-          <span className="sheet-grabber" aria-hidden />
+        {/* Opaque, not translucent: this bar has to hide what scrolls under it,
+            and 95% of a near-black over a white button is still a white button. */}
+        <div className="sticky top-0 z-30 bg-surface-raised">
+          <div className="flex justify-center pb-2 pt-2.5">
+            <span className="sheet-grabber" aria-hidden />
+          </div>
+          {/* Once the artwork has scrolled away, the title and the transport
+              come with you. Reading a tracklist and having to scroll back up
+              to press play is the whole reason people close these. */}
+          <div
+            className={`flex items-center gap-3 overflow-hidden border-b border-line px-5 transition-all duration-base ease-out ${
+              scrolled ? "max-h-16 py-2.5 opacity-100" : "max-h-0 py-0 opacity-0"
+            }`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={coverFor(vinyl)}
+              alt=""
+              className="h-9 w-9 shrink-0 rounded-[2px] object-cover"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sub font-medium text-paper">{vinyl.title}</span>
+              <span className="block truncate text-caption text-content-muted">{vinyl.artist}</span>
+            </span>
+            <button
+              onClick={() => onTogglePlay(vinyl)}
+              disabled={!vinyl.previewUrl}
+              aria-label={playing ? "Pausar" : `Escuchar ${vinyl.title}`}
+              className="pressable flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line-strong text-paper disabled:opacity-30"
+            >
+              {playing ? (
+                <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden>
+                  <rect x="3" y="2" width="3" height="10" fill="currentColor" />
+                  <rect x="8" y="2" width="3" height="10" fill="currentColor" />
+                </svg>
+              ) : (
+                <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden>
+                  <path d="M3 2 L12 7 L3 12 Z" fill="currentColor" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="px-5 pb-8">
           <div className="mx-auto w-full max-w-[420px]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={coverFor(vinyl)}
-              alt={`Portada de ${vinyl.title}`}
-              className="aspect-square w-full rounded-sm object-cover shadow-[0_24px_60px_rgba(0,0,0,0.55)]"
-            />
+            {/* The record, half out of its sleeve — the same object the shelf
+                is made of rather than a thumbnail of it. The disc is a couple
+                of gradients, not an image: at this size nobody is reading a
+                label, and a real one would be another download. */}
+            <div className="relative mx-auto mt-2 w-[80%]">
+              <span
+                aria-hidden
+                className="absolute right-[-15%] top-[5%] aspect-square w-[94%] rounded-full"
+                style={{
+                  background:
+                    "radial-gradient(circle at 50% 50%, #2a2a2a 0 17%, #101010 17.4% 18.5%, #1a1a1a 19% 100%)",
+                  boxShadow: "0 18px 40px rgba(0,0,0,0.6)",
+                }}
+              />
+              <span
+                aria-hidden
+                className="absolute right-[-15%] top-[5%] aspect-square w-[94%] rounded-full opacity-40"
+                style={{
+                  background:
+                    "repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0 1px, transparent 1px 3px)",
+                }}
+              />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverFor(vinyl)}
+                alt={`Portada de ${vinyl.title}`}
+                className="relative aspect-square w-full rounded-[3px] object-cover shadow-[0_26px_60px_rgba(0,0,0,0.62)]"
+              />
+            </div>
 
-            <h2 className="mt-6 text-title font-medium leading-tight text-paper">{vinyl.title}</h2>
+            <div ref={sentinel} aria-hidden />
+
+            <h2 className="mt-7 text-title font-medium leading-tight text-paper">{vinyl.title}</h2>
             <p className="mt-1 text-body text-content-secondary">{vinyl.artist}</p>
-            <p className="mono mt-2 text-caption uppercase tracking-label text-content-faint">
-              {[vinyl.year || null, vinyl.genre || null, vinyl.label || null]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
+
+            {/* The facts, as a sheet of paper rather than a run-on line. Year,
+                pressing, label and country are what someone compares between
+                two copies of the same record, and a middle dot between them
+                makes four different things look like one sentence. */}
+            <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-y border-line py-4">
+              {(
+                [
+                  ["Año", vinyl.year ? String(vinyl.year) : null],
+                  ["Género", vinyl.genre],
+                  ["Sello", vinyl.label],
+                  ["País", vinyl.country],
+                ] as const
+              )
+                .filter(([, v]) => Boolean(v))
+                .map(([k, v]) => (
+                  <div key={k} className="min-w-0">
+                    <dt className="text-caption uppercase tracking-label text-content-faint">{k}</dt>
+                    <dd className="mt-0.5 truncate text-sub text-content-secondary">{v}</dd>
+                  </div>
+                ))}
+            </dl>
 
             {/* the two things you came for, side by side and thumb-sized */}
             <div className="mt-6 flex gap-2.5">
@@ -136,28 +258,37 @@ export default function RecordSheet({
               </p>
             )}
 
-            {vinyl.tracklist.length > 0 && (
+            {/* By side, because that is how the object works: you do not play
+                a record from track 1 to track 12, you play a side and then get
+                up and turn it over. A flat list under a heading that says
+                "Cara A / Cara B" was naming the thing without doing it. */}
+            {sides.length > 0 && (
               <section className="mt-9">
-                <h3 className="text-caption uppercase tracking-label text-content-muted">
-                  Cara A / Cara B
-                </h3>
-                <ol className="mt-3 divide-y divide-line">
-                  {vinyl.tracklist.map((t, i) => (
-                    <li key={i} className="flex items-baseline gap-3 py-2.5">
-                      <span className="mono w-6 shrink-0 text-caption text-content-faint">
-                        {t.position || i + 1}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-sub text-content-secondary">
-                        {t.title}
-                      </span>
-                      {t.duration && (
-                        <span className="mono shrink-0 text-caption text-content-faint">
-                          {t.duration}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ol>
+                {sides.map(([side, tracks]) => (
+                  <div key={side} className="mt-6 first:mt-0">
+                    <h3 className="flex items-baseline gap-2 text-caption uppercase tracking-label text-content-muted">
+                      {side === "?" ? "Canciones" : `Cara ${side}`}
+                      <span className="text-content-faint">{tracks.length}</span>
+                    </h3>
+                    <ol className="mt-2.5 divide-y divide-line">
+                      {tracks.map((t, i) => (
+                        <li key={i} className="flex items-baseline gap-3 py-2.5">
+                          <span className="mono w-5 shrink-0 text-caption text-content-faint">
+                            {t.position?.replace(/^[A-Z]/, "") || i + 1}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-sub text-content-secondary">
+                            {t.title}
+                          </span>
+                          {t.duration && (
+                            <span className="mono shrink-0 text-caption text-content-faint">
+                              {t.duration}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
               </section>
             )}
 

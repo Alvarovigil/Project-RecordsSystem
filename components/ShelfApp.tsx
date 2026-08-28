@@ -475,10 +475,25 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
     }
   };
 
-  // while opened, keep `open` (side info) in sync with the visible centred vinyl
+  // which chrome this session gets; read here because the effect below is
+  // desktop-only behaviour, not just desktop-only rendering
+  const { isPhone } = useDevice();
+
+  /**
+   * While opened, the side panel follows the centred record.
+   *
+   * Desktop only, and the reason is the whole bug it caused: there, opening a
+   * sleeve also brings it to the middle, so "what is open" and "what is
+   * centred" are the same record and this only keeps them together while you
+   * step through with the arrows. On a phone you tap a sleeve without turning
+   * the wheel — and this effect then replaced what you had just chosen with
+   * whatever happened to be in the middle. Every record you tapped opened the
+   * same one.
+   */
   useEffect(() => {
+    if (isPhone) return;
     if (open && active && open.id !== active.id) setOpen(active);
-  }, [active, open]);
+  }, [active, open, isPhone]);
 
   const goPrev = () => skip(-1);
   const goNext = () => skip(1);
@@ -493,7 +508,6 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
    * same actions. Deciding here, at the top, is what keeps either version from
    * carrying dead code for the other.
    */
-  const { isPhone } = useDevice();
 
   if (isPhone) {
     return (
