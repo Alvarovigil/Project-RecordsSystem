@@ -493,7 +493,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
    * same actions. Deciding here, at the top, is what keeps either version from
    * carrying dead code for the other.
    */
-  const { isPhone, touch: isTouch } = useDevice();
+  const { isPhone } = useDevice();
 
   if (isPhone) {
     return (
@@ -732,26 +732,12 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
       {/* the shared bar, with the shelf's own controls in the same row */}
       <TopNav
         transparent
+        // Scanning used to sit here as its own control, and search as a second
+        // button in this row. Search is now the bar's own, in the same corner
+        // on every screen; the shelf only says what search means here.
+        onSearch={() => openSearch()}
         right={
           <div className="flex items-center gap-5">
-          {/* Scanning used to sit here as its own control. It already lives
-              inside the search, one press away and with the destination bar
-              around it — two doors into the same room, and the second one only
-              made the row longer. */}
-          <button
-            onClick={() => openSearch()}
-            className="group flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-paper/60 hover:text-paper transition"
-            aria-label="Buscar"
-          >
-            {/* a keyboard shortcut is a promise; on a tablet there is no
-                keyboard to keep it with */}
-            {!isTouch && (
-              <kbd className="mono inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-[3px] border border-paper/25 text-[11px] text-paper/60 normal-case tracking-normal group-hover:border-paper/60 group-hover:text-paper transition">
-                /
-              </kbd>
-            )}
-            <span>Buscar</span>
-          </button>
           {/* view switch: 3D shelf ↔ grid */}
           <div className="flex items-center border border-paper/20">
             {(["shelf", "grid"] as const).map((v) => (

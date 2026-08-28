@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import AccountMenu from "@/components/AccountMenu";
 import { useSession } from "@/hooks/useSession";
 import { useDevice } from "@/hooks/useDevice";
@@ -22,12 +23,23 @@ import { DEMO_PROFILE } from "@/lib/demo";
 export default function TopNav({
   transparent = false,
   right,
+  onSearch,
 }: {
   transparent?: boolean;
   /** surface-specific controls, sharing the row instead of stacking bars */
   right?: React.ReactNode;
+  /**
+   * A screen that has its own search takes it over; everything else falls
+   * through to Explorar. Either way the control is in the same corner of the
+   * same bar on every screen, which is the only reason anyone learns it is
+   * there. It used to appear only on screens that had nothing else to put in
+   * that corner — so the shelf had a search and the rest of the app looked
+   * like it had none.
+   */
+  onSearch?: () => void;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { available, user, profile } = useSession();
   // A tablet gets this bar, not the phone's tab bar — but it drives it with a
   // finger, and 15px of text with no padding is a 20px-tall target. The ink
@@ -38,6 +50,27 @@ export default function TopNav({
   // a dead link would be worse than a smaller promise
   const preview = available && !user;
   const handle = profile?.username ?? DEMO_PROFILE.username;
+
+  const search = () => {
+    if (onSearch) return onSearch();
+    router.push("/explorar?buscar=1");
+  };
+
+  // "/" opens search from anywhere, the way it does in every tool that has one
+  // — except while you are typing, where a slash is a slash.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = document.activeElement as HTMLElement | null;
+      const typing =
+        el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+      if (typing || document.body.dataset.sheetOpen) return;
+      e.preventDefault();
+      search();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   const links = [
     preview
@@ -102,20 +135,25 @@ export default function TopNav({
         </div>
         <div className="flex shrink-0 items-center gap-5">
           {right}
-          {!right && (
-            <Link
-              href="/explorar?buscar=1"
-              style={touch ? { paddingBlock: 12, marginBlock: -12 } : undefined}
-              className="group flex items-center gap-2 text-[13px] text-paper/40 transition hover:text-paper"
-              aria-label="Buscar"
-            >
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
-                <circle cx="6" cy="6" r="4.2" stroke="currentColor" strokeWidth="1.2" />
-                <path d="M9.2 9.2 L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-              </svg>
-              <span className="hidden sm:inline">Buscar</span>
-            </Link>
-          )}
+          <button
+            onClick={search}
+            style={touch ? { paddingBlock: 12, marginBlock: -12 } : undefined}
+            className="group flex items-center gap-2 text-[13px] text-paper/40 transition hover:text-paper"
+            aria-label="Buscar"
+          >
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+              <circle cx="6" cy="6" r="4.2" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M9.2 9.2 L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+            <span className="hidden sm:inline">Buscar</span>
+            {/* the shortcut is a promise, and it is only made where there is a
+                keyboard to keep it with */}
+            {!touch && (
+              <kbd className="mono inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[3px] border border-line-strong px-1 text-caption normal-case tracking-normal text-content-muted transition group-hover:border-line-focus group-hover:text-paper">
+                /
+              </kbd>
+            )}
+          </button>
           <AccountMenu />
         </div>
       </div>
