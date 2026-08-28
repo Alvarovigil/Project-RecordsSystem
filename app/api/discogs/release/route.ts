@@ -67,12 +67,37 @@ export async function POST(req: NextRequest) {
   if (!token()) {
     return Response.json({ error: "DISCOGS_TOKEN missing" }, { status: 500 });
   }
-  const { releaseId } = await req.json();
+  const { releaseId, isMaster } = await req.json();
   if (!releaseId) return Response.json({ error: "releaseId required" }, { status: 400 });
 
-  const r = await fetch(`https://api.discogs.com/releases/${releaseId}`, {
-    headers: { "User-Agent": UA, Authorization: `Discogs token=${token()}` },
-  });
+  const call = (path: string) =>
+    fetch(`https://api.discogs.com/${path}`, {
+      headers: { "User-Agent": UA, Authorization: `Discogs token=${token()}` },
+    });
+
+  /**
+   * A master id is not a release id, and Discogs will happily serve you a
+   * different record under the same number.
+   *
+   * The search deliberately returns masters — they are the canonical entry for
+   * an album, above its forty pressings — and flags them with `isMaster`. This
+   * route used to ignore the flag and ask /releases/{id} regardless, so asking
+   * for the master of "Rumours Live" returned Ferrante & Teicher's "Midnight
+   * Cowboy": a valid record, a plausible-looking import, and the wrong one.
+   * Silent, because nothing in the chain had any way to notice.
+   *
+   * A master resolves to its `main_release`, which is the pressing Discogs
+   * considers definitive — and the one someone searching by album name meant.
+   */
+  let id = releaseId;
+  if (isMaster) {
+    const m = await call(`masters/${releaseId}`);
+    if (!m.ok) return Response.json({ error: `discogs master ${m.status}` }, { status: m.status });
+    const master = await m.json();
+    id = master.main_release ?? releaseId;
+  }
+
+  const r = await call(`releases/${id}`);
   if (!r.ok) return Response.json({ error: `discogs ${r.status}` }, { status: r.status });
   const release = await r.json();
 
@@ -80,7 +105,7 @@ export async function POST(req: NextRequest) {
   const cleanName = (s: string) => s.replace(/\s\(\d+\)/g, "").trim();
   const artist = cleanName(release.artists?.[0]?.name ?? "Unknown");
   const title = cleanName(release.title ?? "Untitled");
-  const id = `${slugify(artist)}-${slugify(title)}-${releaseId}`;
+  const slug = `${slugify(artist)}-${slugify(title)}-${id}`;
 
   // Vercel's filesystem is read-only: there we serve the artwork through our
   // own image proxy instead of keeping a copy on disk.
@@ -97,7 +122,7 @@ export async function POST(req: NextRequest) {
       const imgRes = await fetch(imgUrl, { headers: { "User-Agent": UA } });
       if (imgRes.ok) {
         const ext = imgUrl.match(/\.(jpe?g|png|webp)(\?|$)/i)?.[1]?.toLowerCase() ?? "jpg";
-        const filename = `${id}.${ext === "jpeg" ? "jpg" : ext}`;
+        const filename = `${slug}.${ext === "jpeg" ? "jpg" : ext}`;
         const dest = resolve(COVERS_DIR, filename);
         const buf = Buffer.from(await imgRes.arrayBuffer());
         await writeFile(dest, buf);
@@ -110,14 +135,14 @@ export async function POST(req: NextRequest) {
   let previewUrl = await searchItunesPreview(artist, title);
   if (!previewUrl && canWriteToDisk) {
     await mkdir(PREVIEWS_DIR, { recursive: true });
-    const dest = resolve(PREVIEWS_DIR, `${id}.mp3`);
+    const dest = resolve(PREVIEWS_DIR, `${slug}.mp3`);
     if (await downloadDeezerPreview(artist, title, dest)) {
-      previewUrl = `/previews/${id}.mp3`;
+      previewUrl = `/previews/${slug}.mp3`;
     }
   }
 
   const vinyl: Vinyl = {
-    id,
+    id: slug,
     title,
     artist,
     year: release.year ?? 0,
@@ -125,7 +150,7 @@ export async function POST(req: NextRequest) {
     label: release.labels?.[0]?.name ?? "",
     country: release.country ?? "",
     palette: ["#888", "#666", "#444", "#222", "#000"],
-    discogsId: releaseId,
+    discogsId: id,
     cover: coverPath,
     previewUrl,
     tracklist: (release.tracklist ?? []).map((t: any) => ({

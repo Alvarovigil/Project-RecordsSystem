@@ -20,6 +20,13 @@ import type { Vinyl } from "@/lib/types";
 
 export type DiscogsResult = {
   id: number;
+  /**
+   * True when this row is a Discogs *master* — the canonical entry for an
+   * album, standing above its forty pressings. Its id is not a release id, and
+   * asking for it as one returns a different record entirely, so the flag has
+   * to travel with the row all the way to the import.
+   */
+  isMaster?: boolean;
   title: string;
   year?: number;
   country?: string;
@@ -127,7 +134,7 @@ export function useCatalogueSearch({
         const res = await fetch(`/api/discogs/release`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ releaseId: r.id }),
+          body: JSON.stringify({ releaseId: r.id, isMaster: r.isMaster }),
         });
         const data = await res.json();
         if (!data.vinyl) return null;

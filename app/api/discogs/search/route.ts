@@ -132,6 +132,16 @@ export async function GET(req: NextRequest) {
     const containsAll = normQ.split(" ").every((t) => t && title.includes(t));
     // exact phrase match → user probably wants the canonical release
     const containsPhrase = normQ.length > 3 && title.includes(normQ);
+    // Exactly the thing asked for, with nothing after it. "Rumours Live" and
+    // "Rumours In Concert" both contain the query and both start with the
+    // artist, so every earlier signal ties — and the live album was winning on
+    // the tiebreak. Being exactly right has to outweigh being merely adjacent.
+    const isExact = title === normQ;
+    // Words that turn an album into a different record. Only penalised when
+    // the query did not ask for them: someone searching "rumours live" should
+    // still find it.
+    const VARIANT = /\b(live|in concert|concert|alternate|demos?|instrumental|karaoke|remix|remixes|acoustic|rehearsals?|outtakes?|sessions?|tribute|reimagined|orchestral)\b/;
+    const isVariant = VARIANT.test(title) && !VARIANT.test(normQ);
     const fmts = r.format ?? [];
     const isVinyl = isVinylFmt(r);
     const isAlbum = fmts.some((f) => /\balbum\b/i.test(f));
@@ -140,6 +150,8 @@ export async function GET(req: NextRequest) {
     const isMaster = r.type === "master";
     let score = 0;
     if (startsWithArtist) score += 100;
+    if (isExact) score += 150;
+    if (isVariant) score -= 120;
     if (containsPhrase) score += 60;
     if (containsAll) score += 30;
     if (isVinyl) score += 40;
