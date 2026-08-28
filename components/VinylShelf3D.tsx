@@ -107,6 +107,16 @@ type Props = {
   ambient?: boolean;
   /** records per second of drift in ambient mode */
   drift?: number;
+  /**
+   * The handle, offered as a prop as well as through the ref.
+   *
+   * This component is loaded with next/dynamic so a phone never downloads the
+   * 3D engine — and next/dynamic does not forward refs. The ref silently
+   * stayed null, so goTo/open/close did nothing and clicking a sleeve stopped
+   * opening it: no error, no warning, just a shelf that had quietly become
+   * scenery. A plain prop crosses that boundary.
+   */
+  handleRef?: { current: VinylShelfHandle | null };
 };
 
 export type VinylShelfHandle = {
@@ -116,6 +126,8 @@ export type VinylShelfHandle = {
   open: (idx: number) => void;
   close: () => void;
 };
+
+
 
 const SLEEVE_W = 3;
 const SLEEVE_H = 3;
@@ -127,7 +139,7 @@ const REVEAL_STAGGER_MS = 38;
 const REVEAL_STAGGER_MAX = 300;
 
 const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
-  { vinilos, onOpen, onActiveChange, onCoverHalfWidth, ambient = false, drift = 0.09 },
+  { vinilos, onOpen, onActiveChange, onCoverHalfWidth, ambient = false, drift = 0.09, handleRef },
   ref,
 ) {
   // animation tuning (fixed)
@@ -200,8 +212,10 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     target.current = N <= LOOP_THRESHOLD ? Math.max(0, Math.min(N - 1, next)) : next;
   };
 
+  // handleRef wins when it is there: through next/dynamic it is the only one
+  // that actually arrives
   useImperativeHandle(
-    ref,
+    handleRef ?? ref,
     () => ({
       goTo: goToIdx,
       next: () => stepTarget(1),

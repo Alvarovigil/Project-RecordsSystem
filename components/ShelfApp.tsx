@@ -510,7 +510,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
       >
       {vinilos.length > 0 && view === "shelf" && (
         <VinylShelf
-          ref={shelfRef}
+          handleRef={shelfRef}
           vinilos={vinilos}
           onOpen={handleVinylClick}
           onActiveChange={setActive}
