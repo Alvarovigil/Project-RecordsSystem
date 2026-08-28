@@ -36,7 +36,7 @@ export default function Landing() {
       {/* Dimmed, not hidden, while the door is up: the corners keep saying
           what this is and where the way in is, without competing with the
           screen doing the introducing. */}
-      <header className="landing-dims pointer-events-none fixed inset-x-0 top-0 z-[60] flex items-start justify-between px-5 pt-[68px] sm:px-8 sm:pt-6">
+      <header className="landing-dims pointer-events-none fixed inset-x-0 top-0 z-[60] flex items-start justify-end px-5 pt-[68px] sm:justify-between sm:px-8 sm:pt-6">
         {/* Not a link — the claim of the whole thing, held in the corner.
             Two sentences, and the full stop between them is doing the work:
             it makes the second half land as a separate promise rather than

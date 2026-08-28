@@ -358,7 +358,7 @@ export default function SoundGate() {
         <div
           onMouseEnter={() => setPeeking(true)}
           onMouseLeave={() => setPeeking(false)}
-          className="fixed bottom-[52px] right-5 z-[70] flex max-w-[calc(100vw-2.5rem)] items-center gap-2 text-[11px] uppercase tracking-[0.05em] text-paper/80 sm:bottom-5 sm:text-[13px]">
+          className="fixed bottom-[52px] right-5 z-[70] flex max-w-[calc(100vw-2.5rem)] items-center gap-2 transition-[gap] duration-slow ease-out text-[11px] uppercase tracking-[0.05em] text-paper/80 sm:bottom-5 sm:text-[13px]">
           {/* The brackets were a frame around three bars that already read as a
               meter; two more characters, and they held the label at arm's
               length from the thing it is labelling. */}
@@ -381,8 +381,22 @@ export default function SoundGate() {
            * slide rather than jump because nothing is being added or removed.
            */}
           <span
-            className={`min-w-0 truncate transition-[max-width,opacity] duration-slow ease-out sm:max-w-[300px] ${
-              open ? "max-w-[52vw] opacity-100 sm:max-w-[300px]" : "max-w-0 opacity-0 sm:max-w-0"
+            /**
+             * The width is only ever set by the open/closed pair.
+             *
+             * There was a `sm:max-w-[300px]` on the base class as well, and
+             * Tailwind sorts utilities by its own rules rather than by the
+             * order you write them — so the open width kept winning while the
+             * thing was closed. The name was invisible and still occupying
+             * three hundred pixels, which is why the meter sat marooned at one
+             * end of the bar and the controls at the other.
+             *
+             * Now the row is exactly as wide as what is in it: closed, the
+             * meter and the two buttons sit together; open, the strip grows to
+             * make room for the name and everything slides across with it.
+             */
+            className={`min-w-0 truncate transition-[max-width,opacity] duration-slow ease-out ${
+              open ? "max-w-[52vw] opacity-100 sm:max-w-[300px]" : "max-w-0 opacity-0"
             }`}
           >
             {current ? `${current.artist} — ${current.title}` : "Sin sonido"}
