@@ -75,9 +75,12 @@ export default function AccountMenu() {
             <div className="truncate text-[13px] text-paper">{profile?.displayName}</div>
             <div className="mono truncate text-[11px] text-paper/40">@{profile?.username}</div>
           </div>
+          {/* Only what is not already in the bar two centimetres to the left.
+              Actividad and Explorar live there; repeating them here made this
+              a second navigation that could disagree with the first, and gave
+              four rows to a menu that answers one question — the one about
+              you. */}
           <MenuLink href={`/u/${profile?.username ?? ""}`}>Mi perfil</MenuLink>
-          <MenuLink href="/actividad">Actividad</MenuLink>
-          <MenuLink href="/explorar">Explorar</MenuLink>
           <MenuLink href="/ajustes">Ajustes</MenuLink>
           <button
             onClick={() => {
