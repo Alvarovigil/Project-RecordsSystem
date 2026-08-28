@@ -10,6 +10,8 @@ import CatalogueNotice from "@/components/ui/CatalogueNotice";
 import PersonRow from "@/components/community/PersonRow";
 import ListCard from "@/components/community/ListCard";
 import { useRepository } from "@/hooks/useRepository";
+import RecordSheet from "@/components/mobile/RecordSheet";
+import { usePlaybackContext } from "@/lib/playback-context";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useCatalogueSearch } from "@/hooks/useCatalogueSearch";
 import { useToast } from "@/components/ui/Toast";
@@ -51,6 +53,8 @@ const MAX_RECENTS = 8;
 export default function ExploreView() {
   const repo = useRepository();
   const lib = useLibrary();
+  const audio = usePlaybackContext();
+  const { nowPlaying, playing } = audio;
   const toast = useToast();
   const router = useRouter();
   const params = useSearchParams();
@@ -63,6 +67,8 @@ export default function ExploreView() {
   const [library, setLibrary] = useState<Vinyl[]>([]);
   const [loading, setLoading] = useState(false);
   const [recents, setRecents] = useState<string[]>([]);
+  /** the record whose sheet is open, opened from a result */
+  const [openRecord, setOpenRecord] = useState<Vinyl | null>(null);
 
   const searching = query.trim().length > 0;
 
@@ -410,10 +416,22 @@ export default function ExploreView() {
                     {(scope === "all" ? records.slice(0, 6) : records).map(
                       (v) => (
                         <li key={v.id}>
-                          <Link
-                            href="/coleccion"
-                            onClick={() => remember(query)}
-                            className="pressable block"
+                          {/**
+                           * Opens here, not on the shelf.
+                           *
+                           * It used to be a link to /coleccion, which threw
+                           * away the search you had just typed and dropped you
+                           * on your whole collection to find the record again
+                           * yourself. A result is the record: pressing it
+                           * opens the record, and your search is still behind
+                           * it when you close the sheet.
+                           */}
+                          <button
+                            onClick={() => {
+                              remember(query);
+                              setOpenRecord(v);
+                            }}
+                            className="pressable block w-full text-left"
                           >
                             <Cover vinyl={v} alt={v.title} />
                             <span className="mt-2 block truncate text-sub text-paper">
@@ -422,7 +440,7 @@ export default function ExploreView() {
                             <span className="block truncate text-caption text-content-muted">
                               {v.artist}
                             </span>
-                          </Link>
+                          </button>
                         </li>
                       ),
                     )}
@@ -597,6 +615,26 @@ export default function ExploreView() {
           )}
         </div>
       )}
+      {/* The same sheet as everywhere else: listen, read, put it in a list.
+          Editing rows are hidden — a search result is not a place you can
+          take something out of. */}
+      <RecordSheet
+        vinyl={openRecord}
+        onClose={() => setOpenRecord(null)}
+        canEdit={false}
+        collections={lib.lists.map((l) => ({
+          id: l.id,
+          name: l.title,
+          vinylIds: lib.idsOf(l.id),
+          kind: l.kind,
+        }))}
+        activeListId=""
+        playing={playing && nowPlaying?.id === openRecord?.id}
+        onTogglePlay={(v) => (nowPlaying?.id === v.id ? audio.toggleCurrent() : audio.play(v))}
+        onAddTo={(listId, v) => void lib.saveToList(v, listId)}
+        onRemoveFromActive={() => {}}
+        onDelete={() => {}}
+      />
     </Page>
   );
 }

@@ -25,19 +25,34 @@ export default function Landing() {
 
       {/* ---------------------------------------------------------- screen 1 */}
       <section className="landing-hides relative z-10 flex min-h-[100svh] flex-col">
-        <header className="flex items-start justify-between px-5 py-6 sm:px-8">
+        {/**
+         * On a phone this row held three things across 390 pixels: a two-line
+         * claim, a 64px wordmark absolutely centred over the middle of it, and
+         * a sign-in link — and they printed on top of each other. Stacked
+         * instead: the mark first, in the middle, where a mark goes; the claim
+         * under it; and signing in pinned to the corner on its own. From `sm`
+         * up there is room for the row that was designed, and it comes back.
+         */}
+        <header className="relative flex flex-col items-center gap-3 px-5 pb-2 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-0 sm:px-8 sm:py-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.svg"
+            alt="Rackr Club"
+            className="h-[52px] w-auto drop-shadow-[0_8px_36px_rgba(0,0,0,0.95)] sm:hidden"
+          />
+
           {/* Not a link — the claim of the whole thing, held in the corner.
               Two sentences, and the full stop between them is doing the work:
               it makes the second half land as a separate promise rather than
               as a list of two nouns. Kept on one line where there is room and
               allowed to break at the stop where there isn't, so the phrase
               never splits mid-thought. */}
-          <span className="max-w-[45vw] text-balance text-[13px] uppercase tracking-[0.04em] text-paper sm:max-w-none sm:text-[15px]">
+          <span className="text-center text-[12px] uppercase tracking-[0.04em] text-paper/85 sm:max-w-none sm:text-left sm:text-[15px] sm:text-paper">
             Your records. Your people.
           </span>
 
           {/* the mark, centred over everything, sized to be looked at */}
-          <div className="pointer-events-none absolute left-1/2 top-5 -translate-x-1/2">
+          <div className="pointer-events-none absolute left-1/2 top-5 hidden -translate-x-1/2 sm:block">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo.svg"
@@ -46,11 +61,18 @@ export default function Landing() {
             />
           </div>
 
-          <SignInButton variant="quiet" />
+          {/* In the flow under the claim on a phone, not pinned to a corner
+              the wordmark is already using. */}
+          <div className="sm:absolute sm:right-8 sm:top-6">
+            <SignInButton variant="quiet" />
+          </div>
         </header>
 
         {/* the contents of the record, at the foot of the sleeve */}
-        <div className="mt-auto px-5 pb-12 text-center sm:px-8 sm:pb-7">
+        {/* pb-28 on a phone: the now-playing bar and the "sobre el proyecto"
+            link are both fixed to the bottom, and the index used to run
+            straight underneath them. */}
+        <div className="mt-auto px-5 pb-28 text-center sm:px-8 sm:pb-7">
           <p className="mono text-[10px] uppercase tracking-[0.3em] text-paper/50">
             Empieza por aquí
           </p>

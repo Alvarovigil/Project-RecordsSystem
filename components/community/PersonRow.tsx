@@ -62,7 +62,7 @@ export default function PersonRow({
       </Link>
       {action && (
         <div className="relative z-10 shrink-0">
-          <FollowButton profileId={profile.id} displayName={profile.displayName} size="sm" />
+          <FollowButton icon profileId={profile.id} displayName={profile.displayName} size="sm" />
         </div>
       )}
     </div>

@@ -28,7 +28,7 @@ export default function AboutProject() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="landing-hides fixed bottom-5 left-5 z-[70] text-[13px] uppercase tracking-[0.04em] text-paper transition hover:text-paper/60 sm:text-[15px]"
+        className="landing-hides fixed bottom-5 left-5 z-[70] text-[12px] uppercase tracking-[0.04em] text-paper transition hover:text-paper/60 sm:text-[15px]"
       >
         Sobre el proyecto
       </button>

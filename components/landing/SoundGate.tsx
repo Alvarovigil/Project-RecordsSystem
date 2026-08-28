@@ -289,8 +289,11 @@ export default function SoundGate() {
         </div>
       )}
 
+      {/* Above the "Sobre el proyecto" link on a phone rather than beside it:
+          two corner labels on a 390px row printed straight through each other.
+          On a wider screen they have their own corners back. */}
       {entered && (
-        <div className="fixed bottom-5 right-5 z-[70] flex max-w-[calc(100vw-2.5rem)] items-center gap-3 text-[13px] uppercase tracking-[0.04em] text-paper sm:text-[15px]">
+        <div className="fixed bottom-[52px] right-5 z-[70] flex max-w-[calc(100vw-2.5rem)] items-center gap-3 text-[12px] uppercase tracking-[0.04em] text-paper sm:bottom-5 sm:text-[15px]">
           <span aria-hidden className="mono shrink-0 tracking-[0.25em] text-paper/70">
             [ <Bars animate={playing} /> ]
           </span>
