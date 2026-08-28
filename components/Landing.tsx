@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import SignInButton from "./SignInButton";
 import ShelfBackdrop from "./ShelfBackdrop";
@@ -20,6 +23,7 @@ export default function Landing() {
   return (
     <main className="relative bg-ink text-paper">
       <Backdrop />
+      <StickyMark />
       <SoundGate />
       <AboutProject />
 
@@ -34,36 +38,26 @@ export default function Landing() {
          * up there is room for the row that was designed, and it comes back.
          */}
         <header className="relative flex flex-col items-center gap-3 px-5 pb-2 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-0 sm:px-8 sm:py-6">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.svg"
-            alt="Rackr Club"
-            className="h-[52px] w-auto drop-shadow-[0_8px_36px_rgba(0,0,0,0.95)] sm:hidden"
-          />
+          {/* The mark is fixed to the window and lives in <StickyMark/> below;
+              this is the hole it would have occupied, so the claim and the
+              sign-in still sit under it rather than jumping up the page. */}
+          {/* Only on a phone, where the mark sits above this row. From sm up
+              the mark is centred over the middle of the header and the row has
+              its two ends back — a spacer there would push the claim into the
+              corner the sign-in is using, which is exactly what it did. */}
+          <span aria-hidden className="block h-[52px] sm:hidden" />
 
           {/* Not a link — the claim of the whole thing, held in the corner.
               Two sentences, and the full stop between them is doing the work:
               it makes the second half land as a separate promise rather than
-              as a list of two nouns. Kept on one line where there is room and
-              allowed to break at the stop where there isn't, so the phrase
-              never splits mid-thought. */}
+              as a list of two nouns. */}
           <span className="text-center text-[12px] uppercase tracking-[0.04em] text-paper/85 sm:max-w-none sm:text-left sm:text-[15px] sm:text-paper">
             Your records. Your people.
           </span>
 
-          {/* the mark, centred over everything, sized to be looked at */}
-          <div className="pointer-events-none absolute left-1/2 top-5 hidden -translate-x-1/2 sm:block">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo.svg"
-              alt="Rackr Club"
-              className="h-[64px] w-auto drop-shadow-[0_8px_36px_rgba(0,0,0,0.95)] sm:h-[92px] md:h-[120px]"
-            />
-          </div>
-
-          {/* In the flow under the claim on a phone, not pinned to a corner
-              the wordmark is already using. */}
-          <div className="sm:absolute sm:right-8 sm:top-6">
+          {/* Under the claim on a phone, in the right-hand end of the row
+              from sm up. Never absolute: the mark already owns that corner. */}
+          <div>
             <SignInButton variant="quiet" />
           </div>
         </header>
@@ -292,6 +286,63 @@ function Backdrop() {
 }
 
 /** Paper grain: the difference between "dark theme" and a room at night. */
+/**
+ * The wordmark, pinned to the window and shrinking as you go.
+ *
+ * A landing that scrolls past its own name loses the only thing every section
+ * has in common. Keeping it fixed makes the mark the constant the page is hung
+ * from — but at hero size it would sit on top of the writing, so it gives up
+ * height as you leave the top: full size while you are still looking at the
+ * cover, a signature by the time you are reading.
+ *
+ * Driven by scroll position rather than by a CSS animation because the size
+ * has to be a function of where the page IS, not of how long something has
+ * been running — you can arrive halfway down with a fragment link, or bounce
+ * back up on a trackpad, and both have to land on the right size. Height and a
+ * transform only, read once per frame.
+ */
+function StickyMark() {
+  const [t, setT] = useState(0);
+
+  useEffect(() => {
+    let frame = 0;
+    const read = () => {
+      frame = 0;
+      // over the first 40% of a screen: by the time the hero is leaving, the
+      // mark has finished shrinking and stops competing with the text
+      const span = window.innerHeight * 0.4;
+      setT(Math.min(1, Math.max(0, window.scrollY / span)));
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(read);
+    };
+    read();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  // eased so most of the shrink happens early and the last stretch settles
+  const e = t * t * (3 - 2 * t);
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none fixed left-1/2 top-4 z-[60] -translate-x-1/2 sm:top-5"
+      style={{ opacity: 0.92 + (1 - e) * 0.08 }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo.svg"
+        alt="Rackr Club"
+        className="w-auto drop-shadow-[0_8px_36px_rgba(0,0,0,0.95)]"
+        style={{ height: `calc(var(--mark-max) - (var(--mark-max) - var(--mark-min)) * ${e})` }}
+      />
+    </div>
+  );
+}
+
 function Grain() {
   return (
     <div

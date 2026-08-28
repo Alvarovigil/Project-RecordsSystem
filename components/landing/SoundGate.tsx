@@ -293,9 +293,12 @@ export default function SoundGate() {
           two corner labels on a 390px row printed straight through each other.
           On a wider screen they have their own corners back. */}
       {entered && (
-        <div className="fixed bottom-[52px] right-5 z-[70] flex max-w-[calc(100vw-2.5rem)] items-center gap-3 text-[12px] uppercase tracking-[0.04em] text-paper sm:bottom-5 sm:text-[15px]">
-          <span aria-hidden className="mono shrink-0 tracking-[0.25em] text-paper/70">
-            [ <Bars animate={playing} /> ]
+        <div className="fixed bottom-[52px] right-5 z-[70] flex max-w-[calc(100vw-2.5rem)] items-center gap-2 text-[11px] uppercase tracking-[0.05em] text-paper/80 sm:bottom-5 sm:text-[13px]">
+          {/* The brackets were a frame around three bars that already read as a
+              meter; two more characters, and they held the label at arm's
+              length from the thing it is labelling. */}
+          <span aria-hidden className="mono shrink-0 text-paper/70">
+            <Bars animate={playing} />
           </span>
 
           {current ? (

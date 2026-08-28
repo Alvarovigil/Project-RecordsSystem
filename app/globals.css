@@ -598,3 +598,17 @@ body[data-sheet-open="1"] {
     rgb(var(--ink-rgb) / 0) 100%
   );
 }
+
+/* The landing's wordmark: how big it is at the top of the page and how small
+   it gets once you have left it. Two numbers, in one place, because they are a
+   design decision rather than a component's business. */
+:root {
+  --mark-max: 52px;
+  --mark-min: 24px;
+}
+@media (min-width: 640px) {
+  :root { --mark-max: 76px; --mark-min: 30px; }
+}
+@media (min-width: 768px) {
+  :root { --mark-max: 104px; --mark-min: 34px; }
+}
