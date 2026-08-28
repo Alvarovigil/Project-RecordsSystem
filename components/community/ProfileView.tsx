@@ -293,7 +293,7 @@ function ListGrid({
   if (lists === null) return <CoverGridSkeleton count={6} />;
   if (lists.length === 0) return <>{empty}</>;
   return (
-    <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <ul className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-3 lg:grid-cols-4">
       {lists.map((l) => (
         <li key={l.id}>
           <ListCard list={l} mine={mine} covers={coversOf(l)} />

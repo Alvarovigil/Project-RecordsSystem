@@ -268,7 +268,7 @@ export default function ExploreView() {
             {loading && lists.length === 0 ? (
               <CoverGridSkeleton count={8} />
             ) : (
-              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
+              <ul className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
                 {lists.slice(0, 8).map((l) => (
                   <li key={l.id}>
                     <ListCard list={l} covers={coversOf(l)} />
@@ -393,7 +393,7 @@ export default function ExploreView() {
 
               {show("lists") && lists.length > 0 && (
                 <ResultBlock title="Listas" onAll={() => setScope("lists")} showAll={scope === "all"}>
-                  <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
+                  <ul className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
                     {(scope === "all" ? lists.slice(0, 4) : lists).map((l) => (
                       <li key={l.id}>
                         <ListCard list={l} covers={coversOf(l)} />

@@ -455,7 +455,7 @@ function ListsView({
         paddingBottom: "calc(var(--tabbar-h) + var(--player-h) + 24px)",
       }}
     >
-      <ul className="grid grid-cols-2 gap-4">
+      <ul className="grid grid-cols-2 gap-x-5 gap-y-8">
         {mine.map((c) => (
           <li key={c.id}>
             <button onClick={() => onActivate(c.id)} className="pressable block w-full text-left">
@@ -474,7 +474,7 @@ function ListsView({
           <h2 className="border-b border-line pb-2 text-caption uppercase tracking-label text-content-muted">
             Guardadas de otra gente
           </h2>
-          <ul className="mt-4 grid grid-cols-2 gap-4">
+          <ul className="mt-4 grid grid-cols-2 gap-x-5 gap-y-8">
             {savedLists.map((l) => (
               <li key={l.id}>
                 <ListCard list={l} covers={[]} />
