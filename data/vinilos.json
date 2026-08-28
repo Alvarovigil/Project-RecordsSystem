@@ -2933,5 +2933,81 @@
         "duration": "1:34"
       }
     ]
+  },
+  {
+    "id": "viernes-xiii-viernes-xiii-37138017",
+    "title": "Viernes XIII",
+    "artist": "Viernes XIII",
+    "year": 2026,
+    "genre": "Rock",
+    "label": "Demons Punk Records",
+    "country": "Spain",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 37138017,
+    "cover": "/covers/viernes-xiii-viernes-xiii-37138017.jpg",
+    "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview111/v4/4a/fb/4b/4afb4b6a-13a5-4028-d0df-37116bdbe30e/mzaf_5939425880544614039.plus.aac.p.m4a",
+    "tracklist": [
+      {
+        "position": "A1",
+        "title": "Mira Mira",
+        "duration": ""
+      },
+      {
+        "position": "A2",
+        "title": "El Borratxo",
+        "duration": ""
+      },
+      {
+        "position": "A3",
+        "title": "Mal De Amor",
+        "duration": ""
+      },
+      {
+        "position": "A4",
+        "title": "Perseguido",
+        "duration": ""
+      },
+      {
+        "position": "A5",
+        "title": "No Siento Pena",
+        "duration": ""
+      },
+      {
+        "position": "A6",
+        "title": "Tibu",
+        "duration": ""
+      },
+      {
+        "position": "B1",
+        "title": "Diversion",
+        "duration": ""
+      },
+      {
+        "position": "B2",
+        "title": "Bus",
+        "duration": ""
+      },
+      {
+        "position": "B3",
+        "title": "Harto",
+        "duration": ""
+      },
+      {
+        "position": "B4",
+        "title": "Antisystem",
+        "duration": ""
+      },
+      {
+        "position": "B5",
+        "title": "La Ultima Paranoia",
+        "duration": ""
+      }
+    ]
   }
 ]

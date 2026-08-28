@@ -25,7 +25,7 @@ import { useDevice } from "@/hooks/useDevice";
 import MobileShelf from "@/components/mobile/MobileShelf";
 import RecordSheet from "@/components/mobile/RecordSheet";
 import MobileSearch from "@/components/mobile/MobileSearch";
-import { useToast } from "@/components/ui/Toast";
+import { useToast, ToastIcon } from "@/components/ui/Toast";
 import type { SavedList } from "@/lib/data/types";
 
 /**
@@ -214,7 +214,19 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   // Accepts an updater so operations that chain in the same tick — creating a
   // list and immediately saving a record into it — both see fresh state.
   /** returns the new list's id, so the caller can save into it right away */
-  const handleCreateCollection = (name: string) => lib.createList(name);
+  /**
+   * Every action confirms itself here, once.
+   *
+   * These handlers are the single place both the desktop overlays and the phone
+   * sheets pass through, so saying it here means saying it exactly once — and
+   * the surfaces that had no feedback at all (creating a list, deleting a
+   * record) get the same treatment as the ones that did.
+   */
+  const handleCreateCollection = async (name: string) => {
+    const id = await lib.createList(name);
+    toast.show(`«${name}» creada`, { media: { icon: ToastIcon.list } });
+    return id;
+  };
 
   const handleRenameCollection = (id: string, name: string) => void lib.renameList(id, name);
   const handleDeleteCollection = (id: string) => void lib.deleteList(id);
@@ -228,13 +240,34 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
 
   const handleAddVinylTo = (colId: string, vinylId: string) => {
     const release = allVinilos.find((v) => v.id === vinylId);
-    if (release) void lib.saveToList(release, colId);
+    if (!release) return;
+    void lib.saveToList(release, colId);
+    const name = lib.lists.find((l) => l.id === colId)?.title;
+    toast.show(`Guardado en ${name ?? "tu colección"}`, { media: { src: coverFor(release) } });
   };
 
-  const handleRemoveVinylFromActive = (vinylId: string) =>
+  const handleRemoveVinylFromActive = (vinylId: string) => {
+    const v = allVinilos.find((x) => x.id === vinylId);
     void lib.removeFromList(activeCollectionId, vinylId);
+    if (v) {
+      toast.undo(`${v.title} fuera de la lista`, () => void lib.saveToList(v, activeCollectionId), {
+        media: { src: coverFor(v) },
+      });
+    }
+  };
 
-  const handleDeleteVinylPermanently = (vinylId: string) => void lib.deleteRelease(vinylId);
+  const handleDeleteVinylPermanently = (vinylId: string) => {
+    const v = allVinilos.find((x) => x.id === vinylId);
+    void lib.deleteRelease(vinylId);
+    // Undo-able even though it is the destructive one: putting it back is a
+    // save, and a delete you cannot take back for five seconds is a delete
+    // people are afraid to use.
+    if (v) {
+      toast.undo(`${v.title} fuera de tu colección`, () => void lib.saveToList(v, activeCollectionId), {
+        media: { src: coverFor(v) },
+      });
+    }
+  };
 
   const handleSetSort = (colId: string, sortBy: SortMode) => void lib.setListSort(colId, sortBy);
 
@@ -429,14 +462,8 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           }}
           visibilityOf={(id) => lib.lists.find((l) => l.id === id)?.visibility ?? "public"}
           myId={myProfileId}
-          onRemoveFromList={(v) => {
-            handleRemoveVinylFromActive(v.id);
-            // the same undo every other removal in the app gets: a swipe is a
-            // fast gesture, and fast gestures are the ones you make by mistake
-            toast.undo(`${v.title} fuera de la lista`, () =>
-              handleSaveToList(v, activeCollectionId),
-            );
-          }}
+          // the handler already confirms it, with the same undo a swipe deserves
+          onRemoveFromList={(v) => handleRemoveVinylFromActive(v.id)}
         />
 
         <RecordSheet

@@ -104,9 +104,26 @@ export default function CollectionsOverlay({
   const editing = editId ? collections.find((c) => c.id === editId) : null;
   const active = collections.find((c) => c.id === activeId);
   const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  const visibleCollections = listFilter.trim()
+  const matching = listFilter.trim()
     ? collections.filter((c) => norm(c.name).includes(norm(listFilter.trim())))
     : collections;
+
+  /**
+   * The two you always have, then everything you made.
+   *
+   * Mi Colección and Lista de deseos are not lists in the same sense as the
+   * rest: you never created them, you cannot delete them, and one of them is
+   * everything you own. Sorted in among "Rock 🤘" they read as peers, and the
+   * eye has to check the name of each row to find the one it wanted. Above a
+   * rule, they are furniture — always in the same place, found without reading.
+   *
+   * Order inside the pair is fixed too: what you have before what you want.
+   */
+  const primary = matching
+    .filter((c) => isPrimaryIn(collections, c.id))
+    .sort((a, b) => (kindOf(collections, a.id) === "collection" ? -1 : 1));
+  const custom = matching.filter((c) => !isPrimaryIn(collections, c.id));
+  const visibleCollections = [...primary, ...custom];
   const activeStats = useMemo(
     () => (active ? statsFor(active, allVinilos) : null),
     [active, allVinilos],
@@ -259,14 +276,28 @@ export default function CollectionsOverlay({
                 )}
               </div>
 
-              <ul className="px-3 py-3 space-y-1">
-                {visibleCollections.map((c) => {
+              {/* gap, not space-y: Tailwind's space-y is a three-selector rule
+                  and it silently outranks any margin an item sets on itself —
+                  which is how the divider ended up 4px from the row above and
+                  12px from the one below. With gap, what a child asks for
+                  composes instead of being overruled. */}
+              <ul className="flex flex-col gap-1 px-3 py-3">
+                {visibleCollections.map((c, i) => {
+                  // the rule goes between the pair and the rest, and only when
+                  // there is something on both sides of it
+                  const startsCustom =
+                    i === primary.length && primary.length > 0 && custom.length > 0;
                   const s = statsFor(c, allVinilos);
                   const isActive = c.id === activeId;
                   // one cover reads better than a mosaic at 36px
                   const cover = vinylsOf(c, allVinilos).filter((v) => v.cover).pop();
                   return (
-                    <li key={c.id} className="group relative">
+                    <li
+                      key={c.id}
+                      // 4px of gap + 8px of margin above, 12px of padding
+                      // below: the rule sits centred in its own space
+                      className={`group relative ${startsCustom ? "mt-2 border-t border-paper/10 pt-3" : ""}`}
+                    >
                       {renameId === c.id ? (
                         <input
                           autoFocus
@@ -393,7 +424,7 @@ export default function CollectionsOverlay({
                       {followed.length}
                     </span>
                   </div>
-                  <ul className="px-3 py-3 space-y-1">
+                  <ul className="flex flex-col gap-1 px-3 py-3">
                     {followed.map((l) => (
                       <li key={l.id} className="group relative">
                         <Link

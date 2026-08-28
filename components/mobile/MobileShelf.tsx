@@ -83,6 +83,17 @@ export default function MobileShelf({
 }) {
   const [view, setView] = useState<"albums" | "lists">("albums");
   const [switching, setSwitching] = useState(false);
+  /**
+   * Same order as the desktop panel: the two you always have, a rule, then the
+   * ones you made. Furniture first, so it is found without reading.
+   */
+  const primary = collections.filter((c) => (c.kind ?? "custom") !== "custom");
+  const custom = collections.filter((c) => (c.kind ?? "custom") === "custom");
+  const ordered = [
+    ...primary.sort((a) => (a.kind === "collection" ? -1 : 1)),
+    ...custom,
+  ];
+
   const [editing, setEditing] = useState<Collection | null>(null);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -163,11 +174,18 @@ export default function MobileShelf({
         width={400}
       >
         <div className="py-1">
-          {collections.map((c) => (
+          {ordered.map((c, i) => (
             // The row is two targets, not one: the name switches to the list,
             // the ⋯ edits it. Long-press would hide the second one behind a
             // gesture nobody discovers.
-            <div key={c.id} className="flex items-center">
+            <div
+              key={c.id}
+              className={`flex items-center ${
+                i === primary.length && primary.length > 0 && custom.length > 0
+                  ? "mt-2 border-t border-line pt-3"
+                  : ""
+              }`}
+            >
               <button
                 onClick={() => {
                   onActivate(c.id);

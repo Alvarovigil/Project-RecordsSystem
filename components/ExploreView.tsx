@@ -341,7 +341,8 @@ export default function ExploreView() {
                                 (vinyl, listId) => void lib.saveToList(vinyl, listId),
                               );
                               if (!v) return toast.show("No se pudo añadir.", { tone: "error" });
-                              toast.show(`${v.title} guardado`, {
+                              toast.show(`${v.title} · guardado`, {
+                                media: { src: r.thumb ?? coverFor(v) },
                                 action: { label: "Ver", onClick: () => router.push("/coleccion") },
                               });
                               repo.listReleases().then(setLibrary).catch(() => {});

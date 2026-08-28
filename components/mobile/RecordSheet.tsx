@@ -200,9 +200,9 @@ export default function RecordSheet({
               <SheetRow
                 label="Quitar de esta lista"
                 onClick={() => {
+                  // the shelf's handler confirms this one, with its undo
                   onRemoveFromActive(vinyl);
                   onClose();
-                  toast.undo("Quitado de la lista", () => onAddTo(activeListId, vinyl));
                 }}
               />
               <SheetRow label="Borrar de mi colección" danger onClick={() => setDeleting(true)} />
@@ -224,7 +224,9 @@ export default function RecordSheet({
                 onClick={() => {
                   onAddTo(c.id, vinyl);
                   setPicking(false);
-                  toast.show(has ? `Ya estaba en ${c.name}` : `Guardado en ${c.name}`);
+                  toast.show(has ? `Ya estaba en ${c.name}` : `Guardado en ${c.name}`, {
+                    media: { src: coverFor(vinyl) },
+                  });
                 }}
               />
             );

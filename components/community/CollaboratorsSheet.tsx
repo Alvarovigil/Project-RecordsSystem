@@ -5,7 +5,7 @@ import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import Sheet from "@/components/ui/Sheet";
 import Confirm from "@/components/ui/Confirm";
-import { useToast } from "@/components/ui/Toast";
+import { useToast, ToastIcon } from "@/components/ui/Toast";
 import { useRepository } from "@/hooks/useRepository";
 import type { Collaborator } from "@/lib/data/types";
 
@@ -72,6 +72,8 @@ export default function CollaboratorsSheet({
     if (!handle.trim() || sending) return;
     setSending(true);
     setError(null);
+    // captured before the field is cleared, so the confirmation can name them
+    const invited = handle.trim().replace(/^@/, "").toLowerCase();
     const res = await repo.inviteCollaborator(listId, handle);
     setSending(false);
     if (!res.ok) {
@@ -80,19 +82,19 @@ export default function CollaboratorsSheet({
     }
     setHandle("");
     load();
-    toast.show("Invitación enviada");
+    toast.show(`Invitación enviada a @${invited}`, { media: { icon: ToastIcon.person } });
   };
 
   const remove = async (c: Collaborator) => {
     setPeople((prev) => prev?.filter((p) => p.profile.id !== c.profile.id) ?? prev);
     await repo.removeCollaborator(listId, c.profile.id);
-    toast.show(`${c.profile.displayName} ya no colabora`);
+    toast.show(`${c.profile.displayName} ya no colabora`, { media: { icon: ToastIcon.person } });
   };
 
   const leave = async () => {
     await repo.leaveList(listId);
     onClose();
-    toast.show(`Has salido de ${listTitle}`);
+    toast.show(`Has salido de ${listTitle}`, { media: { icon: ToastIcon.list } });
   };
 
   const iCollaborate = people?.some((p) => p.profile.id === myId && p.role === "editor");

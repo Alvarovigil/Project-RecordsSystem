@@ -105,12 +105,16 @@ export default function MobileSearch({
     const v = await search.addFromCatalogue(r, targetId, onSaveToList);
     if (!v) return toast.show("No se pudo añadir ese disco.", { tone: "error" });
     const saved = search.savedIn[`d${r.id}`];
-    toast.undo(`${v.title} → ${target?.name ?? "tu colección"}`, () => {
-      // brand new to the library → undo takes it out entirely
-      if (saved?.wasNew) onDeleteVinyl(v.id);
-      else onRemoveFromList(v.id, targetId);
-      search.forgetSave(`d${r.id}`);
-    });
+    toast.undo(
+      `${v.title} → ${target?.name ?? "tu colección"}`,
+      () => {
+        // brand new to the library → undo takes it out entirely
+        if (saved?.wasNew) onDeleteVinyl(v.id);
+        else onRemoveFromList(v.id, targetId);
+        search.forgetSave(`d${r.id}`);
+      },
+      { media: { src: r.thumb } },
+    );
   };
 
   return (

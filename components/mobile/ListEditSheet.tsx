@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import Confirm from "@/components/ui/Confirm";
-import { useToast } from "@/components/ui/Toast";
+import { useToast, ToastIcon } from "@/components/ui/Toast";
 import CollaboratorsSheet from "@/components/community/CollaboratorsSheet";
 import { SORT_LABELS, type SortMode, type Collection } from "@/lib/collections";
 import type { ListVisibility } from "@/lib/data/types";
@@ -68,7 +68,7 @@ export default function ListEditSheet({
     const clean = name.trim();
     if (!clean || clean === list.name) return;
     onRename(list.id, clean);
-    toast.show("Lista renombrada");
+    toast.show("Lista renombrada", { media: { icon: ToastIcon.list } });
   };
 
   return (
@@ -162,7 +162,7 @@ export default function ListEditSheet({
                 onClick={() => {
                   onSetVisibility(list.id, v);
                   setPane("root");
-                  toast.show(VISIBILITY[v].confirm);
+                  toast.show(VISIBILITY[v].confirm, { media: { icon: ToastIcon.list } });
                 }}
               />
             ))}
@@ -191,7 +191,7 @@ export default function ListEditSheet({
         onConfirm={() => {
           onDelete(list.id);
           onClose();
-          toast.show("Lista borrada");
+          toast.show("Lista borrada", { media: { icon: ToastIcon.trash } });
         }}
       />
     </>

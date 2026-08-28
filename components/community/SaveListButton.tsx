@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
-import { useToast } from "@/components/ui/Toast";
+import { useToast, ToastIcon } from "@/components/ui/Toast";
 import { useRepository } from "@/hooks/useRepository";
 
 /**
@@ -61,14 +61,19 @@ export default function SaveListButton({
         await repo.saveList(listId);
         // says where it went, because "guardada" alone leaves you wondering
         toast.show("Guardada en tu colección", {
+          media: { icon: ToastIcon.list },
           action: { label: "Ver", onClick: () => router.push("/coleccion") },
         });
       } else {
         await repo.unsaveList(listId);
-        toast.undo("Ya no la guardas", () => {
-          setSaved(true);
-          void repo.saveList(listId);
-        });
+        toast.undo(
+          "Ya no la guardas",
+          () => {
+            setSaved(true);
+            void repo.saveList(listId);
+          },
+          { media: { icon: ToastIcon.list } },
+        );
       }
     } catch {
       setSaved(!next);
@@ -82,6 +87,7 @@ export default function SaveListButton({
       await repo.duplicateList(listId, `${listTitle} (mi versión)`);
       setMenu(false);
       toast.show("Copiada. Ya es tuya y puedes editarla.", {
+        media: { icon: ToastIcon.list },
         action: { label: "Abrir", onClick: () => router.push("/coleccion") },
       });
     } catch {
@@ -106,7 +112,7 @@ export default function SaveListButton({
     }
     await navigator.clipboard?.writeText(url);
     setMenu(false);
-    toast.show("Enlace copiado");
+    toast.show("Enlace copiado", { media: { icon: ToastIcon.link } });
   };
 
   if (saved === null) return <span aria-hidden style={{ minWidth: 104 }} />;

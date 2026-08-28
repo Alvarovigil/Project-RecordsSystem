@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Button from "@/components/ui/Button";
 import Confirm from "@/components/ui/Confirm";
-import { useToast } from "@/components/ui/Toast";
+import { useToast, ToastIcon } from "@/components/ui/Toast";
 import { useDevice } from "@/hooks/useDevice";
 import { useRelationship } from "@/hooks/useRelationship";
 
@@ -52,7 +52,7 @@ export default function FollowButton({
   const run = async () => {
     try {
       await toggle();
-      if (!following) toast.show(`Sigues a ${displayName}`);
+      if (!following) toast.show(`Sigues a ${displayName}`, { media: { icon: ToastIcon.person } });
     } catch {
       toast.show("No se pudo guardar. Inténtalo otra vez.", { tone: "error" });
     }

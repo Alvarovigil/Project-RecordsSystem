@@ -138,6 +138,221 @@ const REVEAL_MS = 560;
 const REVEAL_STAGGER_MS = 38;
 const REVEAL_STAGGER_MAX = 300;
 
+
+/**
+ * The spine, printed.
+ *
+ * In a real crate you do not read covers — you read spines, because that is all
+ * a shelved record shows you. Ours were a flat sliver of colour sampled from
+ * the artwork, which looked right and said nothing, so the row of sleeves
+ * behind the centred one carried no information at all.
+ *
+ * Drawn on a canvas rather than with 3D text: a spine is ink on cardboard, not
+ * a geometry, and one 2048×128 texture costs a fraction of what a glyph mesh
+ * per record would. The canvas is tall and narrow to match the face it lands
+ * on — the box's px/nx faces are height × thickness — and the type is rotated
+ * so it reads bottom-to-top, which is the convention on European pressings and
+ * the way a head tilts at a shelf.
+ *
+ * The ink colour is derived from the sampled edge rather than fixed: a cream
+ * sleeve needs dark type and a black one needs light, and guessing wrong makes
+ * the text vanish exactly where it mattered.
+ */
+const spineTextureCache = new Map<string, THREE.CanvasTexture>();
+
+/**
+ * The app's own sans, not a guess at its name.
+ *
+ * next/font gives Inter a generated family (`__Inter_xxxx`) and exposes it as
+ * a CSS variable. Asking a canvas for "Inter" therefore misses — unless the
+ * machine happens to have Inter installed — and it silently falls back to
+ * whatever the system offers, which is why the spines came out in a face
+ * nobody chose. Reading the variable gets the real name.
+ */
+function appSans(): string {
+  if (typeof window === "undefined") return "system-ui, sans-serif";
+  const v = getComputedStyle(document.documentElement)
+    .getPropertyValue("--font-geist-sans")
+    .trim();
+  return v ? `${v}, system-ui, sans-serif` : "system-ui, sans-serif";
+}
+
+/**
+ * A canvas draws with whatever is loaded at that instant, and web fonts arrive
+ * after first paint — so a texture built too early is baked in the fallback
+ * and never corrects itself. This flips once, and the sleeves rebuild.
+ */
+function useFontReady() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (typeof document === "undefined" || !document.fonts) return setReady(true);
+    let alive = true;
+    document.fonts.ready.then(() => alive && setReady(true));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return ready;
+}
+
+/**
+ * Where the printing sits along the spine.
+ *
+ * Not centred: on a real sleeve the type sits above the middle, clear of the
+ * shelf lip and closer to eye level. A fraction of the run, so it holds at any
+ * sleeve size — flip the sign if it ends up below.
+ */
+const SPINE_SHIFT = 0.06;
+
+function spineTexture(
+  artist: string,
+  title: string,
+  edge: string,
+  aspect: number,
+  family: string,
+): THREE.CanvasTexture | null {
+  if (typeof document === "undefined") return null;
+  const key = `${artist}|${title}|${edge}|${aspect.toFixed(2)}|${family}`;
+  const hit = spineTextureCache.get(key);
+  if (hit) return hit;
+
+  // The canvas has to match the face it lands on or the glyphs are squeezed:
+  // a 16:1 texture stretched across a 100:1 spine flattens the type to a sixth
+  // of its width. Derived from the geometry rather than hardcoded, so it stays
+  // right if the sleeve ever changes thickness.
+  const LONG = 4096;
+  const SHORT = Math.max(24, Math.round(LONG / aspect));
+  const canvas = document.createElement("canvas");
+  canvas.width = SHORT;
+  canvas.height = LONG;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  const { bg, ink, halo } = spineInk(edge);
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, SHORT, LONG);
+
+  ctx.translate(SHORT / 2, LONG / 2);
+  ctx.rotate(-Math.PI / 2); // reads bottom-to-top, as European pressings do
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = ink;
+
+  /**
+   * One size for every spine on the shelf.
+   *
+   * Shrinking the type until a long title fitted meant every sleeve was set
+   * differently — "Rumours" at full size beside "Dune: Part Two (Original
+   * Motion Picture Soundtrack)" at half — and the same weight reads heavier
+   * at a larger size, so the row looked like a mix of bold and light. A real
+   * crate is printed at one size and the long names are the ones that get
+   * abbreviated. Same here: fixed cap height, and what does not fit is cut.
+   */
+  const size = Math.round(SHORT * 0.52);
+  ctx.font = `600 ${size}px ${family}`;
+  ctx.letterSpacing = `${Math.max(1, Math.round(size * 0.06))}px`;
+
+  const room = LONG - 220;
+  const full = `${artist.toUpperCase()}   ·   ${title}`;
+  let text = full;
+  if (ctx.measureText(text).width > room) {
+    // the artist survives whole; the title is what gives way
+    let t = title;
+    while (t.length > 4 && ctx.measureText(`${artist.toUpperCase()}   ·   ${t}…`).width > room) {
+      t = t.slice(0, -1);
+    }
+    text = `${artist.toUpperCase()}   ·   ${t.trimEnd()}…`;
+    // an artist so long there is no room for a title at all: keep the artist
+    if (ctx.measureText(text).width > room) {
+      let a = artist.toUpperCase();
+      while (a.length > 4 && ctx.measureText(`${a}…`).width > room) a = a.slice(0, -1);
+      text = `${a.trimEnd()}…`;
+    }
+  }
+
+  // after the rotation, the run of the spine is this axis
+  const x = LONG * SPINE_SHIFT;
+  ctx.lineJoin = "round";
+  ctx.lineWidth = Math.max(2, size * 0.14);
+  ctx.strokeStyle = halo;
+  ctx.strokeText(text, x, 0);
+  ctx.fillText(text, x, 0);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  spineTextureCache.set(key, tex);
+  return tex;
+}
+
+/**
+ * Ink that can actually be read on this particular cardboard.
+ *
+ * Choosing black or white from a luminance threshold fails in the middle: a
+ * mid-grey sleeve is far from both, and whichever you pick is roughly as
+ * unreadable as the other. So the two candidates are compared by actual
+ * contrast ratio, and when even the better one is too low, the spine itself is
+ * pushed away from the ink until it isn't — the sampled colour is a starting
+ * point, not a constraint. Legibility wins over fidelity to the sleeve.
+ */
+function spineInk(edge: string): { bg: string; ink: string; halo: string } {
+  const hex = edge.replace("#", "");
+  const full = hex.length === 3 ? hex.split("").map((c) => c + c).join("") : hex;
+  let rgb = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16) || 0);
+
+  // sRGB has to be linearised before luminance means anything
+  const lum = (c: number[]) => {
+    const [r, g, b] = c.map((v) => {
+      const x = v / 255;
+      return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const ratio = (a: number, b: number) =>
+    (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  const scale = (c: number[], k: number) =>
+    c.map((v) => Math.max(0, Math.min(255, Math.round(v * k))));
+
+  /**
+   * Keep the ground out of the extremes before anything else.
+   *
+   * The spine is a lit surface in a 3D scene, and MeshStandardMaterial
+   * multiplies the texture by the light hitting it. A pale sampled edge —
+   * Dune's cream, say — arrives at the eye blown to near-white, and the
+   * contrast so carefully computed here is destroyed after the fact by a lamp.
+   * Holding the ground in a mid band leaves the lighting somewhere to go in
+   * both directions, and keeps the sleeve's hue while doing it.
+   */
+  const L0 = lum(rgb);
+  if (L0 > 0.34) rgb = scale(rgb, Math.sqrt(0.34 / L0));
+  // Only near-black is lifted, and barely: a dark navy spine has all the
+  // contrast it needs against light ink, and brightening it would just make
+  // the shelf look like it had been washed.
+  else if (L0 < 0.015) rgb = scale(rgb, 1.5);
+
+  const dark = 0.02, light = 0.9;
+  const useDark = ratio(lum(rgb), dark) >= ratio(lum(rgb), light);
+
+  let guard = 0;
+  while (ratio(lum(rgb), useDark ? dark : light) < 4.5 && guard++ < 24) {
+    rgb = rgb.map((v) => (useDark ? Math.min(255, v + 8) : Math.max(0, v - 8)));
+  }
+
+  const toHex = (c: number[]) =>
+    "#" + c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
+
+  return {
+    bg: toHex(rgb),
+    ink: useDark ? "rgba(10,10,10,0.95)" : "rgba(250,248,244,0.95)",
+    // A thin outline in the ground's own tone, pushed further from the ink.
+    // Lighting can lift or crush the whole surface and the glyph still has an
+    // edge, because the edge travels with it.
+    halo: useDark
+      ? "rgba(255,255,255,0.55)"
+      : "rgba(0,0,0,0.6)",
+  };
+}
+
 const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   { vinilos, onOpen, onActiveChange, onCoverHalfWidth, ambient = false, drift = 0.09, handleRef },
   ref,
@@ -180,7 +395,10 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   const coverRoughness = 0.35;
   const coverMetalness = 0.05;
   const cardboardRoughness = 0.9;
-  const thickness = 0.03;
+  // A real LP sleeve is about 5mm across a 315mm face — roughly 1 in 63. This
+  // was 1 in 100, thinner than any record ever pressed, which left the spine
+  // too narrow to print anything legible on.
+  const thickness = 0.05;
 
   // scroll target in INDEX space (floating-point). At t=0, item 0 is at x=0.
   const target = useRef(0);
@@ -722,9 +940,31 @@ function Sleeve({
       }),
     [edgeColor, cardboardRoughness],
   );
-  // share the same material across all 4 side faces (right / left / top / bottom)
-  const matRight = edgeMaterial;
-  const matLeft = edgeMaterial;
+  // The two spines carry the printed name; top and bottom stay bare cardboard,
+  // because that is what they are. Built only once the edge colour has been
+  // sampled — printing on the placeholder would mean redrawing every sleeve
+  // the moment its cover decoded.
+  const fontReady = useFontReady();
+  const spineMaterial = useMemo(() => {
+    const map =
+      sampledEdge && fontReady
+        ? spineTexture(
+            vinyl.artist,
+            vinyl.title,
+            sampledEdge,
+            SLEEVE_H / thickness,
+            appSans(),
+          )
+        : null;
+    return new THREE.MeshStandardMaterial({
+      map,
+      color: map ? "#ffffff" : edgeColor,
+      roughness: cardboardRoughness,
+    });
+  }, [sampledEdge, fontReady, vinyl.artist, vinyl.title, edgeColor, cardboardRoughness, thickness]);
+
+  const matRight = spineMaterial;
+  const matLeft = spineMaterial;
   const matTop = edgeMaterial;
   const matBottom = edgeMaterial;
   // PhysicalMaterial w/ a touch of clearcoat → simulates the gloss laminate
