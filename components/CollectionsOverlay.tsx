@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { useEffect, useMemo, useState } from "react";
+import ConfirmButton, { UnsaveIcon } from "@/components/ui/ConfirmButton";
 import { type Collection, type SortMode, SORT_LABELS, sortedVinylIds } from "@/lib/collections";
 import type { ListVisibility, ListWithRecord } from "@/lib/data/types";
 
@@ -29,6 +30,8 @@ type Props = {
   /** lists made by other people that you follow */
   followed: ListWithRecord[];
   onUnfollowList: (listId: string) => void;
+  /** open a kept list on this shelf instead of navigating away from it */
+  onOpenFollowed: (list: ListWithRecord) => void;
   visibilityOf: (collectionId: string) => ListVisibility;
   /** the preview shows what lists are, without letting you dismantle them */
   preview?: boolean;
@@ -81,6 +84,7 @@ export default function CollectionsOverlay({
   onSetVisibility,
   followed,
   onUnfollowList,
+  onOpenFollowed,
   visibilityOf,
   allVinilos,
   preview = false,
@@ -427,17 +431,38 @@ export default function CollectionsOverlay({
                   <ul className="flex flex-col gap-1 px-3 py-3">
                     {followed.map((l) => (
                       <li key={l.id} className="group relative">
-                        <Link
-                          href={`/u/${l.owner.username}/${l.slug}`}
-                          className="flex items-center gap-3 rounded-md border border-dashed border-paper/[0.12] px-3 py-2.5 transition hover:border-paper/25 hover:bg-paper/[0.04]"
+                        <button
+                          onClick={() => {
+                            onOpenFollowed(l);
+                            onClose();
+                          }}
+                          className="flex w-full items-center gap-3 rounded-md border border-dashed border-paper/[0.12] px-3 py-2.5 text-left transition hover:border-paper/25 hover:bg-paper/[0.04]"
                         >
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper/[0.06] mono text-[9px] text-paper/50">
-                            {l.owner.avatarUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={l.owner.avatarUrl} alt="" className="h-full w-full object-cover" />
-                            ) : (
-                              l.owner.displayName.slice(0, 2).toUpperCase()
-                            )}
+                          {/* The owner's face, with a mark on it.
+                              Down a column of lists an avatar alone reads as
+                              decoration — you notice the picture, not that the
+                              list belongs to somebody. The badge is small, sits
+                              where a notification dot would, and carries the
+                              one fact that matters here: this shelf is not
+                              yours. */}
+                          <span className="relative shrink-0">
+                            <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-paper/[0.06] mono text-[9px] text-paper/50">
+                              {l.owner.avatarUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={l.owner.avatarUrl} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                l.owner.displayName.slice(0, 2).toUpperCase()
+                              )}
+                            </span>
+                            <span
+                              title={`Lista de ${l.owner.displayName}`}
+                              className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#151515] ring-[1.5px] ring-ink"
+                            >
+                              <svg width="9" height="9" viewBox="0 0 20 20" fill="none" aria-hidden className="text-paper/70">
+                                <circle cx="10" cy="6.6" r="3" stroke="currentColor" strokeWidth="2" />
+                                <path d="M4.2 16.6 C4.8 13.5 7.1 11.8 10 11.8 C12.9 11.8 15.2 13.5 15.8 16.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                              </svg>
+                            </span>
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-[14px] text-paper/90">{l.title}</span>
@@ -445,18 +470,18 @@ export default function CollectionsOverlay({
                               de {l.owner.displayName} · {l.itemCount} discos
                             </span>
                           </span>
-                        </Link>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            onUnfollowList(l.id);
-                          }}
-                          aria-label="Dejar de seguir"
-                          title="Dejar de seguir"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 mono reveal-on-hover text-[9px] uppercase tracking-[0.16em] text-paper/25 transition hover:text-paper"
-                        >
-                          Dejar
                         </button>
+                        {/* "Dejar" on its own said neither what it acted on
+                            nor what would happen. An icon carries the object,
+                            and the second press carries the decision. */}
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                          <ConfirmButton
+                            icon={<UnsaveIcon />}
+                            label={`Dejar de guardar «${l.title}»`}
+                            confirmLabel="Quitar"
+                            onConfirm={() => onUnfollowList(l.id)}
+                          />
+                        </div>
                       </li>
                     ))}
                   </ul>

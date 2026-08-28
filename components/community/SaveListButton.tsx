@@ -62,7 +62,13 @@ export default function SaveListButton({
         // says where it went, because "guardada" alone leaves you wondering
         toast.show("Guardada en tu colección", {
           media: { icon: ToastIcon.list },
-          action: { label: "Ver", onClick: () => router.push("/coleccion") },
+          // to the list itself, not to the neighbourhood it lives in: "Ver"
+          // that drops you in your own shelf and leaves you to find what you
+          // just saved is an offer the user has to finish themselves
+          action: {
+            label: "Ver",
+            onClick: () => router.push(`/coleccion?lista=${listId}`),
+          },
         });
       } else {
         await repo.unsaveList(listId);

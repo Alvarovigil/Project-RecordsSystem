@@ -27,6 +27,7 @@ import RecordSheet from "@/components/mobile/RecordSheet";
 import MobileSearch from "@/components/mobile/MobileSearch";
 import { useToast, ToastIcon } from "@/components/ui/Toast";
 import type { SavedList } from "@/lib/data/types";
+import { useSearchParams } from "next/navigation";
 
 /**
  * The 3D shelf, fetched only if it is going to be shown.
@@ -51,6 +52,19 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   const allVinilos = lib.releases;
   const activeCollectionId = lib.activeListId;
 
+  /**
+   * A list you kept that somebody else made, opened here rather than sent away.
+   *
+   * It used to be a link out to the owner's page: you saved a list into your
+   * collection and then had to leave your collection to look at it. Which is
+   * the wrong shape — you kept it, so it lives here, and it should arrive as
+   * the same shelf everything else arrives as, in 3D or in the grid.
+   *
+   * What changes is only what it is not: it is not yours, so nothing in it can
+   * be edited, and the corner says whose it is instead of offering to rename
+   * it.
+   */
+  const [foreign, setForeign] = useState<{ list: SavedList; items: Vinyl[] } | null>(null);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [collectionFading, setCollectionFading] = useState(false);
@@ -89,7 +103,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   const activeCollection =
     resolvedCollections.find((c) => c.id === activeCollectionId) ?? null;
   const activeListKind = activeCollection?.kind ?? "custom";
-  const vinilos = useMemo(
+  const ownVinilos = useMemo(
     () =>
       activeCollection
         ? sortedVinylIds(activeCollection, allVinilos)
@@ -98,6 +112,9 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         : allVinilos,
     [activeCollection, allVinilos],
   );
+  // one shelf, two sources: yours, or the one you kept
+  const vinilos = foreign ? foreign.items : ownVinilos;
+  const readOnly = Boolean(foreign);
 
   // Hold the loading card until the first covers have actually decoded, so the
   // shelf never appears as a row of empty sleeves. Floors at 420ms (a card that
@@ -164,6 +181,34 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   }, [collectionsOpen, loadFollowed]);
 
   const [saved, setSaved] = useState<SavedList[]>([]);
+  // ?lista=<id> opens one straight away, which is what the toast's "Ver" and
+  // any shared link need in order to land somewhere rather than near it
+  const params = useSearchParams();
+  const wanted = params.get("lista");
+  useEffect(() => {
+    if (!wanted) return;
+    let alive = true;
+    (async () => {
+      const all = await repo.savedLists();
+      const found = all.find((l) => l.id === wanted);
+      if (!found || !alive) return;
+      const items = await repo.releasesOfList(found.id);
+      if (alive) setForeign({ list: found, items });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [wanted, repo]);
+
+  const openForeign = useCallback(
+    async (list: SavedList) => {
+      setForeign({ list, items: [] });
+      const items = await repo.releasesOfList(list.id);
+      setForeign((cur) => (cur?.list.id === list.id ? { list, items } : cur));
+    },
+    [repo],
+  );
+
   const [myProfileId, setMyProfileId] = useState("");
   useEffect(() => {
     repo
@@ -232,6 +277,8 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   const handleDeleteCollection = (id: string) => void lib.deleteList(id);
 
   const handleActivateCollection = (id: string) => {
+    // choosing one of yours is how you come back from somebody else's
+    setForeign(null);
     // close any open vinyl when switching list so the detail view doesn't
     // linger over a vinyl that no longer exists in the new collection
     if (open) handleClose();
@@ -770,21 +817,45 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           aria-label="Abrir listas"
           className="group flex items-center gap-3 text-left"
         >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-paper/25 text-paper/60 transition group-hover:border-paper/70 group-hover:text-paper">
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
-              <path
-                d="M2 3.5 H12 M2 7 H12 M2 10.5 H8"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </span>
+          {/* Somebody else's list wears their face here; yours wears the
+              lists icon. It is the same control either way — it opens the
+              panel — but the corner has to answer "whose shelf am I looking
+              at" without being asked, because in 3D nothing else does. */}
+          {foreign ? (
+            <span className="relative shrink-0">
+              <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-paper/10 mono text-[10px] text-paper/60">
+                {foreign.list.owner.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={foreign.list.owner.avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  foreign.list.owner.displayName.slice(0, 2).toUpperCase()
+                )}
+              </span>
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#151515] ring-[1.5px] ring-ink">
+                <svg width="9" height="9" viewBox="0 0 20 20" fill="none" aria-hidden className="text-paper/70">
+                  <circle cx="10" cy="6.6" r="3" stroke="currentColor" strokeWidth="2" />
+                  <path d="M4.2 16.6 C4.8 13.5 7.1 11.8 10 11.8 C12.9 11.8 15.2 13.5 15.8 16.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </span>
+            </span>
+          ) : (
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-paper/25 text-paper/60 transition group-hover:border-paper/70 group-hover:text-paper">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+                <path
+                  d="M2 3.5 H12 M2 7 H12 M2 10.5 H8"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </span>
+          )}
           <span>
             <span className="block text-[20px] font-medium leading-none text-paper">
-              {activeCollection?.name ?? "Mi Colección"}
+              {foreign ? foreign.list.title : activeCollection?.name ?? "Mi Colección"}
             </span>
             <span className="mt-1.5 block text-[11px] uppercase tracking-[0.18em] text-paper/50 transition group-hover:text-paper/75">
+              {foreign ? `de ${foreign.list.owner.displayName} · ` : ""}
               {vinilos.length} {vinilos.length === 1 ? "disco" : "discos"}
             </span>
           </span>
@@ -1023,6 +1094,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         }}
         visibilityOf={(id) => lib.lists.find((l) => l.id === id)?.visibility ?? "public"}
         followed={followed}
+        onOpenFollowed={(l: ListWithRecord) => void openForeign(l as SavedList)}
         onUnfollowList={(id) => {
           setFollowed((prev) => prev.filter((l) => l.id !== id));
           void repo.unfollow("list", id);

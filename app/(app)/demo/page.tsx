@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import ShelfApp from "@/components/ShelfApp";
 
 export const metadata = {
@@ -15,5 +16,12 @@ export const metadata = {
  * content comes from lib/demo.ts and lives only in their browser.
  */
 export default function DemoPage() {
-  return <ShelfApp />;
+  // The shelf reads ?lista= to open a kept list directly, and useSearchParams
+  // opts a page out of static rendering unless it sits behind a boundary.
+  // The boundary is cheap here: the shelf paints its own loading card anyway.
+  return (
+    <Suspense>
+      <ShelfApp />
+    </Suspense>
+  );
 }
