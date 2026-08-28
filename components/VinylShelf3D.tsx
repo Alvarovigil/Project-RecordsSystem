@@ -695,6 +695,17 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       if (openTarget.current > 0) return; // no drag while opened
       dragging.current = true;
       velocity.current = 0; // catching a moving shelf stops it, like a list
+      /**
+       * And catching it takes hold of where the shelf IS.
+       *
+       * This was the jump. `target` runs ahead of what you can see — that gap
+       * is the smoothing — so grabbing a moving shelf and dragging from the
+       * target meant the first pixel of the drag teleported the strip by the
+       * whole distance it had left to travel. Pinning the target to the
+       * current position first makes the grab silent, which is what a finger
+       * landing on a moving list does.
+       */
+      target.current = current.current;
       moved = false;
       startX = axisOf(e);
       startT = target.current;
@@ -712,7 +723,10 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
         // usually the worst of them, which is exactly the one a naive
         // implementation would throw with.
         const raw = ((pos - lastPos) * (vertical ? 1 : -1) * 0.01) / dt;
-        velocity.current = velocity.current * 0.72 + raw * 0.28;
+        // heavier averaging, and a ceiling: a flick that crosses the screen in
+        // three frames should move the shelf a long way, not send it to a
+        // record nobody chose
+        velocity.current = Math.max(-9, Math.min(9, velocity.current * 0.8 + raw * 0.2));
         lastPos = pos;
         lastAt = now;
       }
@@ -1042,11 +1056,28 @@ function Strip({
 
     if (velocityRef.current !== 0) {
       const dt = Math.min(delta, 0.05);
+      const dir = Math.sign(velocityRef.current);
       targetRef.current += velocityRef.current * dt;
-      velocityRef.current *= Math.exp(-2.6 * dt);
-      if (Math.abs(velocityRef.current) < 0.45) {
+      // 5.2 rather than 2.6: the first pass slid for over a second, which is
+      // a scroll view, not a shelf of records you are picking one out of
+      velocityRef.current *= Math.exp(-5.2 * dt);
+      if (Math.abs(velocityRef.current) < 0.8) {
         velocityRef.current = 0;
-        targetRef.current = Math.round(targetRef.current);
+        /**
+         * Settle forwards, never backwards.
+         *
+         * Rounding to the nearest record while the strip is still moving can
+         * land behind where it already is — and reversing at the end of a
+         * throw is the other half of what felt wrong. The settle takes the
+         * next record in the direction of travel unless the current one is
+         * genuinely right there.
+         */
+        const t = targetRef.current;
+        const nearest = Math.round(t);
+        targetRef.current =
+          Math.abs(nearest - t) < 0.12 || (nearest - t) * dir >= 0
+            ? nearest
+            : nearest + dir;
       }
       if (N > 0 && N <= 8) {
         // a short list has ends, and running off them is not momentum
