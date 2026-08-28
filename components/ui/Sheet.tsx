@@ -114,20 +114,20 @@ export default function Sheet({
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               style={{ width, maxHeight: "min(78vh, 720px)" }}
               /**
-               * Square, barely outlined, and made of frosted glass.
+               * Square, black, and outlined by almost nothing.
                *
-               * The square corners are the product's own rule — sleeves,
-               * crates, labels — and a dialog is not exempt from it just
-               * because it floats. What it does get is depth: the panel is
-               * translucent and blurs what is behind it, so it reads as a
-               * sheet of glass laid over the shelf rather than a rectangle
-               * pasted on top of it, and the edge can then be almost nothing.
+               * It was frosted glass for about ten minutes and the glass was
+               * the problem: a translucent panel over a shelf of album covers
+               * is a panel with somebody's artwork moving underneath the type.
+               * Solid black gives the words a floor, lets the covers stay
+               * exactly where they were, and needs no blur to hold them apart.
                *
-               * A 5% hairline is enough to find the boundary once the blur has
-               * already separated the two planes. Any more and the outline
-               * becomes the loudest thing in a panel whose job is to be quiet.
+               * What separates it from the page is then a single 5% hairline
+               * and the shadow. In a room this dark that is enough — any more
+               * outline and the edge becomes the loudest thing in a panel
+               * whose job is to be quiet.
                */
-              className="relative flex max-w-[92vw] flex-col overflow-hidden bg-surface-raised/80 shadow-overlay ring-1 ring-inset ring-paper/[0.05] backdrop-blur-2xl"
+              className="relative flex max-w-[92vw] flex-col overflow-hidden bg-ink shadow-overlay ring-1 ring-inset ring-paper/[0.05]"
             >
               {!bare && <Header id={titleId} title={title} subtitle={subtitle} action={action} onClose={onClose} />}
               {children}
