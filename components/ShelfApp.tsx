@@ -500,6 +500,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
       <>
         <MobileShelf
           vinilos={vinilos}
+          allVinilos={allVinilos}
           collections={resolvedCollections}
           activeListId={activeCollectionId}
           activeName={activeCollection?.name ?? "Mi Colección"}

@@ -41,6 +41,7 @@ import type { Vinyl } from "@/lib/types";
  */
 export default function MobileShelf({
   vinilos,
+  allVinilos,
   collections,
   activeListId,
   activeName,
@@ -61,6 +62,8 @@ export default function MobileShelf({
   onRemoveFromList,
 }: {
   vinilos: Vinyl[];
+  /** every record you own, so a list can show what is in it */
+  allVinilos: Vinyl[];
   collections: Collection[];
   activeListId: string;
   activeName: string;
@@ -174,44 +177,80 @@ export default function MobileShelf({
         size="tall"
         width={400}
       >
-        <div className="py-1">
-          {ordered.map((c, i) => (
-            // The row is two targets, not one: the name switches to the list,
-            // the ⋯ edits it. Long-press would hide the second one behind a
-            // gesture nobody discovers.
-            <div
-              key={c.id}
-              className={`flex items-center ${
-                i === primary.length && primary.length > 0 && custom.length > 0
-                  ? "mt-2 border-t border-line pt-3"
-                  : ""
-              }`}
-            >
-              <button
-                onClick={() => {
-                  onActivate(c.id);
-                  setSwitching(false);
-                }}
-                className="pressable flex min-w-0 flex-1 items-center gap-3 py-3.5 pl-5 pr-2 text-left"
+        {/* The same row as the desktop panel, and deliberately so: a cover, the
+            name, a lock on the two you cannot delete, and what is in it. A
+            phone is a single column, which is the shape that panel already
+            had — so there is nothing to redesign, only a hover to remove.
+            Where the desktop reveals the row's actions when the pointer
+            arrives, here the ⋯ is simply always there. A finger has no hover,
+            and hiding a control behind a long press is hiding it. */}
+        <ul className="flex flex-col gap-1 px-3 py-3">
+          {ordered.map((c, i) => {
+            const startsCustom =
+              i === primary.length && primary.length > 0 && custom.length > 0;
+            const isActive = c.id === activeListId;
+            const isPrimary = (c.kind ?? "custom") !== "custom";
+            // one cover reads better than a mosaic at this size; the last one
+            // in is the one you are most likely to recognise
+            const cover = c.vinylIds
+              .map((id) => allVinilos.find((v) => v.id === id))
+              .filter((v): v is Vinyl => Boolean(v?.cover))
+              .pop();
+            return (
+              <li
+                key={c.id}
+                className={`relative ${startsCustom ? "mt-2 border-t border-line pt-3" : ""}`}
               >
-                <span className="min-w-0 flex-1 truncate text-body text-paper">{c.name}</span>
-                <span className="shrink-0 text-sub text-content-muted">
-                  {c.id === activeListId ? "Viendo" : c.vinylIds.length}
-                </span>
-              </button>
-              <button
-                onClick={() => setEditing(c)}
-                aria-label={`Opciones de ${c.name}`}
-                className="pressable flex h-tap w-tap shrink-0 items-center justify-center text-content-muted"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
-                  <circle cx="8" cy="3.2" r="1.35" fill="currentColor" />
-                  <circle cx="8" cy="8" r="1.35" fill="currentColor" />
-                  <circle cx="8" cy="12.8" r="1.35" fill="currentColor" />
-                </svg>
-              </button>
-            </div>
-          ))}
+                <button
+                  onClick={() => {
+                    onActivate(c.id);
+                    setSwitching(false);
+                  }}
+                  className={`pressable flex w-full items-center gap-3 rounded-md py-2.5 pl-3 pr-12 text-left transition ${
+                    isActive ? "bg-fill-strong" : "bg-fill-subtle"
+                  }`}
+                >
+                  <span className="flex h-11 w-11 shrink-0 overflow-hidden rounded-sm bg-fill">
+                    {cover?.cover && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={cover.cover} alt="" className="h-full w-full object-cover" />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate text-body text-paper">{c.name}</span>
+                      {isPrimary && (
+                        <span aria-label="Lista predefinida" className="shrink-0 text-content-faint">
+                          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                            <rect x="2.5" y="5.5" width="7" height="5" rx="0.6" stroke="currentColor" />
+                            <path d="M4 5.5V4a2 2 0 1 1 4 0v1.5" stroke="currentColor" />
+                          </svg>
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 block text-caption text-content-muted">
+                      {c.vinylIds.length} {c.vinylIds.length === 1 ? "disco" : "discos"}
+                      {isActive ? " · viendo ahora" : ""}
+                    </span>
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setEditing(c)}
+                  aria-label={`Opciones de ${c.name}`}
+                  className="pressable absolute right-0 top-1/2 flex h-tap w-tap -translate-y-1/2 items-center justify-center text-content-muted"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+                    <circle cx="8" cy="3.2" r="1.35" fill="currentColor" />
+                    <circle cx="8" cy="8" r="1.35" fill="currentColor" />
+                    <circle cx="8" cy="12.8" r="1.35" fill="currentColor" />
+                  </svg>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="pb-1">
 
           {creating ? (
             <form
