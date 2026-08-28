@@ -726,7 +726,9 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
         // heavier averaging, and a ceiling: a flick that crosses the screen in
         // three frames should move the shelf a long way, not send it to a
         // record nobody chose
-        velocity.current = Math.max(-9, Math.min(9, velocity.current * 0.8 + raw * 0.2));
+        // the ceiling is high enough that a real flick is never clipped, and
+        // there only to stop a single freak sample from launching the shelf
+        velocity.current = Math.max(-22, Math.min(22, velocity.current * 0.76 + raw * 0.24));
         lastPos = pos;
         lastAt = now;
       }
@@ -1058,10 +1060,17 @@ function Strip({
       const dt = Math.min(delta, 0.05);
       const dir = Math.sign(velocityRef.current);
       targetRef.current += velocityRef.current * dt;
-      // 5.2 rather than 2.6: the first pass slid for over a second, which is
-      // a scroll view, not a shelf of records you are picking one out of
-      velocityRef.current *= Math.exp(-5.2 * dt);
-      if (Math.abs(velocityRef.current) < 0.8) {
+      /**
+       * Friction, and the one number that decides how this feels.
+       *
+       * A throw covers roughly v/k records before it dies, so halving k
+       * doubles the glide. At 1.9 a hard flick crosses a good part of a
+       * collection and takes several seconds to give up — which is the point:
+       * the shelf should be something you send spinning and then stop when you
+       * see something, not a control that resets to arm's length every time.
+       */
+      velocityRef.current *= Math.exp(-1.9 * dt);
+      if (Math.abs(velocityRef.current) < 0.32) {
         velocityRef.current = 0;
         /**
          * Settle forwards, never backwards.
