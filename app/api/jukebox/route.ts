@@ -10,7 +10,10 @@
  * one per visitor.
  */
 
-const UA = "RackrClub/0.1";
+// iTunes, not Discogs: same courtesy of identifying ourselves, different host.
+const UA = "Rackr/1.0 +https://rackr.club";
+
+
 
 /** artist, song — the only two things needed to find a preview */
 const JUKEBOX: [string, string][] = [

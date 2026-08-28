@@ -3,6 +3,7 @@ import { writeFile, mkdir, readFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { Vinyl } from "@/lib/types";
 import { downloadDeezerPreview } from "@/lib/preview";
+import { DISCOGS_UA } from "@/lib/discogs";
 
 /**
  * Read at request time, never at module scope.
@@ -14,7 +15,7 @@ import { downloadDeezerPreview } from "@/lib/preview";
  * record at all. A function call costs nothing and cannot go stale.
  */
 const token = () => process.env.DISCOGS_TOKEN;
-const UA = "VinilosApp/0.1 +local";
+
 const DATA_PATH = resolve(process.cwd(), "data/vinilos.json");
 const COVERS_DIR = resolve(process.cwd(), "public/covers");
 const PREVIEWS_DIR = resolve(process.cwd(), "public/previews");
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest) {
 
   const call = (path: string) =>
     fetch(`https://api.discogs.com/${path}`, {
-      headers: { "User-Agent": UA, Authorization: `Discogs token=${token()}` },
+      headers: { "User-Agent": DISCOGS_UA, Authorization: `Discogs token=${token()}` },
     });
 
   /**
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
     coverPath = `/api/cover?url=${encodeURIComponent(imgUrl)}`;
   } else if (imgUrl) {
     try {
-      const imgRes = await fetch(imgUrl, { headers: { "User-Agent": UA } });
+      const imgRes = await fetch(imgUrl, { headers: { "User-Agent": DISCOGS_UA } });
       if (imgRes.ok) {
         const ext = imgUrl.match(/\.(jpe?g|png|webp)(\?|$)/i)?.[1]?.toLowerCase() ?? "jpg";
         const filename = `${slug}.${ext === "jpeg" ? "jpg" : ext}`;

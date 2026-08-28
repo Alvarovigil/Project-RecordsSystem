@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { DISCOGS_UA } from "@/lib/discogs";
+import { getSupabaseAdminClient } from "@/lib/supabase/server";
 
 /**
  * Read at request time, never at module scope.
@@ -10,7 +12,7 @@ import { NextRequest } from "next/server";
  * record at all. A function call costs nothing and cannot go stale.
  */
 const token = () => process.env.DISCOGS_TOKEN;
-const UA = "VinilosApp/0.1 +local";
+
 
 type DiscogsResult = {
   id: number;
@@ -40,7 +42,7 @@ async function discogsSearch(params: Record<string, string>) {
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("per_page", "100");
   const r = await fetch(url, {
-    headers: { "User-Agent": UA, Authorization: `Discogs token=${token()}` },
+    headers: { "User-Agent": DISCOGS_UA, Authorization: `Discogs token=${token()}` },
     next: { revalidate: 60 },
   });
   if (!r.ok) return [] as DiscogsResult[];
@@ -54,6 +56,35 @@ export async function GET(req: NextRequest) {
   }
   const raw = req.nextUrl.searchParams.get("q")?.trim();
   if (!raw) return Response.json({ results: [] });
+
+  /**
+   * The cache is checked before a single upstream request is made.
+   *
+   * Keyed on the normalised query, so "Rosalía — El Mal Querer" and "rosalia
+   * el mal querer" are one entry rather than two. A hit costs one row read and
+   * nothing at Discogs, which is the whole point: the second person to look
+   * for Rumours should not pay for it.
+   */
+  const sb = getSupabaseAdminClient();
+  const cacheKey = norm(raw);
+  if (sb && cacheKey) {
+    const { data } = await sb
+      .from("discogs_search_cache")
+      .select("results, created_at")
+      .eq("query", cacheKey)
+      .maybeSingle();
+    const fresh =
+      data && Date.now() - new Date(data.created_at).getTime() < 30 * 864e5;
+    if (fresh) {
+      // counted, not ignored: which searches repeat is what will tell us
+      // later whether the twelve-query fan-out is worth what it costs
+      void sb.rpc("bump_discogs_cache", { q: cacheKey }).then(
+        () => {},
+        () => {},
+      );
+      return Response.json({ results: data.results, cached: true });
+    }
+  }
 
   const stripped = stripAccents(raw);
   const variants = raw === stripped ? [raw] : [raw, stripped];
@@ -181,6 +212,22 @@ export async function GET(req: NextRequest) {
     thumb: r.thumb,
     format: r.format,
   }));
+
+  /**
+   * Only a real answer is stored. An empty result is far more often Discogs
+   * throttling us — it replies with an empty list rather than an error — than
+   * it is a record that does not exist, and caching that would turn a
+   * momentary limit into a permanent "no such album".
+   */
+  if (sb && cacheKey && results.length > 0) {
+    void sb
+      .from("discogs_search_cache")
+      .upsert({ query: cacheKey, results, created_at: new Date().toISOString() })
+      .then(
+        () => {},
+        () => {},
+      );
+  }
 
   return Response.json({ results });
 }

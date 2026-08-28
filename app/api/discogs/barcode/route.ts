@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { DISCOGS_UA } from "@/lib/discogs";
 
 /**
  * Read at request time, never at module scope.
@@ -10,7 +11,7 @@ import { NextRequest } from "next/server";
  * record at all. A function call costs nothing and cannot go stale.
  */
 const token = () => process.env.DISCOGS_TOKEN;
-const UA = "VinilosApp/0.1 +local";
+
 
 type DiscogsResult = {
   id: number;
@@ -31,7 +32,7 @@ async function byBarcode(code: string) {
   url.searchParams.set("type", "release");
   url.searchParams.set("per_page", "50");
   const r = await fetch(url, {
-    headers: { "User-Agent": UA, Authorization: `Discogs token=${token()}` },
+    headers: { "User-Agent": DISCOGS_UA, Authorization: `Discogs token=${token()}` },
     next: { revalidate: 3600 },
   });
   if (!r.ok) return [] as DiscogsResult[];
