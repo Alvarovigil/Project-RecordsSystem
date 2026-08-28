@@ -505,15 +505,22 @@ export default function CollectionsOverlay({
                                   <img src={covers[0]} alt="" className="h-full w-full object-cover" />
                                 )}
                               </span>
+                              {/* A shadow, not a ring.
+                                  A ring has to match the surface behind it, and
+                                  this one sits on a translucent row that
+                                  changes tint on hover — so it never matched
+                                  and read as a patch. A shadow needs to match
+                                  nothing and separates the badge from the
+                                  artwork under it on any background. */}
                               <span
                                 title={`Lista de ${l.owner.displayName}`}
-                                className="absolute -bottom-1 -right-1 rounded-full ring-2 ring-[#0d0d0d]"
+                                className="absolute -bottom-1 -right-1 rounded-full shadow-[0_0_0_2px_rgba(10,10,10,0.85)]"
                               >
                                 <Avatar
                                   name={l.owner.displayName}
                                   handle={l.owner.username}
                                   src={l.owner.avatarUrl}
-                                  size="xs"
+                                  size="xxs"
                                 />
                               </span>
                             </span>

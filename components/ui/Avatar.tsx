@@ -11,7 +11,12 @@ import { coverFor } from "@/lib/cover";
  * everyone turns a followers list into a wall of nothing.
  */
 
-const SIZES = { xs: 22, sm: 30, md: 40, lg: 64, xl: 88 } as const;
+/**
+ * `xxs` exists for badges pinned to the corner of something else. At 22px the
+ * smallest size was 60% of a 36px cover — not a mark on it, a second picture
+ * competing with it.
+ */
+const SIZES = { xxs: 16, xs: 22, sm: 30, md: 40, lg: 64, xl: 88 } as const;
 export type AvatarSize = keyof typeof SIZES;
 
 /** Deterministic hue from the handle: identity, not decoration. */
