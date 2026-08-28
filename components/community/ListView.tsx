@@ -7,6 +7,7 @@ import Avatar, { Cover } from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import EmptyState, { CoverGridSkeleton } from "@/components/ui/EmptyState";
 import SaveListButton from "./SaveListButton";
+import FollowButton from "./FollowButton";
 import CollaboratorsSheet, { CollaboratorFaces } from "./CollaboratorsSheet";
 import { useRepository } from "@/hooks/useRepository";
 import { useRelationship } from "@/hooks/useRelationship";
@@ -152,6 +153,24 @@ export default function ListView({
                 Editar en mi colección
               </Button>
             </>
+          ) : list?.kind === "collection" && owner ? (
+            /**
+             * Somebody's collection is not a list you keep.
+             *
+             * Every account has exactly one and it is not authored — it is
+             * everything they own, and it changes every time they buy a
+             * record. Keeping a copy of that on your shelf would be keeping a
+             * copy of a person. So the button is not disabled here, it is
+             * absent, and what replaces it is the thing you actually wanted
+             * when you pressed it: follow them, and their additions come to
+             * you in Actividad.
+             */
+            <>
+              <FollowButton profileId={owner.id} displayName={owner.displayName} />
+              <Button variant="ghost" onClick={share}>
+                Compartir
+              </Button>
+            </>
           ) : (
             list &&
             owner && (
@@ -164,6 +183,12 @@ export default function ListView({
             )
           )}
         </div>
+        {!isOwner && list?.kind === "collection" && owner && (
+          <p className="mt-3 max-w-[52ch] text-sub leading-relaxed text-content-muted">
+            La colección de alguien no se guarda: es todo lo que tiene y cambia cada vez que compra
+            un disco. Sigue a {owner.displayName} y verás lo que va añadiendo.
+          </p>
+        )}
       </header>
 
       <div className="mt-8">
