@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import AccountMenu from "@/components/AccountMenu";
@@ -51,6 +51,28 @@ export default function TopNav({
   const preview = available && !user;
   const handle = profile?.username ?? DEMO_PROFILE.username;
 
+  /**
+   * The rule under the bar, only when there is something under the bar.
+   *
+   * On the shelf this bar floats over the artwork and has never had a line —
+   * drawing one there would cut the picture in half. Everywhere else it had
+   * one permanently, so the same bar looked like two different objects
+   * depending on which screen you were on.
+   *
+   * A line is a job, not a decoration: it separates the bar from content
+   * sliding beneath it. At the top of a page there is nothing sliding beneath
+   * it yet, so there is nothing to separate — and the bar matches the shelf's.
+   * The moment the page moves, the line arrives to do its work.
+   */
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    if (transparent) return;
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [transparent]);
+
   const search = () => {
     if (onSearch) return onSearch();
     router.push("/explorar?buscar=1");
@@ -87,7 +109,13 @@ export default function TopNav({
 
   return (
     <nav
-      className={`${transparent ? "absolute inset-x-0 top-0" : "sticky top-0 border-b border-paper/[0.07] bg-ink/85 backdrop-blur-sm"} z-40`}
+      className={`${
+        transparent
+          ? "absolute inset-x-0 top-0"
+          : `sticky top-0 border-b bg-ink/85 backdrop-blur-sm transition-colors duration-200 ${
+              scrolled ? "border-paper/[0.07]" : "border-transparent"
+            }`
+      } z-40`}
     >
       {/* Full width on purpose. A centred 1180px bar over a shelf that runs
           edge to edge draws a margin that nothing else in the layout respects,
