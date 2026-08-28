@@ -206,16 +206,19 @@ function IosSteps() {
         Dos toques y la tienes
       </p>
       <p className="mx-auto mt-2 max-w-[40ch] text-center text-sub leading-relaxed text-content-muted">
-        Safari no deja que una web se instale sola. Apple lo decidió así a
-        propósito, y estos son los dos toques que hacen lo mismo.
+        En el iPhone ninguna web puede instalarse sola: lo decidió Apple y vale
+        para todos los navegadores. Estos son los dos toques que hacen lo mismo.
       </p>
 
       <ol className="mx-auto mt-7 max-w-[380px] space-y-3">
         <li className="flex items-center gap-3.5 border border-line bg-fill-subtle/40 px-4 py-3.5">
           <Num>1</Num>
           <span className="min-w-0 flex-1 text-sub leading-snug text-content-secondary">
+            {/* Not "Safari's bottom bar": in Chrome on the same phone the
+                same button is at the top, and naming the wrong corner is worse
+                than naming none — it sends someone looking where it is not. */}
             Toca <Share /> <b className="text-paper">Compartir</b>, en la barra
-            de abajo de Safari.
+            de tu navegador.
           </span>
         </li>
 
