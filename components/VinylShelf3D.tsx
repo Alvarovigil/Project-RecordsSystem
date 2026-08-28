@@ -441,9 +441,13 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
          * above to keep the edges of the stack readable, and the second lamp
          * only fills the shadow it casts.
          */
-        ambient: 1.15,
-        light1X: 2.5,
-        light1Y: 9,
+        ambient: 0.75,
+        // From below and to the right, which is not where a lamp goes and is
+        // exactly why it works here: lighting a stack from above flattens the
+        // top edges into the covers, and grazing it from underneath is what
+        // separates one sleeve from the next.
+        light1X: 4.5,
+        light1Y: -12,
         light1Z: 8,
         light1Intensity: 1.5,
         light2X: -4,
@@ -531,7 +535,15 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   // Flat to the camera, the clearcoat highlight lands square in the middle of
   // the artwork; angled away on the rack it never does. So the pile gets a
   // duller finish — matte sleeve rather than gallery glass.
-  const coverRoughness = rig?.coverRoughness ?? (vertical ? 0.62 : 0.35);
+  /**
+   * Glossy on the phone, satin on the desktop.
+   *
+   * The matte finish was a guess made to stop the covers blowing out; the real
+   * cause was the exposure, and once that came down the sleeves could be as
+   * shiny as the laminate they are printed on. Tuned on the device, with
+   * ?luces=1.
+   */
+  const coverRoughness = rig?.coverRoughness ?? (vertical ? 0 : 0.35);
   const coverMetalness = vertical ? 0 : 0.05;
   const cardboardRoughness = 0.9;
   // A real LP sleeve is about 5mm across a 315mm face — roughly 1 in 63. This
@@ -754,7 +766,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
         dpr={ambient ? 1 : [1, 1.5]}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: rig?.exposure ?? (vertical ? 0.98 : 1.2),
+          toneMappingExposure: rig?.exposure ?? (vertical ? 0.64 : 1.2),
           powerPreference: "high-performance",
           antialias: true,
         }}
@@ -771,7 +783,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
         <color attach="background" args={["#0a0a0a"]} />
         {/* the gl prop only lands when the context is created, so exposure has
             to be pushed in again whenever it changes */}
-        <Exposure value={rig?.exposure ?? (vertical ? 0.98 : 1.2)} />
+        <Exposure value={rig?.exposure ?? (vertical ? 0.64 : 1.2)} />
         <FogRig openProgressRef={openProgress} near={fogNear} far={fogFar} />
         <ambientLight intensity={lights.ambient} />
         <AnimatedLight

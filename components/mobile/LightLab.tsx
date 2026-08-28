@@ -27,17 +27,17 @@ import type { LightRig } from "@/components/VinylShelf3D";
  */
 
 export const DEFAULT_RIG: LightRig = {
-  ambient: 1.15,
-  keyX: 2.5,
-  keyY: 9,
+  ambient: 0.75,
+  keyX: 4.5,
+  keyY: -12,
   keyZ: 8,
   keyIntensity: 1.5,
   fillX: -4,
   fillY: 5,
   fillZ: 10,
   fillIntensity: 0.9,
-  exposure: 0.98,
-  coverRoughness: 0.62,
+  exposure: 0.64,
+  coverRoughness: 0,
 };
 
 type Control = { key: keyof LightRig; label: string; min: number; max: number; step: number };
