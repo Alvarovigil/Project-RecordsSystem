@@ -167,10 +167,20 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   // lists made by other people that you follow: shown apart in the panel
   const repo = useRepository();
   const [followed, setFollowed] = useState<ListWithRecord[]>([]);
+  // the covers that let a kept list wear the same row as one of your own
+  const [followedCovers, setFollowedCovers] = useState<Record<string, string[]>>({});
   const loadFollowed = useCallback(() => {
     repo
       .followedLists()
-      .then(setFollowed)
+      .then((all) => {
+        setFollowed(all);
+        if (all.length) {
+          repo
+            .coversOfLists(all.map((l) => l.id))
+            .then(setFollowedCovers)
+            .catch(() => {});
+        }
+      })
       .catch(() => setFollowed([]));
   }, [repo]);
   useEffect(loadFollowed, [loadFollowed]);
@@ -1094,6 +1104,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         }}
         visibilityOf={(id) => lib.lists.find((l) => l.id === id)?.visibility ?? "public"}
         followed={followed}
+        followedCovers={followedCovers}
         onOpenFollowed={(l: ListWithRecord) => void openForeign(l as SavedList)}
         onUnfollowList={(id) => {
           setFollowed((prev) => prev.filter((l) => l.id !== id));

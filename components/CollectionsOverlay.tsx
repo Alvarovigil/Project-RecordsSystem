@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 
-import { useEffect, useMemo, useState } from "react";
-import ConfirmButton, { UnsaveIcon } from "@/components/ui/ConfirmButton";
+import { useEffect, useMemo, useRef, useState } from "react";
+import ListHoverCard from "@/components/community/ListHoverCard";
 import { type Collection, type SortMode, SORT_LABELS, sortedVinylIds } from "@/lib/collections";
+import Avatar from "@/components/ui/Avatar";
 import type { ListVisibility, ListWithRecord } from "@/lib/data/types";
 
 /** Predefined lists are told apart by what they are, not by their id. */
@@ -29,6 +30,8 @@ type Props = {
   onSetVisibility: (collectionId: string, visibility: ListVisibility) => void;
   /** lists made by other people that you follow */
   followed: ListWithRecord[];
+  /** up to a few cover URLs per kept list, so its row looks like your own */
+  followedCovers: Record<string, string[]>;
   onUnfollowList: (listId: string) => void;
   /** open a kept list on this shelf instead of navigating away from it */
   onOpenFollowed: (list: ListWithRecord) => void;
@@ -83,6 +86,7 @@ export default function CollectionsOverlay({
   onReorder,
   onSetVisibility,
   followed,
+  followedCovers,
   onUnfollowList,
   onOpenFollowed,
   visibilityOf,
@@ -93,6 +97,22 @@ export default function CollectionsOverlay({
   const [newName, setNewName] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [renameId, setRenameId] = useState<string | null>(null);
+  /**
+   * The hover card waits half a second before it exists.
+   *
+   * Without the delay it fires on the way past — you cross three rows reaching
+   * for a fourth and three panels flash at you. Half a second is long enough to
+   * separate "passing over" from "looking at", and short enough that nobody
+   * experiences it as waiting.
+   */
+  const [hovered, setHovered] = useState<{ list: ListWithRecord; el: HTMLElement } | null>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout>>();
+  const arm = (list: ListWithRecord, el: HTMLElement) => {
+    clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => setHovered({ list, el }), 500);
+  };
+  const disarm = () => clearTimeout(hoverTimer.current);
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
   const [listFilter, setListFilter] = useState("");
 
   useEffect(() => {
@@ -429,61 +449,55 @@ export default function CollectionsOverlay({
                     </span>
                   </div>
                   <ul className="flex flex-col gap-1 px-3 py-3">
-                    {followed.map((l) => (
-                      <li key={l.id} className="group relative">
-                        <button
-                          onClick={() => {
-                            onOpenFollowed(l);
-                            onClose();
-                          }}
-                          className="flex w-full items-center gap-3 rounded-md border border-dashed border-paper/[0.12] px-3 py-2.5 text-left transition hover:border-paper/25 hover:bg-paper/[0.04]"
-                        >
-                          {/* The owner's face, with a mark on it.
-                              Down a column of lists an avatar alone reads as
-                              decoration — you notice the picture, not that the
-                              list belongs to somebody. The badge is small, sits
-                              where a notification dot would, and carries the
-                              one fact that matters here: this shelf is not
-                              yours. */}
-                          <span className="relative shrink-0">
-                            <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-paper/[0.06] mono text-[9px] text-paper/50">
-                              {l.owner.avatarUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={l.owner.avatarUrl} alt="" className="h-full w-full object-cover" />
-                              ) : (
-                                l.owner.displayName.slice(0, 2).toUpperCase()
-                              )}
+                    {followed.map((l) => {
+                      const covers = followedCovers[l.id] ?? [];
+                      return (
+                        <li key={l.id}>
+                          {/* Exactly the row an owned list gets — same square,
+                              same type, same weight — because in your
+                              collection that is what it is: a shelf you can
+                              open. What makes it not yours is one small face on
+                              the corner of the cover, and everything else moves
+                              into the card that appears when you dwell on it. */}
+                          <button
+                            onClick={() => {
+                              onOpenFollowed(l);
+                              onClose();
+                            }}
+                            onMouseEnter={(e) => arm(l, e.currentTarget)}
+                            onMouseLeave={disarm}
+                            className="flex w-full items-center gap-3 rounded-md bg-paper/[0.03] px-3 py-2.5 text-left transition hover:bg-paper/[0.07]"
+                          >
+                            <span className="relative shrink-0">
+                              <span className="flex h-9 w-9 overflow-hidden rounded-sm bg-paper/[0.06]">
+                                {covers[0] && (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={covers[0]} alt="" className="h-full w-full object-cover" />
+                                )}
+                              </span>
+                              <span
+                                title={`Lista de ${l.owner.displayName}`}
+                                className="absolute -bottom-1 -right-1 rounded-full ring-2 ring-[#0d0d0d]"
+                              >
+                                <Avatar
+                                  name={l.owner.displayName}
+                                  handle={l.owner.username}
+                                  src={l.owner.avatarUrl}
+                                  size="xs"
+                                />
+                              </span>
                             </span>
-                            <span
-                              title={`Lista de ${l.owner.displayName}`}
-                              className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#151515] ring-[1.5px] ring-ink"
-                            >
-                              <svg width="9" height="9" viewBox="0 0 20 20" fill="none" aria-hidden className="text-paper/70">
-                                <circle cx="10" cy="6.6" r="3" stroke="currentColor" strokeWidth="2" />
-                                <path d="M4.2 16.6 C4.8 13.5 7.1 11.8 10 11.8 C12.9 11.8 15.2 13.5 15.8 16.6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                              </svg>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[14px] text-paper">{l.title}</span>
+                              <span className="mt-0.5 block truncate text-[11px] text-paper/40">
+                                {l.itemCount} {l.itemCount === 1 ? "disco" : "discos"} · de{" "}
+                                {l.owner.displayName}
+                              </span>
                             </span>
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[14px] text-paper/90">{l.title}</span>
-                            <span className="mono mt-0.5 block truncate text-[10px] uppercase tracking-[0.16em] text-paper/35">
-                              de {l.owner.displayName} · {l.itemCount} discos
-                            </span>
-                          </span>
-                        </button>
-                        {/* "Dejar" on its own said neither what it acted on
-                            nor what would happen. An icon carries the object,
-                            and the second press carries the decision. */}
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                          <ConfirmButton
-                            icon={<UnsaveIcon />}
-                            label={`Dejar de guardar «${l.title}»`}
-                            confirmLabel="Quitar"
-                            onConfirm={() => onUnfollowList(l.id)}
-                          />
-                        </div>
-                      </li>
-                    ))}
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </>
               )}
@@ -521,6 +535,19 @@ export default function CollectionsOverlay({
           )}
         </div>
       </aside>
+
+      {/* Everything a kept list is that yours is not: whose it is, whether you
+          follow them, and how to stop keeping it. Out of the row, so the row
+          can be a row. */}
+      {hovered && (
+        <ListHoverCard
+          list={hovered.list}
+          anchor={hovered.el}
+          count={hovered.list.itemCount}
+          onUnfollow={() => onUnfollowList(hovered.list.id)}
+          onClose={() => setHovered(null)}
+        />
+      )}
     </>
   );
 }
