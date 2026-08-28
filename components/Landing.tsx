@@ -280,7 +280,12 @@ function Backdrop() {
       </div>
       <div className="absolute inset-0 bg-gradient-to-t from-ink from-[14%] via-ink/55 via-[52%] to-transparent" />
       <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-ink/80 to-transparent" />
-      <div className="absolute left-1/2 top-[8vh] h-[380px] w-[620px] -translate-x-1/2 rounded-full bg-[#f83a23]/[0.06] blur-[130px]" />
+      {/* There was a red bloom behind the wordmark here — the accent colour,
+          at 6%, blurred across 620px. The accent earns its keep by being rare
+          and by meaning something: it marks what is live or unread. Spent as
+          atmosphere behind a logo it stops being a signal and starts being a
+          tint, and it warmed the whole page off the near-black everything else
+          is built on. */}
       <Grain />
     </div>
   );
