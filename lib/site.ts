@@ -51,15 +51,16 @@ export const SITE_URL =
 export const SITE_NAME = "Rackr Club";
 
 /**
- * The name that fits under an icon.
+ * The name under the icon.
  *
- * iOS gives a home-screen label about eleven characters before it truncates,
- * and "Rackr Club" is ten — it fits, but only just, and a name that might
- * become "Rackr Cl…" on a wide font is not a name. The full one goes wherever
- * there is room: the install dialogue, the tab, the cards people share. This
- * one goes under the icon, where it is the app's face and has to be certain.
+ * The same one, deliberately. iOS truncates a home-screen label at around
+ * eleven characters and "Rackr Club" is ten, so it fits — with nothing to
+ * spare, which is the risk taken here on purpose: an icon that says something
+ * different from the app it opens is a worse problem than an ellipsis on an
+ * unusually wide font. It stays a separate constant because it is a separate
+ * decision, and the day a longer name arrives this is where it gets shortened.
  */
-export const SITE_SHORT_NAME = "Rackr";
+export const SITE_SHORT_NAME = "Rackr Club";
 
 /**
  * In English, on purpose, and the only line in the product that is.
