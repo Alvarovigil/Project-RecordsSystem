@@ -106,13 +106,43 @@ export default function CollectionsOverlay({
    * experiences it as waiting.
    */
   const [hovered, setHovered] = useState<{ list: ListWithRecord; el: HTMLElement } | null>(null);
-  const hoverTimer = useRef<ReturnType<typeof setTimeout>>();
+  const openTimer = useRef<ReturnType<typeof setTimeout>>();
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  /** dwell on a row and the card appears; move on and it is gone */
   const arm = (list: ListWithRecord, el: HTMLElement) => {
-    clearTimeout(hoverTimer.current);
-    hoverTimer.current = setTimeout(() => setHovered({ list, el }), 500);
+    clearTimeout(closeTimer.current);
+    clearTimeout(openTimer.current);
+    openTimer.current = setTimeout(() => setHovered({ list, el }), 500);
   };
-  const disarm = () => clearTimeout(hoverTimer.current);
-  useEffect(() => () => clearTimeout(hoverTimer.current), []);
+
+  /**
+   * Leaving closes it, with just enough of a bridge to cross the gap.
+   *
+   * Closing on the exact frame the pointer leaves the row would make the card
+   * unreachable — there are ten pixels between them, and crossing those pixels
+   * means having left. 120ms is below the threshold anyone perceives as a
+   * delay, and entering the card cancels it outright.
+   */
+  const disarm = () => {
+    clearTimeout(openTimer.current);
+    closeTimer.current = setTimeout(() => setHovered(null), 120);
+  };
+
+  const keepOpen = () => clearTimeout(closeTimer.current);
+  const closeNow = () => {
+    clearTimeout(openTimer.current);
+    clearTimeout(closeTimer.current);
+    setHovered(null);
+  };
+
+  useEffect(
+    () => () => {
+      clearTimeout(openTimer.current);
+      clearTimeout(closeTimer.current);
+    },
+    [],
+  );
   const [listFilter, setListFilter] = useState("");
 
   useEffect(() => {
@@ -545,7 +575,8 @@ export default function CollectionsOverlay({
           anchor={hovered.el}
           count={hovered.list.itemCount}
           onUnfollow={() => onUnfollowList(hovered.list.id)}
-          onClose={() => setHovered(null)}
+          onEnter={keepOpen}
+          onClose={closeNow}
         />
       )}
     </>

@@ -29,12 +29,15 @@ export default function ListHoverCard({
   anchor,
   count,
   onUnfollow,
+  onEnter,
   onClose,
 }: {
   list: ListWithRecord;
   anchor: HTMLElement | null;
   count: number;
   onUnfollow: () => void;
+  /** the pointer made it across the gap — cancel the pending close */
+  onEnter: () => void;
   onClose: () => void;
 }) {
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
@@ -67,7 +70,7 @@ export default function ListHoverCard({
       ref={ref}
       // staying inside keeps it open: an action you have to reach for must not
       // disappear on the way there
-      onMouseEnter={() => {}}
+      onMouseEnter={onEnter}
       onMouseLeave={onClose}
       style={{ top: pos.top, left: pos.left, width: W }}
       className="fixed z-[80] rounded-lg border border-line-strong bg-surface-overlay/95 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl"
