@@ -1117,6 +1117,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           void repo.setListVisibility(id, visibility).then(() => void lib.refresh());
         }}
         visibilityOf={(id) => lib.lists.find((l) => l.id === id)?.visibility ?? "public"}
+        myId={myProfileId}
         followed={followed}
         followedCovers={followedCovers}
         onOpenFollowed={(l: ListWithRecord) => void openForeign(l as SavedList)}

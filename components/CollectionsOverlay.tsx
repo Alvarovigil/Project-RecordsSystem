@@ -4,7 +4,12 @@ import Link from "next/link";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import ListHoverCard from "@/components/community/ListHoverCard";
+import SharedMark from "@/components/ui/SharedMark";
+import { useRepository } from "@/hooks/useRepository";
+import type { Collaborator } from "@/lib/data/types";
+import CollaboratorsSheet from "@/components/community/CollaboratorsSheet";
 import { type Collection, type SortMode, SORT_LABELS, sortedVinylIds } from "@/lib/collections";
+import { coverFor } from "@/lib/cover";
 import Avatar from "@/components/ui/Avatar";
 import type { ListVisibility, ListWithRecord } from "@/lib/data/types";
 
@@ -36,6 +41,8 @@ type Props = {
   /** open a kept list on this shelf instead of navigating away from it */
   onOpenFollowed: (list: ListWithRecord) => void;
   visibilityOf: (collectionId: string) => ListVisibility;
+  /** who you are, so an invitation knows who is sending it */
+  myId: string;
   /** the preview shows what lists are, without letting you dismantle them */
   preview?: boolean;
   allVinilos: Vinyl[];
@@ -90,6 +97,7 @@ export default function CollectionsOverlay({
   onUnfollowList,
   onOpenFollowed,
   visibilityOf,
+  myId,
   allVinilos,
   preview = false,
 }: Props) {
@@ -106,6 +114,28 @@ export default function CollectionsOverlay({
    * experiences it as waiting.
    */
   const [hovered, setHovered] = useState<{ list: ListWithRecord; el: HTMLElement } | null>(null);
+  /** the list whose collaborators are open, if any */
+  const [sharingId, setSharingId] = useState<string | null>(null);
+
+  /**
+   * Who else can write in the list on screen.
+   *
+   * Asked for per list rather than for all of them: a shelf with twenty lists
+   * would otherwise open twenty requests to answer a question about one.
+   */
+  const repo = useRepository();
+  const [sharedWith, setSharedWith] = useState<Collaborator[]>([]);
+  useEffect(() => {
+    if (!open || !activeId) return setSharedWith([]);
+    let alive = true;
+    repo
+      .collaboratorsOf(activeId)
+      .then((all) => alive && setSharedWith(all.filter((c) => c.role !== "owner")))
+      .catch(() => alive && setSharedWith([]));
+    return () => {
+      alive = false;
+    };
+  }, [repo, open, activeId, sharingId]);
   const openTimer = useRef<ReturnType<typeof setTimeout>>();
   const closeTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -218,6 +248,8 @@ export default function CollectionsOverlay({
               isLibrary={kindOf(collections, editing.id) === "collection"}
               visibility={visibilityOf(editing.id)}
               preview={preview}
+              onShare={() => setSharingId(editing.id)}
+              sharedCount={sharedWith.length}
               onSetVisibility={onSetVisibility}
               onRename={onRename}
               onToggleVinyl={onToggleVinyl}
@@ -281,21 +313,62 @@ export default function CollectionsOverlay({
                       {activeStats.decades && (
                         <Row label="Décadas" value={activeStats.decades} />
                       )}
+                      {/* Who else is in it, in the same table as everything
+                          else true about this list — and as faces, because
+                          "2 colaboradores" is a number you then have to go and
+                          look up. */}
+                      {sharedWith.length > 0 && (
+                        <div className="flex items-baseline justify-between gap-4 border-b border-paper/[0.06] py-2">
+                          <dt className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
+                            Compartida con
+                          </dt>
+                          <dd className="flex flex-wrap items-center justify-end gap-1.5">
+                            {sharedWith.map((c) => (
+                              <span
+                                key={c.profile.id}
+                                className={`flex items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-2 text-[11px] ${
+                                  c.pending
+                                    ? "bg-paper/[0.04] text-paper/40"
+                                    : "bg-paper/[0.08] text-paper/80"
+                                }`}
+                                title={c.pending ? "Invitación pendiente" : undefined}
+                              >
+                                <Avatar
+                                  name={c.profile.displayName}
+                                  handle={c.profile.username}
+                                  src={c.profile.avatarUrl}
+                                  size="xs"
+                                />
+                                {c.profile.displayName}
+                                {c.pending && " ·"}
+                              </span>
+                            ))}
+                          </dd>
+                        </div>
+                      )}
                     </dl>
+                  )}
+
+                  {/* Who is in it, when there is more than one of you. */}
+                  {active.sharedBy && (
+                    <p className="mt-4 flex items-center gap-2 text-[12px] text-paper/45">
+                      <SharedMark title={`Compartida por ${active.sharedBy.displayName}`} />
+                      Compartida por {active.sharedBy.displayName}
+                    </p>
                   )}
 
                   {/* action row */}
                   <div className="mt-5 flex items-center gap-2 rounded-md border border-paper/[0.06] p-2">
                     <button
                       onClick={() => setEditId(active.id)}
-                      className="flex-1 text-[12px] py-1.5 px-3 rounded-control bg-paper/5 hover:bg-paper/10 text-paper transition"
+                      className="flex-1 rounded-control bg-paper/5 px-3 py-1.5 text-[12px] text-paper transition hover:bg-paper/10"
                     >
-                      Editar discos →
+                      Editar lista →
                     </button>
                     {!isPrimaryIn(collections, active.id) && (
                       <button
                         onClick={() => setRenaming(true)}
-                        className="text-[12px] py-1.5 px-3 rounded-control hover:bg-paper/5 text-paper/70 hover:text-paper transition"
+                        className="rounded-control px-3 py-1.5 text-[12px] text-paper/70 transition hover:bg-paper/5 hover:text-paper"
                       >
                         Renombrar
                       </button>
@@ -305,12 +378,13 @@ export default function CollectionsOverlay({
                         onClick={() => {
                           if (confirm(`Eliminar "${active.name}"?`)) onDelete(active.id);
                         }}
-                        className="text-[12px] py-1.5 px-3 rounded-control hover:bg-red-500/10 text-paper/35 hover:text-red-400 transition"
+                        className="rounded-control px-3 py-1.5 text-[12px] text-paper/35 transition hover:bg-red-500/10 hover:text-red-400"
                       >
                         Borrar
                       </button>
                     )}
                   </div>
+
                 </section>
               )}
 
@@ -576,6 +650,17 @@ export default function CollectionsOverlay({
       {/* Everything a kept list is that yours is not: whose it is, whether you
           follow them, and how to stop keeping it. Out of the row, so the row
           can be a row. */}
+      {/* Sharing lives in the same panel now, one press from the list it is
+          about — not on a different screen behind a different button. */}
+      <CollaboratorsSheet
+        open={Boolean(sharingId)}
+        onClose={() => setSharingId(null)}
+        listId={sharingId ?? ""}
+        listTitle={collections.find((c) => c.id === sharingId)?.name ?? ""}
+        isOwner
+        myId={myId}
+      />
+
       {hovered && (
         <ListHoverCard
           list={hovered.list}
@@ -635,6 +720,8 @@ function EditPanel({
   isPrimary,
   isLibrary,
   visibility,
+  onShare,
+  sharedCount,
   onSetVisibility,
   onRename,
   onToggleVinyl,
@@ -649,6 +736,10 @@ function EditPanel({
   /** Mi Colección is the library itself: taking a record out means deleting it */
   isLibrary: boolean;
   visibility: ListVisibility;
+  /** open the collaborators sheet for this list */
+  onShare: () => void;
+  /** how many people are already in it, pending included */
+  sharedCount: number;
   onSetVisibility: (collectionId: string, visibility: ListVisibility) => void;
   onRename: (id: string, name: string) => void;
   onToggleVinyl: (collectionId: string, vinylId: string) => void;
@@ -713,6 +804,24 @@ function EditPanel({
             ))}
           </div>
         </div>
+
+        {/* Sharing sits with sort and visibility because it is the same kind
+            of fact: something true about the list rather than about a record
+            in it. It was on a different screen behind a different button,
+            which is why nobody found it. */}
+        {!isPrimary && (
+          <div className="flex items-center justify-between gap-4 border-b border-paper/[0.06] py-3">
+            <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
+              Compartida con
+            </span>
+            <button
+              onClick={onShare}
+              className="text-[13px] text-paper/70 transition hover:text-paper"
+            >
+              {sharedCount > 0 ? `${sharedCount} · Gestionar →` : "Invitar →"}
+            </button>
+          </div>
+        )}
 
         <div className="flex items-center justify-between gap-4 py-3">
           <label
@@ -804,7 +913,18 @@ function EditPanel({
                     ⋮⋮
                   </span>
                 )}
-                <span className="flex-1 min-w-0 text-[12px] truncate">
+                {/* A record is a picture with a name on it. Editing a list by
+                    reading two columns of type is proofreading; with the
+                    sleeve there you recognise what you are about to remove
+                    before you have finished reading its title. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={coverFor(v)}
+                  alt=""
+                  loading="lazy"
+                  className="h-8 w-8 shrink-0 rounded-[2px] object-cover"
+                />
+                <span className="min-w-0 flex-1 truncate text-[12px]">
                   <span className="text-paper">{v.title}</span>
                   <span className="ml-2 text-paper/40">{v.artist}</span>
                   {v.year ? <span className="ml-2 text-paper/25">{v.year}</span> : null}
@@ -852,12 +972,24 @@ function EditPanel({
                 <li key={v.id}>
                   <button
                     onClick={() => onToggleVinyl(editing.id, v.id)}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-left text-[12px] rounded-control text-paper/55 hover:bg-paper/[0.04] transition"
+                    className="group/add flex w-full items-center gap-2 rounded-control px-3 py-2 text-left text-[12px] text-paper/55 transition hover:bg-paper/[0.04]"
                   >
-                    <span className="h-1.5 w-1.5 rounded-full border border-paper/25" />
-                    <span className="truncate flex-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={coverFor(v)}
+                      alt=""
+                      loading="lazy"
+                      className="h-8 w-8 shrink-0 rounded-[2px] object-cover opacity-60 transition group-hover/add:opacity-100"
+                    />
+                    <span className="min-w-0 flex-1 truncate">
                       <span className="text-paper">{v.title}</span>
                       <span className="ml-2 text-paper/40">{v.artist}</span>
+                    </span>
+                    <span
+                      aria-hidden
+                      className="shrink-0 text-[13px] text-paper/25 transition group-hover/add:text-paper"
+                    >
+                      +
                     </span>
                   </button>
                 </li>
