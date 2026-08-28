@@ -172,12 +172,17 @@ export default function ExploreView() {
   const show = (s: Scope) => scope === "all" || scope === s;
 
   return (
-    <Page width={980}>
+    <Page width="full">
       <PageHeader title="Explorar" subtitle="Discos, listas y gente que colecciona." />
 
       {/* the field is the screen; everything under it answers to it */}
-      <div className="sticky top-0 z-20 -mx-5 bg-surface/95 px-5 pb-3 pt-1 backdrop-blur-sm sm:-mx-6 sm:px-6">
-        <div className="relative">
+      <div className="sticky top-0 z-20 -mx-5 bg-surface/95 px-5 pb-3 pt-1 backdrop-blur-sm sm:-mx-8 sm:px-8">
+        {/* The page runs edge to edge; the field does not.
+            Stretched across a full-width page it became a 1900px box for a
+            twenty-character query, and its clear button ended up a screen away
+            from the text it clears. A search field wants the measure of what
+            gets typed into it, not the measure of the page. */}
+        <div className="relative max-w-[680px]">
           <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-content-faint">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
               <circle cx="7" cy="7" r="4.8" stroke="currentColor" strokeWidth="1.3" />
@@ -214,7 +219,7 @@ export default function ExploreView() {
         </div>
 
         {searching && (
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-3 max-w-[680px] overflow-x-auto">
             <Segmented
               size="sm"
               value={scope}
@@ -263,7 +268,7 @@ export default function ExploreView() {
             {loading && lists.length === 0 ? (
               <CoverGridSkeleton count={8} />
             ) : (
-              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
                 {lists.slice(0, 8).map((l) => (
                   <li key={l.id}>
                     <ListCard list={l} covers={coversOf(l)} />
@@ -274,7 +279,8 @@ export default function ExploreView() {
           </Section>
 
           <Section title="Gente que colecciona">
-            <ul className="divide-y divide-line">
+            {/* people in columns for the same reason */}
+            <ul className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3 [&>li]:border-b [&>li]:border-line">
               {people.slice(0, 8).map((p) => (
                 <li key={p.id}>
                   <PersonRow profile={p} subtitle={p.bio || `@${p.username}`} />
@@ -299,7 +305,7 @@ export default function ExploreView() {
             <div className="space-y-9">
               {show("records") && records.length > 0 && (
                 <ResultBlock title="En tu colección" onAll={() => setScope("records")} showAll={scope === "all"}>
-                  <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+                  <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
                     {(scope === "all" ? records.slice(0, 6) : records).map((v) => (
                       <li key={v.id}>
                         <Link
@@ -328,8 +334,10 @@ export default function ExploreView() {
                   onAll={() => setScope("records")}
                   showAll={scope === "all"}
                 >
-                  <ul className="divide-y divide-line">
-                    {(scope === "all" ? addable.slice(0, 4) : addable.slice(0, 20)).map((r) => {
+                  {/* rows in columns once there is room: a single file of them
+                      across a full-width page is mostly empty space */}
+                  <ul className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3 [&>li]:border-b [&>li]:border-line">
+                    {(scope === "all" ? addable.slice(0, 6) : addable.slice(0, 24)).map((r) => {
                       const done = Boolean(catalogue.savedIn[`d${r.id}`]);
                       return (
                         <li key={r.id} className="flex items-center gap-3 py-3">
@@ -385,7 +393,7 @@ export default function ExploreView() {
 
               {show("lists") && lists.length > 0 && (
                 <ResultBlock title="Listas" onAll={() => setScope("lists")} showAll={scope === "all"}>
-                  <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                  <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
                     {(scope === "all" ? lists.slice(0, 4) : lists).map((l) => (
                       <li key={l.id}>
                         <ListCard list={l} covers={coversOf(l)} />
@@ -397,7 +405,7 @@ export default function ExploreView() {
 
               {show("people") && people.length > 0 && (
                 <ResultBlock title="Gente" onAll={() => setScope("people")} showAll={scope === "all"}>
-                  <ul className="divide-y divide-line">
+                  <ul className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3 [&>li]:border-b [&>li]:border-line">
                     {(scope === "all" ? people.slice(0, 4) : people).map((p) => (
                       <li key={p.id}>
                         <PersonRow profile={p} subtitle={p.bio || `@${p.username}`} />

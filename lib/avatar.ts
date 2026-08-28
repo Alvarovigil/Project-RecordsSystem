@@ -7,8 +7,8 @@
  * still localStorage — instantly over quota.
  *
  * So it is resized here, in the browser, before it goes anywhere. Square, cover
- * cropped from the centre, 256 px (2× the largest place it appears), JPEG at
- * 0.82 — the point where the artefacts stop being visible at this size.
+ * cropped from the centre, 192 px (2× the largest place it appears), JPEG at
+ * 0.8 — the point where the artefacts stop being visible at this size.
  *
  * The centre crop is a real decision and it can be wrong. It is right often
  * enough that offering a crop tool as the *default* step would cost everyone
@@ -16,8 +16,16 @@
  * later, not a mandatory editor now.
  */
 
-const SIZE = 256;
-const QUALITY = 0.82;
+/**
+ * 192 and not 256.
+ *
+ * Until there is a storage bucket the result is a data URL living in the
+ * profile row, which means it travels with every list of people the app ever
+ * renders. At 192 the file is roughly half the size and still twice the
+ * largest place an avatar is drawn.
+ */
+const SIZE = 192;
+const QUALITY = 0.8;
 
 export async function fileToAvatar(file: File): Promise<string> {
   if (!file.type.startsWith("image/")) {

@@ -48,7 +48,7 @@ export default function FeedView() {
   const groups = groupByActorAndList(entries ?? []);
 
   return (
-    <Page width={760}>
+    <Page width="full">
       <PageHeader title="Feed" subtitle="Lo que se mueve alrededor de tu colección." />
 
       <Segmented
@@ -84,7 +84,10 @@ export default function FeedView() {
                         size="sm"
                       />
                     </Link>
-                    <p className="min-w-0 flex-1 text-sub leading-snug text-content-secondary">
+                    {/* the page runs edge to edge, the sentence does not: a
+                        line 1800px long is unreadable however much room there
+                        is for it */}
+                    <p className="min-w-0 flex-1 max-w-[78ch] text-sub leading-snug text-content-secondary">
                       <Link
                         href={`/u/${g.actor.username}`}
                         className="font-medium text-paper hover:underline"
@@ -105,8 +108,8 @@ export default function FeedView() {
 
                   {/* The records are the content, so they get the room. A feed
                       of text rows about an object nobody can see is a log. */}
-                  <ul className="mt-3 grid grid-cols-3 gap-2.5 pl-[42px] sm:grid-cols-5">
-                    {g.releases.slice(0, 5).map((r) => (
+                  <ul className="mt-3 grid grid-cols-3 gap-2.5 pl-[42px] sm:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
+                    {g.releases.slice(0, 12).map((r) => (
                       <li key={r.slug}>
                         <Cover src={r.cover} alt={r.title} />
                         <span className="mt-1.5 block truncate text-caption text-content-muted">
@@ -148,7 +151,7 @@ export default function FeedView() {
                     />
                   </Link>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sub leading-snug text-content-secondary">
+                    <p className="max-w-[78ch] text-sub leading-snug text-content-secondary">
                       <Link
                         href={`/u/${n.actor.username}`}
                         className="font-medium text-paper hover:underline"

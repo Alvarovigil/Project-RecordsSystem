@@ -406,6 +406,16 @@ html {
   }
 }
 
+/* WebKit puts its own clear button inside type="search", which lands on top of
+   ours: two X's, one of which does not match anything else in the interface.
+   Ours stays, because it is the one that is styled and the one that is sized
+   for a finger. */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 /* The crate opens a little when you point at it.
    Each sleeve rises by its own amount — the ones behind travel furthest — so
    the stack fans instead of sliding, and it staggers back to front so it reads

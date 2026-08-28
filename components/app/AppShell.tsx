@@ -55,14 +55,26 @@ export function Page({
   className = "",
 }: {
   children: React.ReactNode;
-  width?: number;
+  /**
+   * A reading measure, or "full" to run edge to edge.
+   *
+   * Most screens want a measure: a paragraph 1800px wide is unreadable however
+   * much room there is. The ones that are mostly grids of artwork want the
+   * opposite — a centred column there leaves the sides empty and makes a large
+   * display feel like a small one.
+   */
+  width?: number | "full";
   className?: string;
 }) {
+  const full = width === "full";
   return (
     <main className={`min-h-screen-d bg-surface text-paper ${className}`}>
       <div
-        className="mx-auto w-full px-5 pb-chrome pt-6 sm:px-6 sm:pt-10"
-        style={{ maxWidth: width, paddingTop: "max(1.5rem, var(--safe-top))" }}
+        className={`w-full pb-chrome ${full ? "px-5 sm:px-8" : "mx-auto px-5 sm:px-6"}`}
+        style={{
+          maxWidth: full ? undefined : width,
+          paddingTop: "max(1.5rem, var(--safe-top))",
+        }}
       >
         {children}
       </div>

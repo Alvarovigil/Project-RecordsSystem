@@ -6,6 +6,7 @@ import Sheet from "@/components/ui/Sheet";
 import Avatar from "@/components/ui/Avatar";
 import { useToast } from "@/components/ui/Toast";
 import { useRepository } from "@/hooks/useRepository";
+import { useSession } from "@/hooks/useSession";
 import { fileToAvatar } from "@/lib/avatar";
 import type { Profile } from "@/lib/data/types";
 
@@ -34,7 +35,14 @@ export default function EditProfileSheet({
   onSaved: (p: Profile) => void;
 }) {
   const repo = useRepository();
+  const { user } = useSession();
   const toast = useToast();
+  // the picture Google handed over at sign-in, still reachable after you have
+  // replaced it — changing your mind should not mean going to find it again
+  const googleAvatar =
+    (user?.user_metadata?.avatar_url as string | undefined) ??
+    (user?.user_metadata?.picture as string | undefined) ??
+    null;
   const [displayName, setDisplayName] = useState(profile.displayName);
   const [username, setUsername] = useState(profile.username);
   const [bio, setBio] = useState(profile.bio);
@@ -126,16 +134,31 @@ export default function EditProfileSheet({
             </span>
           </button>
           <div className="min-w-0 text-sub text-content-muted">
-            <p>Se recorta cuadrada desde el centro y se guarda a 256 px.</p>
-            {avatarUrl && (
-              <button
-                type="button"
-                onClick={() => setAvatarUrl(null)}
-                className="pressable mt-2 text-sub text-content-secondary underline-offset-4 hover:text-paper hover:underline"
-              >
-                Quitar la foto
-              </button>
-            )}
+            <p>
+              {avatarUrl && avatarUrl === googleAvatar
+                ? "Tu foto de Google."
+                : "Se recorta cuadrada desde el centro y se guarda pequeña."}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3">
+              {googleAvatar && avatarUrl !== googleAvatar && (
+                <button
+                  type="button"
+                  onClick={() => setAvatarUrl(googleAvatar)}
+                  className="pressable text-sub text-content-secondary underline-offset-4 hover:text-paper hover:underline"
+                >
+                  Usar la de Google
+                </button>
+              )}
+              {avatarUrl && (
+                <button
+                  type="button"
+                  onClick={() => setAvatarUrl(null)}
+                  className="pressable text-sub text-content-muted underline-offset-4 hover:text-paper hover:underline"
+                >
+                  Quitar la foto
+                </button>
+              )}
+            </div>
           </div>
           <input
             ref={fileRef}

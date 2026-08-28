@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getRepository, resetRepository } from "@/lib/data";
 import { migrateLocalLibrary, localLibraryMigrated, localLibrarySize } from "@/lib/migrate";
 import { useSession } from "@/hooks/useSession";
+import Avatar from "@/components/ui/Avatar";
+import { fileToAvatar } from "@/lib/avatar";
 
 const HANDLE_RULE = /^[a-z0-9_]{3,24}$/;
 
@@ -28,6 +30,21 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /**
+   * The photo Google handed over at sign-in, kept apart from the one in use.
+   *
+   * Signing up with Google already brings a picture — the trigger copies it —
+   * so the question here is not "give us a photo", it is "keep this one, or
+   * use another". Holding on to the original is what makes that reversible:
+   * upload something, change your mind, and the one you arrived with is still
+   * there. Ask people to re-find their own face and most will just leave it.
+   */
+  const googleAvatar =
+    (user?.user_metadata?.avatar_url as string | undefined) ??
+    (user?.user_metadata?.picture as string | undefined) ??
+    null;
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState(0);
 
   useEffect(() => {
@@ -45,6 +62,7 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
         if (!alive || !data || data.onboarded_at) return;
         setUsername(profile.username);
         setDisplayName(profile.displayName);
+        setAvatarUrl(profile.avatarUrl ?? googleAvatar);
         setPending(localLibraryMigrated() ? 0 : localLibrarySize());
         setStep("identity");
       });
@@ -79,7 +97,11 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
     setError(null);
     const { error } = await supabase!
       .from("profiles")
-      .update({ username: handle, display_name: displayName.trim() || handle })
+      .update({
+        username: handle,
+        display_name: displayName.trim() || handle,
+        avatar_url: avatarUrl,
+      })
       .eq("id", user.id);
     setBusy(false);
     if (error) {
@@ -115,8 +137,70 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
           <div className="px-6 py-6">
             <p className="text-[15px] text-paper">¿Con qué nombre te encuentran?</p>
             <p className="mt-1.5 text-[13px] text-paper/45">
-              Tu perfil vivirá en rackr.com/u/{username || "tu-nombre"}
+              Tu perfil vivirá en rackr.club/u/{username || "tu-nombre"}
             </p>
+
+            {/* The photo is a button, because the thing you want to press is
+                your own face — not a link labelled "upload" beside it. */}
+            <div className="mt-6 flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                aria-label="Cambiar la foto"
+                className="relative shrink-0 rounded-full transition hover:opacity-90"
+              >
+                <Avatar name={displayName || "?"} handle={username} src={avatarUrl} size="lg" />
+                <span className="absolute inset-0 flex items-end justify-center rounded-full bg-gradient-to-t from-ink/80 to-transparent pb-1.5 text-[10px] font-medium text-paper">
+                  Cambiar
+                </span>
+              </button>
+              <div className="min-w-0 text-[12px] leading-relaxed text-paper/45">
+                {avatarUrl && avatarUrl === googleAvatar ? (
+                  <p>Tu foto de Google. Puedes dejarla o subir otra.</p>
+                ) : avatarUrl ? (
+                  <p>Se recorta cuadrada y se guarda pequeña.</p>
+                ) : (
+                  <p>Sin foto se usan tus iniciales, que también está bien.</p>
+                )}
+                <div className="mt-1.5 flex gap-3">
+                  {googleAvatar && avatarUrl !== googleAvatar && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatarUrl(googleAvatar)}
+                      className="text-paper/70 underline-offset-4 transition hover:text-paper hover:underline"
+                    >
+                      Usar la de Google
+                    </button>
+                  )}
+                  {avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setAvatarUrl(null)}
+                      className="text-paper/45 underline-offset-4 transition hover:text-paper hover:underline"
+                    >
+                      Quitar
+                    </button>
+                  )}
+                </div>
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = ""; // so picking the same file twice still fires
+                  if (!file) return;
+                  try {
+                    setAvatarUrl(await fileToAvatar(file));
+                    setError(null);
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : "No se pudo leer la imagen.");
+                  }
+                }}
+              />
+            </div>
 
             <label className="mono mt-6 block text-[10px] uppercase tracking-[0.2em] text-paper/40">
               Usuario
