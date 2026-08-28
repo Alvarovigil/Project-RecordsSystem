@@ -77,7 +77,7 @@ export default function Landing() {
            */}
           <Link
             href="/coleccion"
-            className="pressable inline-flex h-11 items-center rounded-full bg-paper px-6 text-[13px] font-medium uppercase tracking-[0.08em] text-ink transition hover:bg-paper/90"
+            className="pressable inline-flex h-9 items-center rounded-full bg-paper px-4 text-[12px] font-medium uppercase tracking-[0.07em] text-ink transition hover:bg-paper/90"
           >
             Empezar gratis
           </Link>
