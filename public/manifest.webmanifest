@@ -1,7 +1,7 @@
 {
-  "name": "Rackr",
+  "name": "Rackr Club",
   "short_name": "Rackr",
-  "description": "Tu colección de vinilos, y la gente que colecciona contigo.",
+  "description": "Tu colección de vinilos, más allá de la estantería. Organiza, descubre y comparte tu colección con el club.",
   "start_url": "/coleccion",
   "scope": "/",
   "display": "standalone",
@@ -9,16 +9,50 @@
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
   "lang": "es",
-  "categories": ["music", "social", "lifestyle"],
+  "categories": [
+    "music",
+    "social",
+    "lifestyle"
+  ],
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "/apple-icon.png", "sizes": "180x180", "type": "image/png" }
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
   ],
   "shortcuts": [
-    { "name": "Buscar un disco", "url": "/explorar?buscar=1" },
-    { "name": "Actividad", "url": "/actividad" }
+    {
+      "name": "Buscar un disco",
+      "url": "/explorar?buscar=1"
+    },
+    {
+      "name": "Actividad",
+      "url": "/actividad"
+    }
   ]
 }

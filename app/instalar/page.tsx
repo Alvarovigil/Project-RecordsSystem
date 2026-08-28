@@ -2,7 +2,7 @@ import InstallCTA from "@/components/InstallCTA";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata = {
-  title: "Instalar Rackr",
+  title: "Instalar Rackr Club",
   description:
     "Tu colección de vinilos en la pantalla de inicio, sin tienda de aplicaciones.",
   alternates: { canonical: `${SITE_URL}/instalar` },

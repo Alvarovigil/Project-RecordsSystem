@@ -1,7 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
+import {
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_SHORT_NAME,
+  SITE_TAGLINE,
+  SITE_URL,
+} from "@/lib/site";
 
 const sans = Inter({
   subsets: ["latin"],
@@ -28,7 +34,8 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: SITE_NAME,
+    // the label under the icon on iOS: the short one, always
+    title: SITE_SHORT_NAME,
     // the status bar sits ON the page rather than above it, which is what
     // makes an installed app look like it owns the whole screen
     statusBarStyle: "black-translucent",

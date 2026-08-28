@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Button from "@/components/ui/Button";
+import { SITE_NAME } from "@/lib/site";
 
 /**
  * The page you send someone when you want them to end up with Rackr on their
@@ -91,7 +92,7 @@ export default function InstallCTA({ url }: { url: string }) {
   const share = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: "Rackr", url });
+        await navigator.share({ title: SITE_NAME, url });
         return;
       } catch {
         return;
@@ -142,7 +143,7 @@ export default function InstallCTA({ url }: { url: string }) {
                 void deferred?.prompt();
               }}
             >
-              Instalar Rackr
+              Instalar Rackr Club
             </Button>
           </Centered>
         ) : situation === "ios" ? (
@@ -155,7 +156,7 @@ export default function InstallCTA({ url }: { url: string }) {
         ) : (
           <Centered
             title="Ábrelo en el móvil"
-            body="Rackr se instala como una app en el teléfono. Mándate el enlace y ábrelo allí — o entra aquí, que en el escritorio funciona igual."
+            body="Rackr Club se instala como una app en el teléfono. Mándate el enlace y ábrelo allí — o entra aquí, que en el escritorio funciona igual."
           >
             <div className="flex flex-wrap justify-center gap-2.5">
               <Button variant="secondary" onClick={share}>

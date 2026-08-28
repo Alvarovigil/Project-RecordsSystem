@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import ListView from "@/components/community/ListView";
 import { getUserByHandle } from "@/lib/community";
 import { DEMO_PROFILE } from "@/lib/demo";
+import { SITE_NAME } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -13,14 +14,14 @@ export async function generateMetadata({
   params: { username: string; list: string };
 }) {
   const supabase = getSupabaseServerClient();
-  if (!supabase) return { title: "Rackr" };
+  if (!supabase) return { title: SITE_NAME };
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("id, display_name")
     .eq("username", params.username)
     .maybeSingle();
-  if (!profile) return { title: "Rackr" };
+  if (!profile) return { title: SITE_NAME };
 
   const { data: list } = await supabase
     .from("lists")
@@ -28,7 +29,7 @@ export async function generateMetadata({
     .eq("owner_id", profile.id)
     .eq("slug", params.list)
     .maybeSingle();
-  if (!list) return { title: "Rackr" };
+  if (!list) return { title: SITE_NAME };
 
   const description =
     list.description || `${list.item_count} discos en la colección de ${profile.display_name}.`;

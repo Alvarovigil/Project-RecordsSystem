@@ -48,7 +48,27 @@ export const SITE_URL =
   usable(host(process.env.VERCEL_URL)) ??
   LOCAL;
 
-export const SITE_NAME = "Rackr";
-export const SITE_TAGLINE = "Tu vida en discos";
+export const SITE_NAME = "Rackr Club";
+
+/**
+ * The name that fits under an icon.
+ *
+ * iOS gives a home-screen label about eleven characters before it truncates,
+ * and "Rackr Club" is ten — it fits, but only just, and a name that might
+ * become "Rackr Cl…" on a wide font is not a name. The full one goes wherever
+ * there is room: the install dialogue, the tab, the cards people share. This
+ * one goes under the icon, where it is the app's face and has to be certain.
+ */
+export const SITE_SHORT_NAME = "Rackr";
+
+/**
+ * In English, on purpose, and the only line in the product that is.
+ *
+ * It rides next to the name wherever the name appears — the tab, the shared
+ * card, the search result — so it works as part of the mark rather than as a
+ * sentence: "Rackr Club — Your records. Your people." The interface stays in
+ * Spanish because that is who uses it; a strapline is signage, not copy.
+ */
+export const SITE_TAGLINE = "Your records. Your people.";
 export const SITE_DESCRIPTION =
-  "Cataloga los vinilos que tienes, apunta los que te faltan y mira lo que guardan los demás. Sin anuncios y sin recomendaciones automáticas.";
+  "Tu colección de vinilos, más allá de la estantería. Organiza, descubre y comparte tu colección con el club.";

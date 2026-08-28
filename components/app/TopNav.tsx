@@ -97,7 +97,7 @@ export default function TopNav({
         <div className="flex min-w-0 items-baseline gap-2.5">
           <Link
             href={preview ? "/demo" : "/coleccion"}
-            aria-label="Rackr"
+            aria-label="Rackr Club"
             className="shrink-0 transition hover:opacity-100"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
