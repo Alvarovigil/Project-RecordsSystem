@@ -189,26 +189,26 @@ export default function ExploreView() {
 
   return (
     <Page width="full">
-      {/* On a wide screen the field rides up beside the title: the page is
-          1900px of horizontal room and the heading was using a fifth of it
-          while the search — the actual instrument of this screen — sat alone
-          on its own line. On a phone there is no room to share, so it stays
-          where it was, sticky under the title. */}
-      <div className="sm:flex sm:items-end sm:justify-between sm:gap-10">
-        <PageHeader
-          title="Explorar"
-          subtitle="Discos, listas y gente que colecciona."
-        />
+      {/**
+       * The title in the middle, and the field directly under it.
+       *
+       * It sat in the top-right corner beside the heading, which is where a
+       * secondary control goes — and search is not secondary here, it is the
+       * entire screen. Centred under the title it reads as the instrument it
+       * is, and it keeps the shape of the room: the shelf names itself in the
+       * middle and so does this.
+       *
+       * It is a field now rather than an underline. A rule under some grey
+       * placeholder text is a typographic idea of a search box; people look
+       * for something with edges, and on a page this wide a lone line does not
+       * read as a place to type at all.
+       */}
+      <PageHeader centered title="Explorar" subtitle="Discos, listas y gente que colecciona." />
 
-        {/* the field is the screen; everything under it answers to it */}
-        <div className="sticky top-0 z-20 -mx-5 bg-surface/95 px-5 pb-3 pt-1 backdrop-blur-sm sm:static sm:-mx-0 sm:ml-auto sm:w-[min(420px,38vw)] sm:shrink-0 sm:bg-transparent sm:px-0 sm:pb-6 sm:pt-0 sm:backdrop-blur-none">
-          {/* The page runs edge to edge; the field does not.
-            Stretched across a full-width page it became a 1900px box for a
-            twenty-character query, and its clear button ended up a screen away
-            from the text it clears. A search field wants the measure of what
-            gets typed into it, not the measure of the page. */}
-          <div className="relative w-full max-w-[680px] sm:max-w-none">
-            <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-content-faint">
+      <div className="sticky top-0 z-20 -mx-5 bg-surface/95 px-5 pb-3 pt-1 backdrop-blur-sm sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-7 sm:pt-0 sm:backdrop-blur-none">
+        <div className="mx-auto w-full max-w-[560px]">
+          <div className="relative w-full">
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-content-muted">
               <svg
                 width="16"
                 height="16"
@@ -242,7 +242,7 @@ export default function ExploreView() {
               autoCorrect="off"
               aria-label="Buscar discos, listas o personas"
               placeholder="Busca discos, listas o personas"
-              className="h-12 w-full border-b border-line-strong bg-transparent pl-7 pr-10 text-body text-paper outline-none transition-colors placeholder:text-content-faint focus:border-line-focus"
+              className="h-12 w-full rounded-full border border-line bg-fill-subtle pl-11 pr-11 text-body text-paper outline-none transition-colors placeholder:text-content-muted hover:border-line-strong focus:border-line-strong focus:bg-fill-subtle/80"
             />
             {searching && (
               <button
@@ -251,7 +251,7 @@ export default function ExploreView() {
                   inputRef.current?.focus();
                 }}
                 aria-label="Borrar búsqueda"
-                className="pressable absolute right-0 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center text-content-muted hover:text-paper"
+                className="pressable absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-content-muted hover:bg-fill hover:text-paper"
               >
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                   <path
@@ -266,7 +266,7 @@ export default function ExploreView() {
           </div>
 
           {searching && (
-            <div className="mt-3 max-w-[680px] overflow-x-auto sm:max-w-none">
+            <div className="mt-3 flex justify-center overflow-x-auto">
               <Segmented
                 size="sm"
                 value={scope}

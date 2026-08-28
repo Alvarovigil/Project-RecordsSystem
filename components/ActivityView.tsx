@@ -54,7 +54,7 @@ export default function ActivityView() {
 
   return (
     <Page width="full">
-      <PageHeader title="Actividad" subtitle="Lo que se mueve alrededor de tu colección." />
+      <PageHeader centered title="Actividad" subtitle="Lo que se mueve alrededor de tu colección." />
 
       {invites.length > 0 && (
         <ul className="mb-9 space-y-3">

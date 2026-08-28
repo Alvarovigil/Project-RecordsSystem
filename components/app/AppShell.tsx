@@ -138,11 +138,32 @@ export function PageHeader({
   title,
   subtitle,
   action,
+  centered = false,
 }: {
   title: string;
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
+  /**
+   * Centred, the way the shelf names the list you are in.
+   *
+   * Flush left is right for a document — a profile, a list, something with a
+   * beginning. It is wrong for the two screens that are a place rather than a
+   * page: on a display two thousand pixels wide, a title in the far corner
+   * leaves the middle of the screen unclaimed and nothing tells you the room
+   * is centred on you. The shelf already puts its name in the middle; these
+   * two now agree with it.
+   */
+  centered?: boolean;
 }) {
+  if (centered) {
+    return (
+      <header className="flex flex-col items-center pb-7 text-center">
+        <h1 className="text-display font-medium text-paper">{title}</h1>
+        {subtitle && <p className="mt-1.5 text-sub text-content-muted">{subtitle}</p>}
+        {action && <div className="mt-5">{action}</div>}
+      </header>
+    );
+  }
   return (
     <header className="flex items-start justify-between gap-4 pb-6">
       <div className="min-w-0">
