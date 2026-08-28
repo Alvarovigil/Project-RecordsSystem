@@ -229,12 +229,40 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
 
     async listLists() {
       const userId = await requireUser();
-      const { data } = await sb
-        .from("lists")
-        .select("*")
-        .eq("owner_id", userId)
-        .order("position");
-      return ((data ?? []) as ListRow[]).map(toList);
+      /**
+       * Your lists, and the ones you were invited to and said yes to.
+       *
+       * Accepting an invitation used to put a row in list_collaborators and
+       * change nothing you could see: the list appeared on nobody's shelf but
+       * its owner's, so the person who accepted was left holding a permission
+       * with no door. A shared list is a list you have — it just is not one
+       * you own, which is what sharedBy says on the way out.
+       */
+      const [own, shared] = await Promise.all([
+        sb.from("lists").select("*").eq("owner_id", userId).order("position"),
+        sb
+          .from("list_collaborators")
+          .select("lists!inner(*, profiles!lists_owner_id_fkey!inner(id, username, display_name))")
+          .eq("user_id", userId)
+          .eq("status", "accepted"),
+      ]);
+
+      const mine = ((own.data ?? []) as ListRow[]).map(toList);
+      const theirs = ((shared.data ?? []) as any[])
+        .map((row) => row.lists)
+        .filter(Boolean)
+        .map((l: any) => ({
+          ...toList(l as ListRow),
+          sharedBy: {
+            id: l.profiles.id,
+            username: l.profiles.username,
+            displayName: l.profiles.display_name,
+          },
+        }));
+
+      // yours first, always: the shelf you built is not a peer of one you were
+      // let into, and the two predefined ones have to stay at the top
+      return [...mine, ...theirs];
     },
 
     async createList({ title, description = "", visibility = "public" }: NewListInput) {

@@ -22,6 +22,7 @@ import Avatar from "@/components/ui/Avatar";
 import { coverFor } from "@/lib/cover";
 import { useImagesReady } from "@/hooks/useImagesReady";
 import { listTitleFor } from "@/lib/list-title";
+import SharedMark from "@/components/ui/SharedMark";
 import LightLab, { DEFAULT_RIG, useLightLab } from "./LightLab";
 import { useRepository } from "@/hooks/useRepository";
 import type { Collection } from "@/lib/collections";
@@ -295,6 +296,11 @@ export default function MobileShelf({
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
                       <span className="truncate text-body text-paper">{c.name}</span>
+                      {c.sharedBy && (
+                        <span className="text-content-faint">
+                          <SharedMark title={`Compartida por ${c.sharedBy.displayName}`} />
+                        </span>
+                      )}
                       {isPrimary && (
                         <span aria-label="Lista predefinida" className="shrink-0 text-content-faint">
                           <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
@@ -304,7 +310,10 @@ export default function MobileShelf({
                         </span>
                       )}
                     </span>
-                    <span className="mt-0.5 block text-caption text-content-muted">
+                    <span className="mt-0.5 block truncate text-caption text-content-muted">
+                      {/* whose it is before how many: the number is
+                          bookkeeping, the name is why this list is here */}
+                      {c.sharedBy ? `de ${c.sharedBy.displayName} y tú · ` : ""}
                       {c.vinylIds.length} {c.vinylIds.length === 1 ? "disco" : "discos"}
                       {isActive ? " · viendo ahora" : ""}
                     </span>

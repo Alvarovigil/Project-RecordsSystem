@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Whether a set of images has finished decoding — so a grid can arrive as one
@@ -29,12 +29,23 @@ export function useImagesReady(urls: (string | null | undefined)[], timeout = 70
   // covers does not restart the wait
   const key = urls.filter(Boolean).join("|");
   const [ready, setReady] = useState(() => key.length === 0);
-  const seen = useRef<string>("");
 
   useEffect(() => {
-    if (key === seen.current) return;
-    seen.current = key;
-
+    /**
+     * No "have I seen this key before" guard.
+     *
+     * There was one, and it was the bug: the effect wrote the key to a ref and
+     * returned early if it saw it again. React runs an effect, cleans it up
+     * and runs it a second time on mount — so the second run found its own key
+     * already recorded, returned before starting the wait, and left `ready`
+     * false with nothing on the way to flip it. Every crate on a profile
+     * stayed at opacity zero, images fully decoded, invisible.
+     *
+     * The dependency array already does the job the ref was doing: the effect
+     * only re-runs when the set of images actually changes. Running twice for
+     * the same key costs one redundant decode of images the browser has
+     * already cached; leaving a screen blank costs the screen.
+     */
     const list = key ? key.split("|") : [];
     if (list.length === 0) {
       setReady(true);

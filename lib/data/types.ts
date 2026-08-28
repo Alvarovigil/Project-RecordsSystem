@@ -14,6 +14,15 @@ export type ListVisibility = "public" | "unlisted" | "private";
 export type List = {
   id: string;
   ownerId: string;
+  /**
+   * Set when this list is somebody else's and you edit it with them.
+   *
+   * A shared list lives on both shelves and belongs to one of them. Naming its
+   * owner here is what lets every screen say "de Marta y tú" instead of
+   * quietly presenting somebody else's work as yours — and it is the flag the
+   * collaborative mark on the crate reads.
+   */
+  sharedBy?: { id: string; username: string; displayName: string };
   title: string;
   slug: string;
   description: string;

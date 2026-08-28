@@ -97,6 +97,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         sortBy: l.sortBy,
         kind: l.kind,
         visibility: l.visibility,
+        sharedBy: l.sharedBy,
       })),
     [lib.lists, lib.idsOf],
   );

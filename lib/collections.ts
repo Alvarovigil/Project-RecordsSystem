@@ -29,6 +29,8 @@ export type Collection = {
   kind?: "collection" | "wishlist" | "custom";
   /** who can see it once you have an account; local-only lists keep it too */
   visibility?: "public" | "unlisted" | "private";
+  /** somebody else's list that you have been invited to edit */
+  sharedBy?: { id: string; username: string; displayName: string };
 };
 
 const KEY = "vinilos.collections.v1";
