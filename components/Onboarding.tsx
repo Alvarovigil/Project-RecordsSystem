@@ -13,6 +13,12 @@ const HANDLE_RULE = /^[a-z0-9_]{3,24}$/;
  *
  * Two steps, both skippable in one click, because nothing here should stand
  * between you and the shelf you were already using.
+ *
+ * "Have you been through this?" is a fact about the account, so it lives on the
+ * account. It used to live in localStorage — which Safari purges after seven
+ * days of not visiting, as anti-tracking policy that cannot tell a preference
+ * from a tracker. The app therefore asked people their name again every week,
+ * and again on every new device. A column answers it once, everywhere.
  */
 export default function Onboarding({ onDone }: { onDone?: () => void }) {
   const { user, profile } = useSession();
@@ -25,23 +31,40 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
   const [pending, setPending] = useState(0);
 
   useEffect(() => {
-    if (!user || !profile) return;
-    // an account that has never been through here keeps the auto-generated
-    // handle; that's our signal, and it costs no extra column
-    const seen = localStorage.getItem(`vinilos.onboarded.${user.id}`);
-    if (seen) return;
-    setUsername(profile.username);
-    setDisplayName(profile.displayName);
-    setPending(localLibraryMigrated() ? 0 : localLibrarySize());
-    setStep("identity");
-  }, [user, profile]);
+    if (!user || !profile || !supabase) return;
+    let alive = true;
+    supabase
+      .from("profiles")
+      .select("onboarded_at")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        // Only a definite "no" opens the step. A failed read must not put the
+        // form in front of someone who already answered it — asking twice is
+        // worse than never asking.
+        if (!alive || !data || data.onboarded_at) return;
+        setUsername(profile.username);
+        setDisplayName(profile.displayName);
+        setPending(localLibraryMigrated() ? 0 : localLibrarySize());
+        setStep("identity");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [user, profile, supabase]);
 
   if (!step || !user) return null;
 
   const finish = () => {
-    localStorage.setItem(`vinilos.onboarded.${user.id}`, new Date().toISOString());
+    // Closed immediately, recorded in the background: waiting on a round trip
+    // to dismiss a panel you already finished with is the wrong trade, and if
+    // the write fails the worst case is being asked once more.
     setStep(null);
     onDone?.();
+    void supabase
+      ?.from("profiles")
+      .update({ onboarded_at: new Date().toISOString() })
+      .eq("id", user.id);
     // the shell hosts this now, so the page underneath re-reads its data
     resetRepository();
   };
