@@ -96,74 +96,134 @@ export default function ActivityView() {
           secondary={{ label: "Ver mi colección", href: "/coleccion" }}
         />
       ) : (
-        <ul className="space-y-9">
-          {groups.map((g) => (
-            <li key={g.id}>
-              <Row group={g} />
-            </li>
+        <div className="-mx-3">
+          {byDay(groups).map(([day, rows]) => (
+            <section key={day}>
+              {/* A day is the unit people actually think in, and a river with
+                  no landmarks is one nobody can place themselves in: without
+                  this, "hace 2 h" and "hace 3 d" sit in the same undifferen-
+                  tiated column and the screen has no shape. */}
+              <h2 className="sticky top-0 z-10 bg-surface/90 px-3 py-2 text-caption uppercase tracking-label text-content-faint backdrop-blur-sm">
+                {day}
+              </h2>
+              <ul className="[&>li]:border-b [&>li]:border-line">
+                {rows.map((g) => (
+                  <li key={g.id}>
+                    <Row group={g} />
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
     </Page>
   );
 }
 
 /**
- * One line of activity, and — when there is something to look at — the thing
- * itself underneath.
+ * One line of activity: who, what, what it looks like, when.
  *
- * The covers are not decoration: a river of sentences about records nobody can
- * see is exactly the screen people scroll past. Where there is no object (a
- * follow), the row stays a single line rather than growing a placeholder.
+ * It reads left to right in one line because that is what a feed is for —
+ * scanning. The covers used to sit in a grid underneath, which turned every
+ * entry into a block two hundred pixels tall and meant three of them filled a
+ * screen; on a wide display it also left a river of text down the left and
+ * nothing at all on the right. Now the artwork rides at the end of the same
+ * line, right-aligned, so the rows line up as a column of thumbnails you can
+ * run your eye down.
+ *
+ * The covers are not decoration. A river of sentences about records nobody can
+ * see is exactly the screen people scroll past — but they are also not the
+ * point, so they are small, capped, and counted rather than continued.
  */
 function Row({ group: g }: { group: ActivityGroup }) {
   const lead = g.actors[0];
   const listHref = g.list ? `/u/${g.list.ownerHandle}/${g.list.slug}` : undefined;
+  const SHOWN = 5;
+  const extra = g.releases.length - SHOWN;
 
   return (
-    <>
-      <div className="flex items-center gap-3">
-        {/* the faces of the people in this group: one, or a small stack when
-            several people did the same thing to the same object */}
-        <div className="flex shrink-0 -space-x-2">
-          {g.actors.slice(0, 3).map((a) => (
-            <Link key={a.id} href={`/u/${a.username}`} className="group pressable">
-              <span className="block rounded-full ring-2 ring-surface">
-                <Avatar
-                  name={a.displayName}
-                  handle={a.username}
-                  src={a.avatarUrl}
-                  size="sm"
-                  interactive
-                />
-              </span>
-            </Link>
-          ))}
-        </div>
-
-        {/* the page runs edge to edge, the sentence does not: a line 1800px
-            long is unreadable however much room there is for it */}
-        <p className="min-w-0 max-w-[78ch] flex-1 text-sub leading-snug text-content-secondary">
-          <Sentence group={g} lead={lead} listHref={listHref} />
-        </p>
-
-        <time className="shrink-0 text-caption text-content-faint">{ago(g.at)}</time>
+    <div className="group/row flex items-center gap-4 rounded-md px-3 py-3.5 transition-colors hover:bg-fill-subtle">
+      {/* the faces: one, or a small stack when several people did the same
+          thing to the same object */}
+      <div className="flex shrink-0 -space-x-2">
+        {g.actors.slice(0, 3).map((a) => (
+          <Link key={a.id} href={`/u/${a.username}`} className="pressable">
+            <span className="block rounded-full ring-2 ring-surface">
+              <Avatar
+                name={a.displayName}
+                handle={a.username}
+                src={a.avatarUrl}
+                size="sm"
+                interactive
+              />
+            </span>
+          </Link>
+        ))}
       </div>
 
-      {g.releases.length > 0 && (
-        <ul className="mt-3 grid grid-cols-3 gap-2.5 pl-[42px] sm:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
-          {g.releases.slice(0, 12).map((r) => (
-            <li key={r.slug}>
-              <Cover src={r.cover} alt={r.title} />
-              <span className="mt-1.5 block truncate text-caption text-content-muted">
-                {r.title}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
+      {/* The page runs edge to edge; the sentence does not. A line 1800px long
+          is unreadable however much room there is for it — so the text keeps a
+          measure and the space left over goes to the artwork. */}
+      <p className="min-w-0 max-w-[62ch] flex-1 text-sub leading-snug text-content-secondary">
+        <Sentence group={g} lead={lead} listHref={listHref} />
+      </p>
+
+      {/**
+       * A column, not a tail.
+       *
+       * Rendered even when it is empty, and always the same width: otherwise
+       * the artwork starts wherever that row's sentence happened to end and
+       * the timestamps sit at seven different distances from the edge. What
+       * makes a list of rows read as a list is that the eye can run straight
+       * down each column without hunting — and that only happens if the
+       * columns are columns.
+       */}
+      <ul className="ml-auto hidden w-[268px] shrink-0 items-center justify-end gap-1.5 sm:flex">
+        {g.releases.slice(0, SHOWN).map((r) => (
+          <li key={r.slug} className="w-11">
+            {/* no titles under them: the sentence already said what this is,
+                and five captions would be a second, competing sentence */}
+            <Cover src={r.cover} alt={r.title} className="rounded-[3px]" />
+          </li>
+        ))}
+        {extra > 0 && (
+          <li className="mono w-8 text-right text-caption text-content-faint">+{extra}</li>
+        )}
+      </ul>
+
+      <time className="w-[68px] shrink-0 text-right text-caption tabular-nums text-content-faint">
+        {ago(g.at)}
+      </time>
+    </div>
   );
+}
+
+/**
+ * The day a group belongs to, in the words people use for it.
+ *
+ * Only three of them are worth a name; past that the date itself is more
+ * useful than "hace mucho".
+ */
+function byDay(groups: ActivityGroup[]): [string, ActivityGroup[]][] {
+  const out = new Map<string, ActivityGroup[]>();
+  const today = new Date();
+  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  for (const g of groups) {
+    const d = new Date(g.at);
+    const key = same(d, today)
+      ? "Hoy"
+      : same(d, yesterday)
+        ? "Ayer"
+        : today.getTime() - d.getTime() < 7 * 864e5
+          ? d.toLocaleDateString("es-ES", { weekday: "long" })
+          : d.toLocaleDateString("es-ES", { day: "numeric", month: "long" });
+    (out.get(key) ?? out.set(key, []).get(key)!).push(g);
+  }
+  return [...out.entries()];
 }
 
 /**
