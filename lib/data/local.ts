@@ -487,7 +487,15 @@ export function createLocalRepository(): LibraryRepository {
       }
 
       // somebody kept one of yours, and somebody kept somebody else's
-      const ownFirst = ownLists(all)[0];
+      /**
+       * A list somebody could actually keep.
+       *
+       * `ownLists()[0]` is Mi Colección, and the placeholder was inventing
+       * three people who had saved it — a thing that cannot happen. Fake data
+       * that depicts an impossible state is worse than no data: it is a bug
+       * report waiting to be filed against a feature that works.
+       */
+      const ownFirst = ownLists(all).find((l) => l.kind === "custom");
       const keepers = communityUsers().slice(0, 3);
       if (ownFirst) {
         keepers.forEach((u, i) =>

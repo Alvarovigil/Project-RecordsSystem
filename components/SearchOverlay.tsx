@@ -153,7 +153,17 @@ export default function SearchOverlay({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/70 backdrop-blur-sm pt-[12vh]">
+    /**
+     * The room behind the search, put properly out of focus.
+     *
+     * 70% black with a 4px blur left the shelf legible enough to keep reading
+     * — so the palette floated on top of a scene that was still competing with
+     * it. This is a modal: the point is that everything else stops. Darker,
+     * and blurred far enough that the covers become colour rather than
+     * pictures, which is what tells you the shelf is still there without
+     * asking you to look at it.
+     */
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/85 pt-[12vh] backdrop-blur-2xl">
       <div
         className="absolute inset-0"
         onClick={onClose}
