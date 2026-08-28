@@ -1,15 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import Segmented from "@/components/ui/Segmented";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import Button from "@/components/ui/Button";
 import ListEditSheet from "./ListEditSheet";
-import EmptyState from "@/components/ui/EmptyState";
 import ListCard from "@/components/community/ListCard";
 import Crate from "@/components/ui/Crate";
+import AccordionShelf from "./AccordionShelf";
 import Avatar from "@/components/ui/Avatar";
 import { coverFor } from "@/lib/cover";
 import type { Collection } from "@/lib/collections";
@@ -145,7 +144,7 @@ export default function MobileShelf({
       </header>
 
       {view === "albums" ? (
-        <CrateStack
+        <AccordionShelf
           vinilos={vinilos}
           onOpen={onOpen}
           onPlay={onPlay}
@@ -296,131 +295,6 @@ export default function MobileShelf({
   );
 }
 
-/**
- * Sleeves front-to-back, the way they sit in a crate.
- *
- * Scroll-snapping so a flick always lands on a record rather than between two,
- * and the snapped one lifts and straightens — the feedback that tells you which
- * one you have got hold of. Everything is a CSS transform, so the whole thing
- * runs on the compositor and survives a cheap phone.
- */
-function CrateStack({
-  vinilos,
-  onOpen,
-  onPlay,
-  onRemove,
-  listName,
-  nowPlayingId,
-  isPlaying,
-}: {
-  vinilos: Vinyl[];
-  onOpen: (v: Vinyl) => void;
-  onPlay: (v: Vinyl) => void;
-  onRemove: (v: Vinyl) => void;
-  listName: string;
-  nowPlayingId?: string;
-  isPlaying: boolean;
-}) {
-  const ref = useRef<HTMLUListElement>(null);
-  const [active, setActive] = useState(0);
-
-  // Which sleeve is centred, read from an observer rather than from scroll
-  // maths: it stays correct through momentum, snapping and orientation change.
-  useEffect(() => {
-    const root = ref.current;
-    if (!root) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) setActive(Number((e.target as HTMLElement).dataset.i));
-        }
-      },
-      { root, rootMargin: "-45% 0px -45% 0px", threshold: 0 },
-    );
-    Array.from(root.children).forEach((c) => io.observe(c));
-    return () => io.disconnect();
-  }, [vinilos.length]);
-
-  if (vinilos.length === 0) {
-    return (
-      <div className="px-5 pb-chrome" style={{ paddingTop: "calc(var(--safe-top) + 130px)" }}>
-        <EmptyState
-          title="Esta lista está vacía"
-          body="Busca un disco por título, artista o código de barras y aparecerá aquí."
-          action={{ label: "Buscar discos", href: "/explorar?buscar=1" }}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <ul
-      ref={ref}
-      data-scrollable
-      className="scroll-y h-screen-d snap-y snap-mandatory"
-      style={{
-        perspective: "1100px",
-        paddingTop: "calc(var(--safe-top) + 118px)",
-        paddingBottom: "calc(var(--tabbar-h) + var(--player-h) + 90px)",
-      }}
-    >
-      {vinilos.map((v, i) => {
-        const isActive = i === active;
-        const sounding = v.id === nowPlayingId;
-        return (
-          <li
-            key={v.id}
-            data-i={i}
-            className="snap-center px-5"
-            style={{ marginBottom: isActive ? 22 : -14, transformStyle: "preserve-3d" }}
-          >
-            <Sleeve
-              vinyl={v}
-              eager={i < 4}
-              isActive={isActive}
-              tilt={i < active ? 34 : -34}
-              listName={listName}
-              onOpen={() => onOpen(v)}
-              onRemove={() => onRemove(v)}
-            />
-
-            {/* the transport belongs to the centred record only: a play button
-                on every sleeve is 30 targets nobody aimed at */}
-            {isActive && (
-              <div className="mt-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-body font-medium text-paper">{v.title}</p>
-                  <p className="truncate text-sub text-content-muted">
-                    {v.artist}
-                    {v.year ? ` · ${v.year}` : ""}
-                  </p>
-                </div>
-                <button
-                  onClick={() => onPlay(v)}
-                  disabled={!v.previewUrl}
-                  aria-label={sounding && isPlaying ? "Pausar" : `Escuchar ${v.title}`}
-                  className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line-strong text-paper disabled:opacity-30"
-                >
-                  {sounding && isPlaying ? (
-                    <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden>
-                      <rect x="3" y="2" width="3" height="10" fill="currentColor" />
-                      <rect x="8" y="2" width="3" height="10" fill="currentColor" />
-                    </svg>
-                  ) : (
-                    <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden>
-                      <path d="M3 2 L12 7 L3 12 Z" fill="currentColor" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 /** Your lists and the ones you kept, in one grid but never confusable. */
 function ListsView({
   collections,
@@ -509,89 +383,6 @@ function ListsView({
  * Nothing is lost either way: removal goes through the same undo as every
  * other removal in the app.
  */
-function Sleeve({
-  vinyl,
-  eager,
-  isActive,
-  tilt,
-  listName,
-  onOpen,
-  onRemove,
-}: {
-  vinyl: Vinyl;
-  eager: boolean;
-  isActive: boolean;
-  tilt: number;
-  listName: string;
-  onOpen: () => void;
-  onRemove: () => void;
-}) {
-  const x = useMotionValue(0);
-  const hint = useTransform(x, [-150, -60, 0, 60, 150], [1, 0, 0, 0, 1]);
-  const fade = useTransform(x, [-260, 0, 260], [0.2, 1, 0.2]);
-  const [dragging, setDragging] = useState(false);
-
-  const end = (_: unknown, info: PanInfo) => {
-    setDragging(false);
-    const far = Math.abs(info.offset.x) > window.innerWidth * 0.45;
-    const flick = Math.abs(info.velocity.x) > 700 && Math.abs(info.offset.x) > 60;
-    if (far || flick) onRemove();
-  };
-
-  return (
-    <div className="relative">
-      {/* what the gesture is going to do, revealed by the gesture itself */}
-      <motion.span
-        style={{ opacity: hint }}
-        aria-hidden
-        className="pointer-events-none absolute inset-0 flex items-center justify-center text-caption font-semibold uppercase tracking-label text-[#ff6b57]"
-      >
-        Quitar de {listName}
-      </motion.span>
-
-      <motion.button
-        onClick={() => !dragging && onOpen()}
-        drag={isActive ? "x" : false}
-        dragDirectionLock
-        dragSnapToOrigin
-        dragElastic={0.55}
-        onDragStart={() => setDragging(true)}
-        onDragEnd={end}
-        style={{
-          x,
-          opacity: isActive ? fade : 0.55,
-          transform: isActive ? undefined : `rotateX(${tilt}deg) scale(0.9)`,
-          transition: dragging
-            ? undefined
-            : "transform 380ms var(--ease-out), opacity 380ms var(--ease-out)",
-        }}
-        className="block w-full touch-pan-y text-left"
-      >
-        <span className="relative block">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={coverFor(vinyl)}
-            alt=""
-            draggable={false}
-            loading={eager ? "eager" : "lazy"}
-            className="aspect-square w-full rounded-sm object-cover"
-            style={{
-              boxShadow: isActive
-                ? "0 26px 60px rgba(0,0,0,0.6)"
-                : "0 10px 26px rgba(0,0,0,0.45)",
-            }}
-          />
-          {/* the spine label, like the reference: the title reads while the
-              sleeve is still edge-on */}
-          <span className="absolute inset-x-0 top-0 flex items-center gap-1.5 rounded-t-sm bg-ink/72 px-2.5 py-1.5 backdrop-blur-sm">
-            <span className="truncate text-caption font-semibold text-paper">{vinyl.title}</span>
-            <span className="truncate text-caption text-paper/55">{vinyl.artist}</span>
-          </span>
-        </span>
-      </motion.button>
-    </div>
-  );
-}
 
 function RoundButton({
   label,
