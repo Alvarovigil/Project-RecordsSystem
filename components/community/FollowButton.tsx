@@ -101,7 +101,15 @@ export function FollowsYouBadge({ profileId }: { profileId: string }) {
   const { rel } = useRelationship(profileId);
   if (!rel?.followsYou) return null;
   return (
-    <span className="rounded-sm bg-fill px-1.5 py-0.5 text-micro font-medium uppercase tracking-label text-content-muted">
+    /**
+     * On the handle line, and never allowed to wrap.
+     *
+     * Two words in a box that breaks into two lines reads as damage. It cannot
+     * shrink the handle either — `shrink-0` means the handle truncates and the
+     * badge stays whole, because half a username is still a username and half
+     * a badge is a bug.
+     */
+    <span className="shrink-0 whitespace-nowrap rounded-sm bg-fill px-1.5 py-0.5 text-micro font-medium uppercase tracking-label text-content-muted">
       Te sigue
     </span>
   );

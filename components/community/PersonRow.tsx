@@ -45,12 +45,18 @@ export default function PersonRow({
           interactive
         />
         <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2">
-            <span className="truncate text-body font-medium text-paper">{profile.displayName}</span>
-            <FollowsYouBadge profileId={profile.id} />
+          {/* The name gets the line to itself.
+              "Te sigue" used to sit beside it as a chip, and on a phone there
+              is not room for a name, a chip and a button: the chip wrapped to
+              two lines and the name truncated to make space for it. It belongs
+              on the second line anyway — it is a fact about the relationship,
+              like the handle, not part of who they are. */}
+          <span className="block truncate text-body font-medium text-paper">
+            {profile.displayName}
           </span>
-          <span className="mt-0.5 block truncate text-sub text-content-muted">
-            {subtitle ?? `@${profile.username}`}
+          <span className="mt-0.5 flex items-center gap-1.5 text-sub text-content-muted">
+            <span className="truncate">{subtitle ?? `@${profile.username}`}</span>
+            <FollowsYouBadge profileId={profile.id} />
           </span>
         </span>
       </Link>
