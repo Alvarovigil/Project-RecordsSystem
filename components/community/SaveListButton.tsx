@@ -79,9 +79,14 @@ export default function SaveListButton({
           { media: { icon: ToastIcon.list } },
         );
       }
-    } catch {
+    } catch (e) {
       setSaved(!next);
-      toast.show("No se pudo guardar.", { tone: "error" });
+      // says which of the two failed, and — where the backend gave a reason —
+      // what it was. "No se pudo guardar" on an unsave is its own small lie.
+      const why = e instanceof Error && e.message ? ` (${e.message})` : "";
+      toast.show(next ? `No se pudo guardar.${why}` : `No se pudo quitar.${why}`, {
+        tone: "error",
+      });
     }
   };
 

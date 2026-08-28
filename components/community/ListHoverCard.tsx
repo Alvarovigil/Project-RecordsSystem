@@ -9,6 +9,7 @@ import { useRepository } from "@/hooks/useRepository";
 import { useImagesReady } from "@/hooks/useImagesReady";
 import { useToast } from "@/components/ui/Toast";
 import type { ListWithRecord } from "@/lib/data/types";
+import { listTitleFor } from "@/lib/list-title";
 
 /**
  * What a kept list actually is, shown on the way past it.
@@ -95,6 +96,8 @@ export default function ListHoverCard({
   // where there is one thing to look at
   const gridReady = useImagesReady((covers ?? []).slice(0, 6));
 
+  // kept lists are never yours, so the owner's "Mi Colección" is renamed here
+  const title = listTitleFor(list, false);
   const listHref = `/u/${list.owner.username}/${list.slug}`;
 
   const share = async () => {
@@ -103,7 +106,7 @@ export default function ListHoverCard({
     // fallback, and it says so rather than silently doing nothing
     if (navigator.share) {
       try {
-        await navigator.share({ title: list.title, url });
+        await navigator.share({ title, url });
         return;
       } catch {
         return; // cancelled: not an error, and not something to report
@@ -131,7 +134,7 @@ export default function ListHoverCard({
     >
       <div className="px-4 pb-3.5 pt-4">
         <Link href={listHref} className="block">
-          <p className="truncate text-body font-medium text-paper hover:underline">{list.title}</p>
+          <p className="truncate text-body font-medium text-paper hover:underline">{title}</p>
         </Link>
         {list.description && (
           <p className="mt-1 line-clamp-2 text-sub leading-snug text-content-muted">

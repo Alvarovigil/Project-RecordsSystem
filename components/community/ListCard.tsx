@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Crate from "@/components/ui/Crate";
 import type { ListWithRecord } from "@/lib/data/types";
+import { listTitleFor } from "@/lib/list-title";
 
 /**
  * Someone's list, as an object you can recognise across the app.
@@ -22,7 +23,7 @@ export default function ListCard({
   mine = false,
   href,
 }: {
-  list: Pick<ListWithRecord, "id" | "title" | "description" | "itemCount" | "slug"> & {
+  list: Pick<ListWithRecord, "id" | "title" | "description" | "itemCount" | "slug" | "kind"> & {
     owner?: ListWithRecord["owner"];
     followers?: number;
   };
@@ -44,7 +45,9 @@ export default function ListCard({
       <Crate covers={covers} />
 
       <span className="mt-2.5 block">
-        <span className="block truncate text-body font-medium text-paper">{list.title}</span>
+        <span className="block truncate text-body font-medium text-paper">
+          {listTitleFor(list, mine)}
+        </span>
         <span className="mt-1 flex items-center gap-1.5 text-sub text-content-muted">
           {!mine && list.owner && (
             <>

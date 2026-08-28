@@ -12,6 +12,7 @@ import { useRepository } from "@/hooks/useRepository";
 import { useRelationship } from "@/hooks/useRelationship";
 import type { ListWithRecord } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
+import { listTitleFor } from "@/lib/list-title";
 
 /**
  * A list, whoever made it.
@@ -74,7 +75,12 @@ export default function ListView({
     void load();
   }, [load]);
 
-  const title = list?.title ?? initial?.title ?? "…";
+  // "Mi Colección" on someone else's page names a person who is not you
+  const title = list
+    ? listTitleFor(list, isOwner)
+    : initial?.title
+      ? listTitleFor(initial as Parameters<typeof listTitleFor>[0], isOwner)
+      : "…";
   const owner = list?.owner ?? initial?.owner;
 
   const share = async () => {
@@ -151,7 +157,7 @@ export default function ListView({
             owner && (
               <SaveListButton
                 listId={list.id}
-                listTitle={list.title}
+                listTitle={title}
                 ownerName={owner.displayName}
                 ownerHandle={owner.username}
               />

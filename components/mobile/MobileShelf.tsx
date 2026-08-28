@@ -21,6 +21,7 @@ const VinylShelf3D = dynamic(() => import("@/components/VinylShelf3D"), { ssr: f
 import Avatar from "@/components/ui/Avatar";
 import { coverFor } from "@/lib/cover";
 import { useImagesReady } from "@/hooks/useImagesReady";
+import { listTitleFor } from "@/lib/list-title";
 import type { Collection } from "@/lib/collections";
 import type { ListVisibility, SavedList } from "@/lib/data/types";
 import type { SortMode } from "@/lib/collections";
@@ -335,7 +336,7 @@ export default function MobileShelf({
                       size="sm"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-body text-paper">{l.title}</span>
+                      <span className="block truncate text-body text-paper">{listTitleFor(l, false)}</span>
                       <span className="block truncate text-caption text-content-muted">
                         de {l.owner.displayName}
                       </span>
@@ -343,7 +344,7 @@ export default function MobileShelf({
                   </Link>
                   <button
                     onClick={() => setListMenu(l)}
-                    aria-label={`Opciones de ${l.title}`}
+                    aria-label={`Opciones de ${listTitleFor(l, false)}`}
                     className="pressable flex h-tap w-tap shrink-0 items-center justify-center text-content-muted"
                   >
                     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
@@ -365,7 +366,7 @@ export default function MobileShelf({
       <Sheet
         open={Boolean(listMenu)}
         onClose={() => setListMenu(null)}
-        title={listMenu?.title}
+        title={listMenu ? listTitleFor(listMenu, false) : undefined}
         subtitle={listMenu ? `Lista de ${listMenu.owner.displayName}` : undefined}
         size="auto"
         width={380}

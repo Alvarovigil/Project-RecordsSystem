@@ -678,12 +678,29 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
 
     async saveList(listId) {
       const userId = await requireUser();
-      await sb.from("list_follows").insert({ user_id: userId, list_id: listId });
+      const { error } = await sb.from("list_follows").insert({ user_id: userId, list_id: listId });
+      /**
+       * Thrown, not swallowed.
+       *
+       * This used to discard the error, so a save that the database refused —
+       * a list you cannot read, a row that is already there, a policy you do
+       * not satisfy — looked exactly like a save that worked: the button said
+       * "Guardada" and the list was gone again on the next load. The button
+       * already knows how to put itself back and say so; it just never got
+       * told. Duplicates are the one case that is not a failure, because
+       * saving something twice is what the user wanted anyway.
+       */
+      if (error && error.code !== "23505") throw new Error(error.message);
     },
 
     async unsaveList(listId) {
       const userId = await requireUser();
-      await sb.from("list_follows").delete().eq("user_id", userId).eq("list_id", listId);
+      const { error } = await sb
+        .from("list_follows")
+        .delete()
+        .eq("user_id", userId)
+        .eq("list_id", listId);
+      if (error) throw new Error(error.message);
     },
 
     async duplicateList(listId, title) {
