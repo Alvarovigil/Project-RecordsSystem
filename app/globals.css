@@ -386,11 +386,26 @@ html {
     overscroll-behavior-y: none;
   }
 
-  /* Safari zooms the page when a field with text under 16px takes focus, and
-     never zooms back out. Not a preference — a trap. */
-  input,
-  select,
-  textarea {
+  /**
+   * Safari zooms the page when a field with text under 16px takes focus, and
+   * does not reliably zoom back out. Not a preference — a trap, and the single
+   * loudest "this is a web page" moment there is.
+   *
+   * The rule was already here and did nothing, which is worth writing down:
+   * `input` is one element selector, and every field in this app also carries
+   * a Tailwind class — `text-body`, `text-[15px]` — which is one class
+   * selector and therefore wins, whatever the order. `:not(#never)` adds an id
+   * to the specificity without matching anything or touching the markup, which
+   * beats any single utility class and stays out of `!important`'s way if a
+   * component ever genuinely needs to override it.
+   *
+   * The fix is the font size and not `maximum-scale=1` on the viewport: that
+   * would stop the zoom by taking pinch-to-enlarge away from everyone, which
+   * is a worse trade than any amount of native feel.
+   */
+  input:not(#never),
+  select:not(#never),
+  textarea:not(#never) {
     font-size: max(16px, 1em);
   }
 }
