@@ -154,7 +154,7 @@ export default function ListEditSheet({
             {isPrimary && (
               // Saying why the option is missing beats a greyed-out row that
               // makes people tap it repeatedly to find out.
-              <p className="border-t border-line px-5 py-3.5 text-caption leading-relaxed text-content-muted">
+              <p className="mx-2 mt-1 border-t border-line px-3 pb-3.5 pt-3 text-caption leading-relaxed text-content-muted">
                 Tu colección y tu lista de deseos no se pueden borrar. Puedes renombrarlas.
               </p>
             )}
@@ -200,7 +200,7 @@ export default function ListEditSheet({
                 ))}
               </ul>
             )}
-            <p className="border-t border-line px-5 py-3.5 text-caption leading-relaxed text-content-muted">
+            <p className="mx-2 mt-1 border-t border-line px-3 pb-3.5 pt-3 text-caption leading-relaxed text-content-muted">
               Quitarlos de aquí no los borra de tu colección.
             </p>
           </div>
@@ -236,7 +236,7 @@ export default function ListEditSheet({
                 }}
               />
             ))}
-            <p className="border-t border-line px-5 py-3.5 text-caption leading-relaxed text-content-muted">
+            <p className="mx-2 mt-1 border-t border-line px-3 pb-3.5 pt-3 text-caption leading-relaxed text-content-muted">
               {VISIBILITY[visibility].help}
             </p>
           </div>

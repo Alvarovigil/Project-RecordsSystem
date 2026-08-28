@@ -142,7 +142,7 @@ export default function SaveListButton({
         size="auto"
         width={380}
       >
-        <div className="py-1">
+        <div className="py-1.5">
           <SheetRow
             label={saved ? "Quitar de mi colección" : "Guardar en mi colección"}
             detail={saved ? undefined : "Se actualiza sola"}
@@ -156,7 +156,7 @@ export default function SaveListButton({
           <SheetRow label={`Ver el perfil de ${ownerName}`} href={`/u/${ownerHandle}`} />
         </div>
         {/* what saving actually does, said once, where the choice is made */}
-        <p className="border-t border-line px-5 py-3.5 text-caption leading-relaxed text-content-muted">
+        <p className="mx-2 mt-1 border-t border-line px-3 pb-3.5 pt-3 text-caption leading-relaxed text-content-muted">
           Guardada, la lista sigue siendo de {ownerName} y cambia cuando {ownerName.split(" ")[0]} la
           cambia.
         </p>

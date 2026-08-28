@@ -96,7 +96,10 @@ export default function Sheet({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }}
             onClick={onClose}
-            className="absolute inset-0 bg-ink/70 backdrop-blur-[2px]"
+            // the room behind a dialog stops competing with it: dark enough
+            // to sit under type, blurred enough that what is behind becomes
+            // colour rather than content
+            className="absolute inset-0 bg-ink/78 backdrop-blur-md"
           />
           {isPhone ? (
             <PhoneSheet size={size} onClose={onClose}>
@@ -110,7 +113,22 @@ export default function Sheet({
               exit={{ opacity: 0, y: 6, scale: 0.99 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               style={{ width, maxHeight: "min(78vh, 720px)" }}
-              className="relative flex max-w-[92vw] flex-col overflow-hidden border border-line-overlay bg-surface-raised shadow-overlay"
+              /**
+               * Rounded, and lit from inside its own edge.
+               *
+               * This app is square on purpose — sleeves, crates, labels — but
+               * that rule is about the artwork and the furniture, not about a
+               * panel that floats above them. A hard-cornered dialog reads as
+               * a system alert from another decade, and it disagreed with the
+               * phone, whose sheets have been rounded to the device's own
+               * radius for a while now.
+               *
+               * The inset ring is the other half: a single hairline of light
+               * along the top edge, the way a real surface catches it, which
+               * is what stops a dark panel on a dark ground from looking like
+               * a hole cut in the page.
+               */
+              className="relative flex max-w-[92vw] flex-col overflow-hidden rounded-[16px] bg-surface-raised shadow-overlay ring-1 ring-inset ring-paper/[0.08]"
             >
               {!bare && <Header id={titleId} title={title} subtitle={subtitle} action={action} onClose={onClose} />}
               {children}
@@ -207,10 +225,10 @@ function Header({
         </div>
       )}
       {(title || action || onClose) && (
-        <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-3.5">
+        <div className="flex items-start justify-between gap-4 px-5 pb-2.5 pt-4">
           <div className="min-w-0">
             {title && (
-              <h2 id={id} className="truncate text-[17px] font-medium leading-tight text-paper">
+              <h2 id={id} className="truncate text-body font-medium leading-tight text-paper">
                 {title}
               </h2>
             )}
@@ -222,7 +240,7 @@ function Header({
               <button
                 onClick={onClose}
                 aria-label="Cerrar"
-                className="pressable -mr-1 flex h-8 w-8 items-center justify-center text-content-muted transition hover:text-content"
+                className="pressable -mr-1.5 -mt-0.5 flex h-8 w-8 items-center justify-center rounded-full text-content-muted transition-colors hover:bg-fill hover:text-paper"
               >
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                   <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -252,9 +270,18 @@ export function SheetRow({
   onClick?: () => void;
   href?: string;
 }) {
-  const cls = `pressable flex w-full items-center gap-3.5 px-5 py-3.5 text-left text-body transition ${
-    danger ? "text-[#ff6b57]" : "text-content/90"
-  } hover:bg-fill-subtle`;
+  /**
+   * An inset row, so the highlight is a shape and not a stripe.
+   *
+   * Full-bleed rows make the hover state a band running wall to wall, which
+   * belongs to a table. Inset by the panel's own padding and rounded to match
+   * it, the highlight becomes an object the size of the thing you are pointing
+   * at — which is what makes a menu feel like it is made of pieces rather than
+   * printed on a page.
+   */
+  const cls = `pressable mx-2 flex w-[calc(100%-1rem)] items-center gap-3.5 rounded-[10px] px-3 py-3 text-left text-body transition-colors ${
+    danger ? "text-[#ff6b57] hover:bg-[#ff6b57]/10" : "text-content/90 hover:bg-fill"
+  }`;
   const inner = (
     <>
       {icon && <span className="flex h-5 w-5 shrink-0 items-center justify-center text-content-muted">{icon}</span>}
