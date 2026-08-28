@@ -47,7 +47,7 @@ export default function VinylActions({
                   onAddTo(c.id);
                   setShowAddMenu(false);
                 }}
-                className="w-full text-left px-3 py-2 text-[12px] text-paper/80 hover:bg-paper/5 hover:text-paper rounded-sm normal-case tracking-normal"
+                className="w-full text-left px-3 py-2 text-[12px] text-paper/80 hover:bg-paper/5 hover:text-paper rounded-control normal-case tracking-normal"
               >
                 {c.name}
               </button>

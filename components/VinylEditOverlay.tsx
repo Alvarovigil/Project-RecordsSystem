@@ -105,7 +105,7 @@ export default function VinylEditOverlay({
               <button
                 onClick={() => setShowAddMenu((v) => !v)}
                 disabled={otherCollections.length === 0}
-                className="w-full text-left px-3 py-2 text-paper/80 hover:bg-paper/5 hover:text-paper rounded-sm disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-between gap-2"
+                className="w-full text-left px-3 py-2 text-paper/80 hover:bg-paper/5 hover:text-paper rounded-control disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-between gap-2"
               >
                 <span>Añadir a otra colección</span>
                 <span className="text-paper/40">›</span>
@@ -120,7 +120,7 @@ export default function VinylEditOverlay({
                         setShowAddMenu(false);
                         setMenuOpen(false);
                       }}
-                      className="w-full text-left px-3 py-2 text-paper/80 hover:bg-paper/5 hover:text-paper rounded-sm"
+                      className="w-full text-left px-3 py-2 text-paper/80 hover:bg-paper/5 hover:text-paper rounded-control"
                     >
                       {c.name}
                     </button>
@@ -136,7 +136,7 @@ export default function VinylEditOverlay({
                   onRemoveFromActive();
                   setMenuOpen(false);
                 }}
-                className="w-full text-left px-3 py-2 text-paper/80 hover:bg-paper/5 hover:text-paper rounded-sm"
+                className="w-full text-left px-3 py-2 text-paper/80 hover:bg-paper/5 hover:text-paper rounded-control"
               >
                 {isInWishlist ? "Quitar de deseos" : "Quitar de esta lista"}
               </button>
@@ -149,7 +149,7 @@ export default function VinylEditOverlay({
             ) : !confirmDelete ? (
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="w-full text-left px-3 py-2 text-paper/50 hover:bg-red-500/10 hover:text-red-400 rounded-sm"
+                className="w-full text-left px-3 py-2 text-paper/50 hover:bg-red-500/10 hover:text-red-400 rounded-control"
               >
                 Eliminar permanentemente
               </button>

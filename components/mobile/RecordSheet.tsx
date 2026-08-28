@@ -102,7 +102,7 @@ export default function RecordSheet({
               <button
                 onClick={() => onTogglePlay(vinyl)}
                 disabled={!vinyl.previewUrl}
-                className="pressable flex h-12 flex-1 items-center justify-center gap-2 rounded-sm bg-paper text-body font-medium text-ink disabled:opacity-35"
+                className="pressable flex h-12 flex-1 items-center justify-center gap-2 rounded-control bg-paper text-body font-medium text-ink disabled:opacity-35"
               >
                 {playing ? (
                   <>
@@ -123,7 +123,7 @@ export default function RecordSheet({
               </button>
               <button
                 onClick={() => setPicking(true)}
-                className="pressable flex h-12 items-center justify-center gap-2 rounded-sm border border-line-strong px-5 text-body font-medium text-paper"
+                className="pressable flex h-12 items-center justify-center gap-2 rounded-control border border-line-strong px-5 text-body font-medium text-paper"
               >
                 Guardar
               </button>

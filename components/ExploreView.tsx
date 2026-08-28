@@ -136,15 +136,28 @@ export default function ExploreView() {
     setRecents(next);
   };
 
-  const coversOf = useCallback(
-    (l: ListWithRecord) =>
-      ((l as ListWithRecord & { vinylIds?: string[] }).vinylIds ?? [])
-        .map((id) => library.find((r) => r.id === id))
-        .filter((v): v is Vinyl => Boolean(v))
-        .slice(0, 4)
-        .map(coverFor),
-    [library],
-  );
+  /**
+   * Covers come from the backend, not from your own shelf.
+   *
+   * This used to cross-reference each list's record ids against `library` —
+   * which is *your* collection, and which on Supabase never carries those ids
+   * for somebody else's list anyway. Every crate on this page came out empty.
+   */
+  const [covers, setCovers] = useState<Record<string, string[]>>({});
+  const coversOf = useCallback((l: ListWithRecord) => covers[l.id] ?? [], [covers]);
+
+  useEffect(() => {
+    if (lists.length === 0) return;
+    let alive = true;
+    // one request for every crate on the page, not one per crate
+    repo
+      .coversOfLists(lists.map((l) => l.id))
+      .then((c) => alive && setCovers((prev) => ({ ...prev, ...c })))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [repo, lists]);
 
   const counts = useMemo(
     () => ({

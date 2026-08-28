@@ -268,7 +268,7 @@ export function RowSave({
       <button
         onClick={() => onSave(targetId)}
         disabled={busy}
-        className="rounded-sm border border-paper/20 px-3 py-1.5 text-[12px] text-paper/70 transition hover:border-transparent hover:bg-paper hover:text-ink disabled:opacity-40 group-hover:border-paper/40"
+        className="rounded-control border border-paper/20 px-3 py-1.5 text-[12px] text-paper/70 transition hover:border-transparent hover:bg-paper hover:text-ink disabled:opacity-40 group-hover:border-paper/40"
       >
         {busy ? "Guardando…" : "Guardar"}
       </button>

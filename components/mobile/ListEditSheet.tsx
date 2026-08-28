@@ -103,7 +103,7 @@ export default function ListEditSheet({
                 onChange={(e) => setName(e.target.value)}
                 onBlur={commitName}
                 enterKeyHint="done"
-                className="mt-2 h-11 w-full rounded-sm border border-line-strong bg-transparent px-3 text-body text-paper outline-none transition-colors focus:border-line-focus"
+                className="mt-2 h-11 w-full rounded-control border border-line-strong bg-transparent px-3 text-body text-paper outline-none transition-colors focus:border-line-focus"
               />
             </div>
 

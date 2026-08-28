@@ -71,10 +71,18 @@ export const HIDDEN_TO = CRATE_TOP + PANEL_BOTTOM * CRATE_H;
  * back — which is also what lets all three read at once instead of the front
  * one swallowing the rest.
  */
+/**
+ * `lift` is how far each sleeve rises when the card is pointed at.
+ *
+ * The ones behind travel furthest, so the stack fans open like a hand of cards
+ * rather than sliding as a block. Resting positions sit a little lower than
+ * they otherwise would, purely to leave that headroom: the card clips at its
+ * top edge, and a sleeve that rose past it would be sliced rather than lifted.
+ */
 const SLEEVES = [
-  { foot: 0.895, dim: 0.4 },  // back
-  { foot: 0.93, dim: 0.19 },
-  { foot: 0.968, dim: 0 },    // front — the newest
+  { foot: 0.915, lift: 0.026, dim: 0.4 },  // back
+  { foot: 0.942, lift: 0.015, dim: 0.19 },
+  { foot: 0.97, lift: 0.005, dim: 0 },     // front — the newest
 ];
 
 const pct = (n: number) => `${(n * 100).toFixed(2)}%`;
@@ -101,8 +109,11 @@ export default function Crate({
         return (
           <span
             key={`${src}-${i}`}
-            className="absolute"
+            className="crate-sleeve absolute"
             style={{
+              // back to front, so it unfolds rather than jumping
+              transitionDelay: `${(SLEEVES.length - 1 - (offset + i)) * 35}ms`,
+              ["--lift" as string]: pct(s.lift / CARD),
               width: pct(SLEEVE),
               // dead centre on the crate. Records in a crate are flush; the
               // small horizontal scatter that was here read as sloppy, not

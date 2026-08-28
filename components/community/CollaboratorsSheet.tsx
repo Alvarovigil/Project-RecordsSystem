@@ -130,7 +130,7 @@ export default function CollaboratorsSheet({
                   autoCorrect="off"
                   spellCheck={false}
                   placeholder="martaferran"
-                  className="h-11 w-full rounded-sm border border-line-strong bg-transparent pl-7 pr-3 text-body text-paper outline-none placeholder:text-content-faint focus:border-line-focus"
+                  className="h-11 w-full rounded-control border border-line-strong bg-transparent pl-7 pr-3 text-body text-paper outline-none placeholder:text-content-faint focus:border-line-focus"
                 />
               </div>
               <Button type="submit" variant="primary" loading={sending} disabled={!handle.trim()}>

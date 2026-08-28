@@ -234,14 +234,14 @@ export default function CollectionsOverlay({
                   <div className="mt-5 flex items-center gap-2 rounded-md border border-paper/[0.06] p-2">
                     <button
                       onClick={() => setEditId(active.id)}
-                      className="flex-1 text-[12px] py-1.5 px-3 rounded-sm bg-paper/5 hover:bg-paper/10 text-paper transition"
+                      className="flex-1 text-[12px] py-1.5 px-3 rounded-control bg-paper/5 hover:bg-paper/10 text-paper transition"
                     >
                       Editar discos →
                     </button>
                     {!isPrimaryIn(collections, active.id) && (
                       <button
                         onClick={() => setRenaming(true)}
-                        className="text-[12px] py-1.5 px-3 rounded-sm hover:bg-paper/5 text-paper/70 hover:text-paper transition"
+                        className="text-[12px] py-1.5 px-3 rounded-control hover:bg-paper/5 text-paper/70 hover:text-paper transition"
                       >
                         Renombrar
                       </button>
@@ -251,7 +251,7 @@ export default function CollectionsOverlay({
                         onClick={() => {
                           if (confirm(`Eliminar "${active.name}"?`)) onDelete(active.id);
                         }}
-                        className="text-[12px] py-1.5 px-3 rounded-sm hover:bg-red-500/10 text-paper/35 hover:text-red-400 transition"
+                        className="text-[12px] py-1.5 px-3 rounded-control hover:bg-red-500/10 text-paper/35 hover:text-red-400 transition"
                       >
                         Borrar
                       </button>
@@ -700,7 +700,7 @@ function EditPanel({
                   setDragIdx(null);
                   setOverIdx(null);
                 }}
-                className={`group flex items-center gap-2 px-3 py-2 rounded-sm transition ${
+                className={`group flex items-center gap-2 px-3 py-2 rounded-control transition ${
                   isDragging ? "opacity-30" : "hover:bg-paper/[0.04]"
                 } ${isOver ? "bg-paper/[0.08] outline outline-1 outline-paper/20" : ""} ${
                   draggable ? "cursor-grab active:cursor-grabbing" : ""
@@ -762,7 +762,7 @@ function EditPanel({
                 <li key={v.id}>
                   <button
                     onClick={() => onToggleVinyl(editing.id, v.id)}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-left text-[12px] rounded-sm text-paper/55 hover:bg-paper/[0.04] transition"
+                    className="w-full flex items-center gap-3 px-3 py-2 text-left text-[12px] rounded-control text-paper/55 hover:bg-paper/[0.04] transition"
                   >
                     <span className="h-1.5 w-1.5 rounded-full border border-paper/25" />
                     <span className="truncate flex-1">

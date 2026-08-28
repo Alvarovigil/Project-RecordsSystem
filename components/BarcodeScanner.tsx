@@ -442,7 +442,7 @@ export default function BarcodeScanner({
               if (value) void handleCode(value);
               input.value = "";
             }}
-            className="mb-3 flex items-center gap-2 rounded-lg bg-white/10 px-3 backdrop-blur-md"
+            className="mb-3 flex items-center gap-2 rounded-control bg-white/10 px-3 backdrop-blur-md"
           >
             <input
               name="code"
@@ -460,13 +460,13 @@ export default function BarcodeScanner({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setTyping((v) => !v)}
-            className="pressable h-12 flex-1 rounded-lg bg-white/10 text-sub font-medium text-paper backdrop-blur-md"
+            className="pressable h-12 flex-1 rounded-control bg-white/10 text-sub font-medium text-paper backdrop-blur-md"
           >
             {typing ? "Volver a la cámara" : "Escribir el código"}
           </button>
           <button
             onClick={onClose}
-            className="pressable h-12 flex-1 rounded-lg bg-paper text-sub font-semibold text-ink"
+            className="pressable h-12 flex-1 rounded-control bg-paper text-sub font-semibold text-ink"
           >
             {addedCount > 0
               ? `Listo · ${addedCount} ${addedCount === 1 ? "añadido" : "añadidos"}`

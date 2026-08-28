@@ -185,7 +185,7 @@ export default function MobileSearch({
           {mode === "vinyls" && !q.trim() && canScan && (
             <button
               onClick={() => setScanning(true)}
-              className="pressable mt-4 flex w-full items-center gap-3.5 rounded-md border border-dashed border-line-strong px-4 py-4 text-left"
+              className="pressable mt-4 flex w-full items-center gap-3.5 rounded-control border border-dashed border-line-strong px-4 py-4 text-left"
             >
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm border border-line-strong text-paper">
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>

@@ -48,7 +48,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   ref,
 ) {
   const cls = [
-    "pressable inline-flex select-none items-center justify-center gap-2 rounded-sm font-medium",
+    "pressable inline-flex select-none items-center justify-center gap-2 rounded-control font-medium",
     "transition-colors duration-fast ease-out",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-line-focus focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
     "disabled:cursor-not-allowed disabled:opacity-45",

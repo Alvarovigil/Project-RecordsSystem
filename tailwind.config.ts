@@ -50,6 +50,7 @@ export default {
       borderRadius: {
         none: "var(--r-none)",
         sm: "var(--r-sm)",
+        control: "var(--r-control)",
         md: "var(--r-md)",
         lg: "var(--r-lg)",
         sheet: "var(--r-sheet)",

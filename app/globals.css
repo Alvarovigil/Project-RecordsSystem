@@ -59,6 +59,14 @@
      unfinished rather than as rigour. */
   --r-none: 0px;
   --r-sm: 4px;
+  /**
+   * Things you press or type into.
+   *
+   * Separate from --r-sm because that one is also on album art and on the
+   * sleeves in the crate, and a record with rounded corners is not a record.
+   * Softening controls should never round the artwork.
+   */
+  --r-control: 10px;
   --r-md: 8px;
   --r-lg: 14px;
   --r-sheet: 18px;
@@ -395,6 +403,30 @@ html {
 @media (hover: hover) and (pointer: fine) {
   .hoverable {
     --can-hover: 1;
+  }
+}
+
+/* The crate opens a little when you point at it.
+   Each sleeve rises by its own amount — the ones behind travel furthest — so
+   the stack fans instead of sliding, and it staggers back to front so it reads
+   as unfolding rather than as three things moving at once. Gated on a real
+   pointer: on touch there is no hover, and a state you cannot leave is worse
+   than no state at all. */
+.crate-sleeve {
+  transition: transform 420ms var(--ease-out);
+  will-change: transform;
+}
+@media (hover: hover) and (pointer: fine) {
+  .group:hover .crate-sleeve {
+    transform: translateY(calc(var(--lift) * -1));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .crate-sleeve {
+    transition: none;
+  }
+  .group:hover .crate-sleeve {
+    transform: none;
   }
 }
 

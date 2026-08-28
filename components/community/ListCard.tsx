@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Avatar from "@/components/ui/Avatar";
 import Crate from "@/components/ui/Crate";
 import type { ListWithRecord } from "@/lib/data/types";
 
@@ -49,12 +48,9 @@ export default function ListCard({
         <span className="mt-1 flex items-center gap-1.5 text-sub text-content-muted">
           {!mine && list.owner && (
             <>
-              <Avatar
-                name={list.owner.displayName}
-                handle={list.owner.username}
-                src={list.owner.avatarUrl}
-                size="xs"
-              />
+              {/* the name alone. An avatar repeated down a grid of cards is
+                  fourteen copies of the same face saying the same thing, and
+                  it crowds out the line it sits on */}
               <span className="truncate">{list.owner.displayName}</span>
               <span aria-hidden className="text-content-faint">
                 ·

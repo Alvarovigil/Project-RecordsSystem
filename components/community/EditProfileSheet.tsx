@@ -216,7 +216,7 @@ export default function EditProfileSheet({
 }
 
 const inputCls =
-  "h-11 w-full rounded-sm border border-line-strong bg-transparent px-3 text-body text-paper outline-none placeholder:text-content-faint focus:border-line-focus transition-colors duration-fast";
+  "h-11 w-full rounded-control border border-line-strong bg-transparent px-3 text-body text-paper outline-none placeholder:text-content-faint focus:border-line-focus transition-colors duration-fast";
 
 function Field({
   label,

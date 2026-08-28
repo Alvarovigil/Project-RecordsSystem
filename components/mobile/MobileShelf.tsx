@@ -233,7 +233,7 @@ export default function MobileShelf({
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="El turno de noche"
                 enterKeyHint="done"
-                className="h-11 flex-1 rounded-sm border border-line-strong bg-transparent px-3 text-body text-paper outline-none placeholder:text-content-faint focus:border-line-focus"
+                className="h-11 flex-1 rounded-control border border-line-strong bg-transparent px-3 text-body text-paper outline-none placeholder:text-content-faint focus:border-line-focus"
               />
               <Button type="submit" variant="primary" disabled={!newName.trim()}>
                 Crear
