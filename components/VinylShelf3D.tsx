@@ -636,7 +636,10 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     const onMove = (e: PointerEvent) => {
       if (!dragging) return;
       const dx = axisOf(e) - startX;
-      if (Math.abs(dx) > 4) moved = true;
+      // A finger is not a mouse. Four pixels is a steady hand on a trackpad and
+      // an ordinary tap on glass, so on touch that threshold turned taps into
+      // drags and threw the click away.
+      if (Math.abs(dx) > (e.pointerType === "touch" ? 10 : 4)) moved = true;
       // The records go where the finger goes. Dragging down on a rack pulls
       // the row rightwards past you, which is why the horizontal sign is
       // negative; dragging down on a pile pushes the pile down, and inverting
@@ -648,15 +651,25 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       if (!dragging) return;
       dragging = false;
       target.current = clampToList(Math.round(target.current));
-      if (moved) {
-        // swallow the synthetic click that follows a drag
-        const stop = (ev: Event) => {
-          ev.stopPropagation();
-          ev.preventDefault();
-          window.removeEventListener("click", stop, true);
-        };
-        window.addEventListener("click", stop, true);
-      }
+      if (!moved) return;
+      /**
+       * Swallow the click a drag leaves behind — and always take the trap back
+       * out again.
+       *
+       * This listener used to be removed only when a click actually arrived.
+       * A drag that ends over nothing — or one the browser decides not to
+       * follow with a click at all, which on touch is most of them — left it
+       * armed, and it ate the *next* tap instead. Which is why a record had to
+       * be tapped twice: the first tap was paying off a debt from the last
+       * gesture.
+       */
+      const stop = (ev: Event) => {
+        ev.stopPropagation();
+        ev.preventDefault();
+      };
+      window.addEventListener("click", stop, { capture: true, once: true });
+      // and if no click ever comes, the trap disarms itself
+      setTimeout(() => window.removeEventListener("click", stop, true), 350);
     };
     el.addEventListener("pointerdown", onDown);
     window.addEventListener("pointermove", onMove);
@@ -872,6 +885,9 @@ function Strip({
   const pointerXY = useRef({ x: -10000, y: -10000, inside: false });
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
+      // a finger is not a cursor: it never hovers, and treating it as one puts
+      // a document-wide hit test in the middle of every drag
+      if (e.pointerType === "touch") return;
       pointerXY.current.x = e.clientX;
       pointerXY.current.y = e.clientY;
       pointerXY.current.inside = true;
@@ -910,7 +926,23 @@ function Strip({
     if (openTargetRef.current > 0) {
       currentRef.current = targetRef.current;
     } else {
-      currentRef.current += (targetRef.current - currentRef.current) * 0.12;
+      /**
+       * Smoothing measured in seconds, not in frames.
+       *
+       * `current += (target - current) * 0.12` moves twelve per cent of the
+       * remaining distance every frame, which quietly means "per frame the
+       * device happens to deliver". A 120Hz iPhone runs it twice as fast as a
+       * 60Hz one, and — this is the part you feel — any frame that arrives
+       * late still only advances twelve per cent, so the shelf lags behind the
+       * finger and then catches up in a rush. That is the jump.
+       *
+       * The exponential form takes the same 12% at 60fps and holds it steady
+       * at any rate, including a rate that changes mid-gesture, which on a
+       * phone it constantly does.
+       */
+      const k = 7.67; // 1 - e^(-k/60) = 0.12
+      const step = 1 - Math.exp(-k * Math.min(delta, 0.1));
+      currentRef.current += (targetRef.current - currentRef.current) * step;
     }
 
     const t = tweenRef.current;
@@ -948,6 +980,15 @@ function Strip({
     // check the synthetic move ignores the DOM chrome on top, so resting the
     // pointer on the transport buttons hover-lifted whichever sleeve happened
     // to sit behind them.
+    /**
+     * Hover only exists where there is a pointer.
+     *
+     * elementFromPoint forces the browser to hit-test the whole document, and
+     * this ran on every frame the shelf moved — on a phone, during the one
+     * gesture that most needs the budget, to maintain a state no finger can
+     * ever enter. Now it costs nothing until a mouse has actually been on the
+     * canvas.
+     */
     const overCanvas =
       pointerXY.current.inside &&
       document.elementFromPoint(pointerXY.current.x, pointerXY.current.y) ===

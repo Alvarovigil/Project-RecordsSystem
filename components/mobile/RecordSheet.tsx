@@ -68,9 +68,12 @@ export default function RecordSheet({
   useEffect(() => {
     const el = sentinel.current;
     if (!vinyl || !el) return;
-    const io = new IntersectionObserver(([e]) => setScrolled(!e.isIntersecting), {
-      rootMargin: "-72px 0px 0px 0px",
-    });
+    // A band rather than a line: with a single threshold, holding the sheet
+    // still at exactly the crossing point leaves it deciding twice a frame.
+    const io = new IntersectionObserver(
+      ([e]) => setScrolled(e.boundingClientRect.top < 0 ? true : e.isIntersecting ? false : true),
+      { rootMargin: "-56px 0px 0px 0px", threshold: [0, 1] },
+    );
     io.observe(el);
     return () => io.disconnect();
   }, [vinyl]);
@@ -122,12 +125,22 @@ export default function RecordSheet({
           <div className="flex justify-center pb-2 pt-2.5">
             <span className="sheet-grabber" aria-hidden />
           </div>
-          {/* Once the artwork has scrolled away, the title and the transport
-              come with you. Reading a tracklist and having to scroll back up
-              to press play is the whole reason people close these. */}
+          {/**
+           * Once the artwork has scrolled away, the title and the transport
+           * come with you. Reading a tracklist and having to scroll back up to
+           * press play is the whole reason people close these.
+           *
+           * It hangs BELOW the sticky strip instead of sitting inside it, and
+           * that is not a layout preference — it is the fix for a flicker. When
+           * the bar grew inside the flow it pushed everything down, which slid
+           * the sentinel back into view, which hid the bar, which pulled
+           * everything up again: a loop that ran as fast as the browser could
+           * paint it. Out of the flow, appearing costs nothing below it and
+           * there is nothing to oscillate.
+           */}
           <div
-            className={`flex items-center gap-3 overflow-hidden border-b border-line px-5 transition-all duration-base ease-out ${
-              scrolled ? "max-h-16 py-2.5 opacity-100" : "max-h-0 py-0 opacity-0"
+            className={`absolute inset-x-0 top-full flex items-center gap-3 border-b border-line bg-surface-raised px-5 py-2.5 transition-all duration-base ease-out ${
+              scrolled ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
             }`}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
