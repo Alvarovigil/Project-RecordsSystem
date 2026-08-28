@@ -497,7 +497,16 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   // A real LP sleeve is about 5mm across a 315mm face — roughly 1 in 63. This
   // was 1 in 100, thinner than any record ever pressed, which left the spine
   // too narrow to print anything legible on.
-  const thickness = 0.05;
+  /**
+   * The pile is thicker than the rack, and it is not a lie about the object.
+   *
+   * A sleeve in a rack is seen along its spine, where 5mm on a 315mm face is
+   * exactly right and any more reads as a box set. Lying in a pile you see the
+   * edge almost flat on, foreshortened to a couple of pixels, and at the real
+   * ratio the cardboard disappears — the stack turns back into stacked
+   * photographs. The extra is buying back what the viewing angle takes away.
+   */
+  const thickness = vertical ? 0.085 : 0.05;
 
   // scroll target in INDEX space (floating-point). At t=0, item 0 is at x=0.
   const target = useRef(0);
