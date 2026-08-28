@@ -36,7 +36,16 @@ export default function Landing() {
       {/* Dimmed, not hidden, while the door is up: the corners keep saying
           what this is and where the way in is, without competing with the
           screen doing the introducing. */}
-      <header className="landing-dims pointer-events-none fixed inset-x-0 top-0 z-[60] flex items-start justify-end px-5 pt-[68px] sm:justify-between sm:px-8 sm:pt-6">
+      {/**
+       * Desktop only.
+       *
+       * On a phone the mark is centred at the top and there is no room beside
+       * it for anything else — the claim printed through it and the sign-in
+       * link sat on its shoulder. Both have somewhere better to be: the claim
+       * is on the door, in the tab and on every shared card, and the way in is
+       * the button in the middle of the screen that says Empezar gratis.
+       */}
+      <header className="landing-dims pointer-events-none fixed inset-x-0 top-0 z-[60] hidden items-start justify-between px-5 pt-[68px] sm:flex sm:px-8 sm:pt-6">
         {/* Not a link — the claim of the whole thing, held in the corner.
             Two sentences, and the full stop between them is doing the work:
             it makes the second half land as a separate promise rather than
@@ -397,8 +406,17 @@ function StickyMark() {
   return (
     <div
       aria-hidden
+      /**
+       * No opacity on this wrapper, ever.
+       *
+       * The mark inverts against what is behind it — white over the page's
+       * black, black over the white of a button passing underneath. Difference
+       * blending only does that at full strength: at 92% the subtraction is
+       * partial and both states come out grey, which is the muddle it was in.
+       * Dimming for the gate is done on this same class in CSS, where it is a
+       * deliberate, temporary state rather than a permanent tax.
+       */
       className="landing-dims pointer-events-none fixed left-1/2 top-4 z-[60] -translate-x-1/2 sm:top-5"
-      style={{ opacity: 0.92 + (1 - e) * 0.08 }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {/**

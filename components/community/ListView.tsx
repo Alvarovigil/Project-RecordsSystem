@@ -10,10 +10,13 @@ import SaveListButton from "./SaveListButton";
 import FollowButton from "./FollowButton";
 import CollaboratorsSheet, { CollaboratorFaces } from "./CollaboratorsSheet";
 import RecordSheet from "@/components/mobile/RecordSheet";
+import Crate from "@/components/ui/Crate";
+import { coverFor } from "@/lib/cover";
 import { useLibrary } from "@/hooks/useLibrary";
 import { usePlaybackContext } from "@/lib/playback-context";
 import { useRepository } from "@/hooks/useRepository";
 import { useRelationship } from "@/hooks/useRelationship";
+import { useBackTo } from "@/hooks/useBackTo";
 import type { ListWithRecord } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 import { listTitleFor } from "@/lib/list-title";
@@ -32,9 +35,10 @@ import { listTitleFor } from "@/lib/list-title";
  * | someone else's    | Guardar · ⋯ (duplicar, compartir, ver perfil)   |
  * | you collaborate   | as above, plus the faces and "salir de la lista" |
  *
- * The back link names the person rather than saying "Atrás". You arrived here
- * from a feed, a search or a record — the browser's back button is a guess,
- * and "← Marta Ferrán" is a destination.
+ * The back link names a place rather than saying "Atrás", and the place is
+ * where you actually came from: Explorar, Actividad, a profile. Naming the
+ * owner every time was right for one of the four ways in and sent everybody
+ * else somewhere they had never been.
  */
 export default function ListView({
   listId,
@@ -59,6 +63,9 @@ export default function ListView({
   const audio = usePlaybackContext();
   const { nowPlaying, playing } = audio;
   const { rel } = useRelationship(ownerId);
+  // where you came from, when it was one of ours; the owner's profile when it
+  // was not — the one destination that is always true for this page
+  const cameFrom = useBackTo();
   const isOwner = rel?.isYou ?? false;
 
   const load = useCallback(async () => {
@@ -109,15 +116,31 @@ export default function ListView({
     <Page width={1000}>
       {owner && (
         <Link
-          href={`/u/${owner.username}`}
+          href={cameFrom?.href ?? `/u/${owner.username}`}
           className="pressable inline-flex items-center gap-2 text-sub text-content-muted transition-colors hover:text-paper"
         >
           <span aria-hidden>←</span>
-          {owner.displayName}
+          {cameFrom?.label ?? owner.displayName}
         </Link>
       )}
 
-      <header className="mt-5 border-b border-line pb-7">
+      {/**
+       * The crate, then the words.
+       *
+       * A list opened cold was a title over a paragraph over a row of chips —
+       * the same header any page anywhere has. But a list IS its records, and
+       * the fastest way to know whether this one is for you is to see three of
+       * them. The crate is the same object the card in Explorar shows, so
+       * arriving here confirms what you clicked instead of replacing it.
+       */}
+      <header className="mt-5 flex flex-col gap-6 border-b border-line pb-7 sm:flex-row sm:items-end sm:gap-8">
+        {items && items.length > 0 && (
+          <span className="w-[168px] shrink-0 sm:w-[196px]">
+            <Crate covers={items.slice(-3).reverse().map((v) => coverFor(v))} />
+          </span>
+        )}
+
+        <div className="min-w-0 flex-1">
         <h1 className="text-display font-medium leading-tight text-paper">{title}</h1>
         {(list?.description || initial?.description) && (
           <p className="mt-2.5 max-w-[58ch] text-body leading-relaxed text-content-secondary">
@@ -197,6 +220,7 @@ export default function ListView({
             un disco. Sigue a {owner.displayName} y verás lo que va añadiendo.
           </p>
         )}
+        </div>
       </header>
 
       <div className="mt-8">

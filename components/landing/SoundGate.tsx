@@ -358,8 +358,15 @@ export default function SoundGate() {
         <div
           onMouseEnter={() => setPeeking(true)}
           onMouseLeave={() => setPeeking(false)}
+          /**
+           * A pill of frosted glass, like the tab bar in the app — and with no
+           * outline, because there is nothing on the other side of it to be
+           * separated from. Sitting directly on the shelf it needed a ground:
+           * over a pale sleeve the controls disappeared, and the fix is the
+           * one the rest of the product already uses.
+           */
           // centred at the foot of a phone, back in its corner from sm up
-          className="fixed bottom-6 left-1/2 z-[70] flex max-w-[calc(100vw-2.5rem)] -translate-x-1/2 items-center gap-2 transition-[gap] duration-slow ease-out sm:bottom-5 sm:left-auto sm:right-5 sm:translate-x-0 text-[11px] uppercase tracking-[0.05em] text-paper/80 sm:bottom-5 sm:text-[13px]">
+          className="fixed bottom-6 left-1/2 z-[70] flex max-w-[calc(100vw-2.5rem)] -translate-x-1/2 items-center gap-2 rounded-full bg-ink/55 px-3.5 py-2 backdrop-blur-xl transition-[gap] duration-slow ease-out sm:bottom-5 sm:left-auto sm:right-5 sm:translate-x-0 text-[11px] uppercase tracking-[0.05em] text-paper/80 sm:bottom-5 sm:text-[13px]">
           {/* The brackets were a frame around three bars that already read as a
               meter; two more characters, and they held the label at arm's
               length from the thing it is labelling. */}
