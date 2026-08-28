@@ -397,7 +397,7 @@ export function createLocalRepository(): LibraryRepository {
           .reverse()
           .map((r) => all.find((v) => v.id === r))
           .filter((v): v is Vinyl => Boolean(v))
-          .slice(0, 3)
+          .slice(0, 6)
           .map((v) => v.cover ?? "")
           .filter(Boolean);
       }

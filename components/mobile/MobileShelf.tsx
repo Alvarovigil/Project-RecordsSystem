@@ -60,6 +60,7 @@ export default function MobileShelf({
   visibilityOf,
   myId,
   onRemoveFromList,
+  onUnsaveList,
 }: {
   vinilos: Vinyl[];
   /** every record you own, so a list can show what is in it */
@@ -82,6 +83,8 @@ export default function MobileShelf({
   visibilityOf: (id: string) => ListVisibility;
   myId: string;
   onRemoveFromList: (v: Vinyl) => void;
+  /** stop keeping somebody else's list */
+  onUnsaveList: (listId: string) => void;
 }) {
   /**
    * The two ways of looking at the same records — the phone's version of the
@@ -107,6 +110,15 @@ export default function MobileShelf({
   ];
 
   const [editing, setEditing] = useState<Collection | null>(null);
+  /**
+   * The kept list whose ⋯ is open.
+   *
+   * On the desktop these three actions live in a card that appears when the
+   * pointer rests on the row. A finger cannot rest on anything, so the same
+   * three get a button of their own — the alternative is a set of actions that
+   * exist on one device and simply do not on the other.
+   */
+  const [listMenu, setListMenu] = useState<SavedList | null>(null);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
 
@@ -292,30 +304,74 @@ export default function MobileShelf({
             </p>
             <div className="pb-1">
               {savedLists.map((l) => (
-                <Link
-                  key={l.id}
-                  href={`/u/${l.owner.username}/${l.slug}`}
-                  className="pressable flex items-center gap-3 px-5 py-3"
-                >
-                  <Avatar
-                    name={l.owner.displayName}
-                    handle={l.owner.username}
-                    src={l.owner.avatarUrl}
-                    size="sm"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-body text-paper">{l.title}</span>
-                    <span className="block truncate text-caption text-content-muted">
-                      de {l.owner.displayName}
+                <div key={l.id} className="flex items-center">
+                  <Link
+                    href={`/u/${l.owner.username}/${l.slug}`}
+                    className="pressable flex min-w-0 flex-1 items-center gap-3 py-3 pl-5 pr-2"
+                  >
+                    <Avatar
+                      name={l.owner.displayName}
+                      handle={l.owner.username}
+                      src={l.owner.avatarUrl}
+                      size="sm"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-body text-paper">{l.title}</span>
+                      <span className="block truncate text-caption text-content-muted">
+                        de {l.owner.displayName}
+                      </span>
                     </span>
-                  </span>
-                  <span aria-hidden className="text-content-faint">
-                    →
-                  </span>
-                </Link>
+                  </Link>
+                  <button
+                    onClick={() => setListMenu(l)}
+                    aria-label={`Opciones de ${l.title}`}
+                    className="pressable flex h-tap w-tap shrink-0 items-center justify-center text-content-muted"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
+                      <circle cx="8" cy="3.2" r="1.35" fill="currentColor" />
+                      <circle cx="8" cy="8" r="1.35" fill="currentColor" />
+                      <circle cx="8" cy="12.8" r="1.35" fill="currentColor" />
+                    </svg>
+                  </button>
+                </div>
               ))}
             </div>
           </>
+        )}
+      </Sheet>
+
+      {/* the same three doors as the desktop hover card, in the same order and
+          with the same words: a menu that disagrees with itself across devices
+          teaches people not to trust either copy */}
+      <Sheet
+        open={Boolean(listMenu)}
+        onClose={() => setListMenu(null)}
+        title={listMenu?.title}
+        subtitle={listMenu ? `Lista de ${listMenu.owner.displayName}` : undefined}
+        size="auto"
+        width={380}
+      >
+        {listMenu && (
+          <div className="py-1">
+            <SheetRow
+              label="Quitar de mi colección"
+              onClick={() => {
+                onUnsaveList(listMenu.id);
+                setListMenu(null);
+              }}
+            />
+            <SheetRow
+              label="Compartir enlace"
+              onClick={() => {
+                void shareList(listMenu);
+                setListMenu(null);
+              }}
+            />
+            <SheetRow
+              label={`Ver el perfil de ${listMenu.owner.displayName}`}
+              href={`/u/${listMenu.owner.username}`}
+            />
+          </div>
         )}
       </Sheet>
 
@@ -421,4 +477,26 @@ function RoundButton({
       {children}
     </button>
   );
+}
+
+/**
+ * Share a list: the platform sheet where there is one, the clipboard where
+ * there is not — and it says which, because a button that silently did
+ * nothing is indistinguishable from a broken one.
+ */
+async function shareList(l: SavedList) {
+  const url = `${window.location.origin}/u/${l.owner.username}/${l.slug}`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: l.title, url });
+    } catch {
+      // cancelled: not an error, and not something to report
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch {
+    // nothing sensible to do; the link is still one tap away in the address bar
+  }
 }

@@ -408,7 +408,9 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         const url = row.releases?.cover_url;
         if (!url) continue;
         const bucket = (out[row.list_id] ??= []);
-        if (bucket.length < 3) bucket.push(url);
+        // six, not three: the crate shows three and the hover card shows six.
+        // One request answers both rather than the screen making two.
+        if (bucket.length < 6) bucket.push(url);
       }
       return out;
     },

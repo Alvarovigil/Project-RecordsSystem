@@ -522,6 +522,14 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           myId={myProfileId}
           // the handler already confirms it, with the same undo a swipe deserves
           onRemoveFromList={(v) => handleRemoveVinylFromActive(v.id)}
+          onUnsaveList={(id) => {
+            // both lists of kept lists: the phone reads `saved`, the desktop
+            // panel reads `followed`, and one of them going stale is how a
+            // list you removed comes back when you rotate the phone
+            setSaved((prev) => prev.filter((l) => l.id !== id));
+            setFollowed((prev) => prev.filter((l) => l.id !== id));
+            void repo.unsaveList(id);
+          }}
         />
 
         <RecordSheet

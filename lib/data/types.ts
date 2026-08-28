@@ -206,7 +206,8 @@ export interface LibraryRepository {
   /** full records of any list you're allowed to read, owned by you or not */
   releasesOfList(listId: string): Promise<Vinyl[]>;
   /**
-   * A handful of cover URLs per list, for the mosaics.
+   * Up to six cover URLs per list, newest first — the crate takes three, the
+   * hover card takes six.
    *
    * One request for every list on a screen rather than one per list: a profile
    * with fourteen lists would otherwise open fourteen connections to draw its
