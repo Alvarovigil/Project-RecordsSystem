@@ -20,7 +20,21 @@ import { useId } from "react";
  * size and it should have been a menu.
  */
 
-export type Segment<T extends string> = { value: T; label: string; count?: number };
+export type Segment<T extends string> = {
+  value: T;
+  /** always written, even when it is not shown: it is what a screen reader says */
+  label: string;
+  /**
+   * Shown instead of the label.
+   *
+   * Only for pairs a glance can tell apart without reading — a record and a
+   * grid, where the two shapes ARE the two views. Anything you would have to
+   * learn keeps its word: an icon nobody recognises is a word you have made
+   * unreadable.
+   */
+  icon?: React.ReactNode;
+  count?: number;
+};
 
 export default function Segmented<T extends string>({
   segments,
@@ -51,9 +65,11 @@ export default function Segmented<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(s.value)}
-            className={`pressable relative z-10 flex items-center gap-1.5 rounded-full px-4 font-medium transition-colors duration-fast ${pad} ${
-              active ? "text-ink" : "text-content-secondary hover:text-paper"
-            }`}
+            aria-label={s.icon ? s.label : undefined}
+            title={s.icon ? s.label : undefined}
+            className={`pressable relative z-10 flex items-center justify-center gap-1.5 rounded-full font-medium transition-colors duration-fast ${
+              s.icon ? (size === "sm" ? "w-11" : "w-12") : "px-4"
+            } ${pad} ${active ? "text-ink" : "text-content-secondary hover:text-paper"}`}
           >
             {active && (
               <motion.span
@@ -62,7 +78,7 @@ export default function Segmented<T extends string>({
                 className="absolute inset-0 -z-10 rounded-full bg-paper"
               />
             )}
-            <span>{s.label}</span>
+            {s.icon ?? <span>{s.label}</span>}
             {s.count !== undefined && (
               <span className={active ? "text-ink/50" : "text-content-faint"}>{s.count}</span>
             )}

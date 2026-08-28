@@ -163,8 +163,8 @@ export default function MobileShelf({
               value={view}
               onChange={setView}
               segments={[
-                { value: "shelf", label: "Estante" },
-                { value: "grid", label: "Cuadrícula" },
+                { value: "shelf", label: "Estante", icon: <ShelfIcon /> },
+                { value: "grid", label: "Cuadrícula", icon: <GridIcon /> },
               ]}
               className="shadow-[0_8px_30px_rgba(0,0,0,0.45)]"
             />
@@ -528,4 +528,33 @@ async function shareList(l: SavedList) {
   } catch {
     // nothing sensible to do; the link is still one tap away in the address bar
   }
+}
+
+/**
+ * The two views, as the two shapes.
+ *
+ * The same pair the desktop bar uses, deliberately: a record for the shelf and
+ * a block of four for the grid. Two words in a pill are two things to read
+ * every time you look at the screen, and these two are the rare case where the
+ * picture is not a decoration of the idea — it IS the idea. The words are
+ * still there for anyone listening to the page.
+ */
+function ShelfIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <circle cx="7" cy="7" r="5.6" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="7" cy="7" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function GridIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden>
+      <path
+        d="M1.6 1.6h4.2v4.2H1.6zM8.2 1.6h4.2v4.2H8.2zM1.6 8.2h4.2v4.2H1.6zM8.2 8.2h4.2v4.2H8.2z"
+        fill="currentColor"
+      />
+    </svg>
+  );
 }
