@@ -483,11 +483,17 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     },
 
     async suggestedProfiles() {
-      const { data } = await sb
+      // "gente que colecciona" is a place to find someone, and you are not
+      // someone you need to find. Asked for, not required: signed out there is
+      // nobody to exclude and the list is the same.
+      const { data: auth } = await sb.auth.getUser();
+      let q = sb
         .from("profiles")
         .select("id, username, display_name, bio, avatar_url")
         .order("created_at", { ascending: false })
         .limit(12);
+      if (auth.user) q = q.neq("id", auth.user.id);
+      const { data } = await q;
       return ((data ?? []) as any[]).map(toProfile);
     },
 
