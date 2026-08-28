@@ -8,26 +8,31 @@ import Button from "@/components/ui/Button";
  * The page you send someone when you want them to end up with Rackr on their
  * home screen.
  *
- * Installing a web app is a different act on every platform and only one of
- * them lets a page do it for you, so this screen's whole job is to work out
- * which of four situations the visitor is in and say the one thing that is
- * true there. Anything less specific — "añádelo a tu pantalla de inicio" over
- * a generic button — is how a share link turns into a dead end for everyone
- * except the person who wrote it.
+ * **Why there is no single button on iPhone, and why there never will be.**
+ * Chromium fires `beforeinstallprompt`, which is the one and only way a page
+ * can install itself, and this screen uses it where it exists. WebKit does not
+ * implement it and has said it will not: the request is WONTFIX in their
+ * tracker, on the grounds that a permissive prompt would be abused the way
+ * notification prompts were, and that on iOS any page can already be added
+ * from the share menu without meeting anyone's criteria. `navigator.share()`
+ * does not help either — that opens *our* share sheet, and "Añadir a pantalla
+ * de inicio" only exists in Safari's own.
  *
- * 1. **Already installed.** The page is running standalone. There is nothing
- *    to install and saying so is the useful answer.
- * 2. **A browser that can install.** Chrome and Edge fire
- *    `beforeinstallprompt`. That event is the only chance to install
- *    programmatically and it is not replayed, so it is caught the moment it
- *    arrives and kept.
- * 3. **iOS.** Safari has no such event and never will; it has to be Compartir
- *    → Añadir a inicio, spelled out, because nobody discovers that menu on
- *    purpose.
- * 4. **An in-app browser.** This is the case that actually matters, because a
- *    link shared on WhatsApp or Instagram opens inside their own browser,
- *    where installing is impossible and no amount of instructions helps. The
- *    only honest move is to say so and tell them to open it in the real one.
+ * So the second-best thing is done properly: show the icon they are about to
+ * get, name the exact words they are looking for, and point at the corner of
+ * the screen where the button actually is. Nobody discovers that menu on
+ * purpose.
+ *
+ * The four situations that are not iOS:
+ *
+ * 1. **Already installed** — running standalone. Nothing to install, and
+ *    saying so is the useful answer.
+ * 2. **Promptable** — Chrome/Edge. The event is caught the moment it arrives
+ *    (it is never replayed) and kept behind a real one-tap button.
+ * 3. **A desktop** — offers to send the link to a phone rather than pretend.
+ * 4. **An in-app browser** — the case that decides whether any of this works,
+ *    because a link shared on WhatsApp or Instagram opens in their own webview
+ *    where installing is impossible and instructions do not help.
  */
 
 type Deferred = Event & { prompt: () => Promise<void> };
@@ -58,8 +63,6 @@ export default function InstallCTA({ url }: { url: string }) {
     );
 
     const onPrompt = (e: Event) => {
-      // Chrome asks first and only once. Keeping the event is what lets the
-      // button below be a real install rather than a set of instructions.
       e.preventDefault();
       setDeferred(e as Deferred);
       setSituation((s) => (s === "installed" || s === "in-app" ? s : "promptable"));
@@ -93,91 +96,80 @@ export default function InstallCTA({ url }: { url: string }) {
   };
 
   return (
-    <div className="mt-10">
-      {/* Held until we know which of the four this is. A button that says
-          "Instalar" for a second and then turns into instructions has already
-          told someone the wrong thing. */}
-      {situation === null ? (
-        <div className="h-12" aria-hidden />
-      ) : situation === "installed" ? (
-        <Panel
-          title="Ya la tienes instalada"
-          body="Estás dentro de la app. Ábrela desde tu pantalla de inicio la próxima vez."
-        >
-          <Button variant="primary" href="/coleccion">
-            Ir a mi colección
-          </Button>
-        </Panel>
-      ) : situation === "in-app" ? (
-        <Panel
-          title="Ábrelo en tu navegador"
-          body="Estás dentro del navegador de otra aplicación, y desde aquí no se puede instalar nada. Toca los tres puntos de arriba y elige «Abrir en Safari» o «Abrir en Chrome»."
-        >
-          <Button variant="secondary" onClick={share}>
-            {copied ? "Enlace copiado" : "Copiar el enlace"}
-          </Button>
-        </Panel>
-      ) : situation === "promptable" ? (
-        <Panel
-          title="Instálala en un toque"
-          body="Se añade a tu pantalla de inicio y se abre a pantalla completa, sin barra de navegador."
-        >
-          <Button
-            variant="primary"
-            onClick={() => {
-              void deferred?.prompt();
-            }}
+    <>
+      {/* Held until we know which case this is. A button that says "Instalar"
+          for a second and then turns into instructions has already told
+          somebody the wrong thing. */}
+      <div className="mt-10 min-h-[168px]">
+        {situation === null ? null : situation === "installed" ? (
+          <Centered
+            title="Ya la tienes"
+            body="Estás dentro de la app. La próxima vez ábrela desde tu pantalla de inicio."
           >
-            Instalar Rackr
-          </Button>
-        </Panel>
-      ) : situation === "ios" ? (
-        <Panel
-          title="Añádela a tu pantalla de inicio"
-          body="Safari no deja que una web se instale sola, así que son dos toques:"
-        >
-          <ol className="mt-1 space-y-3">
-            <Step n={1}>
-              Toca <Share /> <b className="text-paper">Compartir</b>, abajo en la barra de Safari.
-            </Step>
-            <Step n={2}>
-              Baja y elige <b className="text-paper">Añadir a pantalla de inicio</b>.
-            </Step>
-          </ol>
-        </Panel>
-      ) : situation === "android-other" ? (
-        <Panel
-          title="Añádela a tu pantalla de inicio"
-          body="En el menú ⋮ de tu navegador, elige «Instalar aplicación» o «Añadir a pantalla de inicio»."
-        />
-      ) : (
-        <Panel
-          title="Ábrelo en el móvil"
-          body="Rackr se instala como una app en el teléfono. Mándate el enlace y ábrelo allí — o sigue aquí, que en el escritorio funciona igual."
-        >
-          <div className="flex flex-wrap gap-2.5">
+            <Button variant="primary" href="/coleccion">
+              Ir a mi colección
+            </Button>
+          </Centered>
+        ) : situation === "in-app" ? (
+          <Centered
+            title="Ábrelo en tu navegador"
+            body="Estás dentro del navegador de otra aplicación, y desde aquí no se puede instalar nada. Toca ⋯ arriba y elige «Abrir en Safari» o «Abrir en Chrome»."
+          >
             <Button variant="secondary" onClick={share}>
               {copied ? "Enlace copiado" : "Copiar el enlace"}
             </Button>
-            <Button variant="ghost" href="/coleccion">
-              Entrar sin instalar
+          </Centered>
+        ) : situation === "promptable" ? (
+          <Centered
+            title="Instálala en un toque"
+            body="Se añade a tu pantalla de inicio y se abre a pantalla completa, sin barra de navegador."
+          >
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={() => {
+                void deferred?.prompt();
+              }}
+            >
+              Instalar Rackr
             </Button>
-          </div>
-        </Panel>
-      )}
+          </Centered>
+        ) : situation === "ios" ? (
+          <IosSteps />
+        ) : situation === "android-other" ? (
+          <Centered
+            title="Añádela a tu pantalla de inicio"
+            body="Abre el menú ⋮ de tu navegador y elige «Instalar aplicación» o «Añadir a pantalla de inicio»."
+          />
+        ) : (
+          <Centered
+            title="Ábrelo en el móvil"
+            body="Rackr se instala como una app en el teléfono. Mándate el enlace y ábrelo allí — o entra aquí, que en el escritorio funciona igual."
+          >
+            <div className="flex flex-wrap justify-center gap-2.5">
+              <Button variant="secondary" onClick={share}>
+                {copied ? "Enlace copiado" : "Copiar el enlace"}
+              </Button>
+              <Button variant="ghost" href="/coleccion">
+                Entrar sin instalar
+              </Button>
+            </div>
+          </Centered>
+        )}
+      </div>
 
-      <p className="mt-8 text-sub leading-relaxed text-content-muted">
-        No hay tienda de aplicaciones, ni descarga, ni cuenta obligatoria para mirar.{" "}
+      <p className="mt-10 text-center text-sub leading-relaxed text-content-muted">
+        Sin tienda de aplicaciones y sin descarga.{" "}
         <Link href="/explorar" className="text-paper underline underline-offset-4">
           Curiosea antes
         </Link>{" "}
         si lo prefieres.
       </p>
-    </div>
+    </>
   );
 }
 
-function Panel({
+function Centered({
   title,
   body,
   children,
@@ -187,22 +179,84 @@ function Panel({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="border border-line bg-fill-subtle/40 px-5 py-6 sm:px-6">
+    <div className="text-center">
       <p className="text-heading font-medium text-paper">{title}</p>
-      <p className="mt-2 max-w-[46ch] text-sub leading-relaxed text-content-muted">{body}</p>
-      {children && <div className="mt-5">{children}</div>}
+      <p className="mx-auto mt-2 max-w-[38ch] text-sub leading-relaxed text-content-muted">{body}</p>
+      {children && <div className="mt-6 flex justify-center">{children}</div>}
     </div>
   );
 }
 
-function Step({ n, children }: { n: number; children: React.ReactNode }) {
+/**
+ * The two taps, drawn rather than described.
+ *
+ * The first step is a place, not an instruction — so it points at the place,
+ * with the arrow aimed at the real corner of the real toolbar. The second is a
+ * row in a menu, so it shows the row: the same glyph and the same words the
+ * sheet uses, which turns "look for it" into "recognise it".
+ */
+function IosSteps() {
   return (
-    <li className="flex items-baseline gap-3 text-sub leading-relaxed text-content-secondary">
-      <span className="mono flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line text-caption text-content-muted">
-        {n}
-      </span>
-      <span>{children}</span>
-    </li>
+    <div>
+      <p className="text-center text-heading font-medium text-paper">
+        Dos toques y la tienes
+      </p>
+      <p className="mx-auto mt-2 max-w-[40ch] text-center text-sub leading-relaxed text-content-muted">
+        Safari no deja que una web se instale sola. Apple lo decidió así a propósito, y estos son
+        los dos toques que hacen lo mismo.
+      </p>
+
+      <ol className="mx-auto mt-7 max-w-[380px] space-y-3">
+        <li className="flex items-center gap-3.5 border border-line bg-fill-subtle/40 px-4 py-3.5">
+          <Num>1</Num>
+          <span className="min-w-0 flex-1 text-sub leading-snug text-content-secondary">
+            Toca <Share /> <b className="text-paper">Compartir</b>, en la barra de abajo de Safari.
+          </span>
+        </li>
+
+        <li className="border border-line bg-fill-subtle/40 px-4 py-3.5">
+          <div className="flex items-center gap-3.5">
+            <Num>2</Num>
+            <span className="min-w-0 flex-1 text-sub leading-snug text-content-secondary">
+              Baja y elige esta fila:
+            </span>
+          </div>
+          {/* the row as it looks in the sheet, so it is recognised and not hunted */}
+          <div className="mt-3 flex items-center gap-3 rounded-[10px] bg-paper px-3.5 py-2.5">
+            <span className="flex-1 text-[15px] font-medium text-ink">
+              Añadir a pantalla de inicio
+            </span>
+            <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
+              <rect x="1.4" y="1.4" width="15.2" height="15.2" rx="4" stroke="#0a0a0a" strokeWidth="1.3" />
+              <path d="M9 5.4v7.2M5.4 9h7.2" stroke="#0a0a0a" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+          </div>
+        </li>
+      </ol>
+
+      {/* Safari's share button lives in the bottom bar. An arrow at the foot of
+          the page is the shortest possible sentence about where to look. */}
+      <div className="mt-8 flex flex-col items-center gap-1.5 text-content-faint">
+        <span className="text-caption uppercase tracking-label">Está aquí abajo</span>
+        <svg width="16" height="22" viewBox="0 0 16 22" fill="none" aria-hidden className="animate-nudge">
+          <path
+            d="M8 1v18M2.5 13.5 8 19.5l5.5-6"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function Num({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="mono flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-line text-caption text-content-muted">
+      {children}
+    </span>
   );
 }
 
