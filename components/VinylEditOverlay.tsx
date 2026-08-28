@@ -100,7 +100,7 @@ export default function VinylEditOverlay({
         </button>
 
         {menuOpen && (
-          <div className="absolute top-9 right-0 min-w-[200px] bg-ink/95 backdrop-blur-sm border border-paper/10 rounded-sm shadow-lg p-1 text-[12px]">
+          <div className="absolute top-9 right-0 min-w-[200px] bg-surface-overlay/95 backdrop-blur-sm border border-line-overlay rounded-sm shadow-popover p-1 text-[12px]">
             <div className="relative">
               <button
                 onClick={() => setShowAddMenu((v) => !v)}
@@ -111,7 +111,7 @@ export default function VinylEditOverlay({
                 <span className="text-paper/40">›</span>
               </button>
               {showAddMenu && otherCollections.length > 0 && (
-                <div className="absolute right-full top-0 mr-1 min-w-[180px] bg-ink/95 backdrop-blur-sm border border-paper/10 rounded-sm shadow-lg p-1">
+                <div className="absolute right-full top-0 mr-1 min-w-[180px] bg-surface-overlay/95 backdrop-blur-sm border border-line-overlay rounded-sm shadow-popover p-1">
                   {otherCollections.map((c) => (
                     <button
                       key={c.id}

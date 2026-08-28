@@ -70,7 +70,7 @@ export default function AccountMenu() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-[220px] border border-paper/15 bg-[#0d0d0d] py-1 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+        <div className="absolute right-0 top-full z-50 mt-2 w-[220px] border border-line-overlay bg-surface-overlay py-1 shadow-popover">
           <div className="border-b border-paper/10 px-3 pb-2 pt-1.5">
             <div className="truncate text-[13px] text-paper">{profile?.displayName}</div>
             <div className="mono truncate text-[11px] text-paper/40">@{profile?.username}</div>

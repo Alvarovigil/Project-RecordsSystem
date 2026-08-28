@@ -94,7 +94,7 @@ export function ListPicker({
     <div
       ref={panelRef}
       style={pos ? { top: pos.top, left: pos.left } : { visibility: "hidden" }}
-      className="fixed z-[60] w-[264px] border border-paper/15 bg-[#0d0d0d] shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
+      className="fixed z-[60] w-[264px] border border-line-overlay bg-surface-overlay shadow-popover"
     >
       <div className="border-b border-paper/10 px-3 py-2">
         <input

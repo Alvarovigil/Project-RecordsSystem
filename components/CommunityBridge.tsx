@@ -136,7 +136,7 @@ export default function CommunityBridge({ vinyl, allVinilos, onOpenOwn, onSave }
             className="fixed inset-0 z-30 bg-black/40"
             aria-label="Cerrar comunidad"
           />
-          <section className="fixed left-1/2 top-1/2 z-40 flex max-h-[80vh] w-[min(960px,94vw)] -translate-x-1/2 -translate-y-1/2 flex-col border border-paper/12 bg-[#0b0b0b] shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
+          <section className="fixed left-1/2 top-1/2 z-40 flex max-h-[80vh] w-[min(960px,94vw)] -translate-x-1/2 -translate-y-1/2 flex-col border border-line-overlay bg-surface-raised shadow-overlay">
             {/* header: breadcrumb-ish, always says where you are */}
             <header className="flex items-center justify-between border-b border-paper/10 px-6 py-3">
               <div className="flex items-center gap-3">

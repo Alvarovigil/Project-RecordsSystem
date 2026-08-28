@@ -73,7 +73,7 @@ export default function ListHoverCard({
       onMouseEnter={onEnter}
       onMouseLeave={onClose}
       style={{ top: pos.top, left: pos.left, width: W }}
-      className="fixed z-[80] rounded-lg border border-line-strong bg-surface-overlay/95 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+      className="fixed z-[80] rounded-lg border border-line-overlay bg-surface-overlay/95 p-4 shadow-popover backdrop-blur-xl"
     >
       <p className="truncate text-body font-medium text-paper">{list.title}</p>
       {list.description && (

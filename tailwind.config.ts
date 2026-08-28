@@ -40,12 +40,18 @@ export default {
           DEFAULT: "var(--line)",
           strong: "var(--line-strong)",
           focus: "var(--line-focus)",
+          overlay: "var(--line-overlay)",
         },
         fill: {
           subtle: "var(--fill-subtle)",
           DEFAULT: "var(--fill)",
           strong: "var(--fill-strong)",
         },
+      },
+      boxShadow: {
+        overlay: "var(--shadow-overlay)",
+        popover: "var(--shadow-popover)",
+        toast: "var(--shadow-toast)",
       },
       borderRadius: {
         none: "var(--r-none)",

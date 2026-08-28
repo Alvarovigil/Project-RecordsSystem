@@ -17,10 +17,9 @@ import { useRepository } from "@/hooks/useRepository";
  * maintenance job, you are keeping a pointer.
  *
  * The cost is a corner people get stuck in — "I want this list but with my
- * changes" — so the escape hatch sits right next to it: **Duplicar**. Your own
- * copy, disconnected, editable, credited to whoever built the original. Both
- * doors visible in the same menu means nobody has to guess which one they
- * wanted, which is where the dead end would have been.
+ * changes". The escape hatch for that is duplicating, which is not offered
+ * yet: until the copy is properly resolved, showing the door is worse than
+ * not having it.
  */
 export default function SaveListButton({
   listId,
@@ -40,7 +39,6 @@ export default function SaveListButton({
   const toast = useToast();
   const [saved, setSaved] = useState<boolean | null>(null);
   const [menu, setMenu] = useState(false);
-  const [working, setWorking] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -84,22 +82,6 @@ export default function SaveListButton({
     } catch {
       setSaved(!next);
       toast.show("No se pudo guardar.", { tone: "error" });
-    }
-  };
-
-  const duplicate = async () => {
-    setWorking(true);
-    try {
-      await repo.duplicateList(listId, `${listTitle} (mi versión)`);
-      setMenu(false);
-      toast.show("Copiada. Ya es tuya y puedes editarla.", {
-        media: { icon: ToastIcon.list },
-        action: { label: "Abrir", onClick: () => router.push("/coleccion") },
-      });
-    } catch {
-      toast.show("No se pudo duplicar.", { tone: "error" });
-    } finally {
-      setWorking(false);
     }
   };
 
@@ -164,19 +146,14 @@ export default function SaveListButton({
               setMenu(false);
             }}
           />
-          <SheetRow
-            label={working ? "Duplicando…" : "Duplicar para editar"}
-            detail="Copia tuya"
-            onClick={() => void duplicate()}
-          />
+          {/* duplicar: oculto por ahora, hasta que la copia esté resuelta */}
           <SheetRow label="Compartir enlace" onClick={() => void share()} />
           <SheetRow label={`Ver el perfil de ${ownerName}`} href={`/u/${ownerHandle}`} />
         </div>
-        {/* the difference between the two options, said once, where the choice
-            is actually being made */}
+        {/* what saving actually does, said once, where the choice is made */}
         <p className="border-t border-line px-5 py-3.5 text-caption leading-relaxed text-content-muted">
           Guardada, la lista sigue siendo de {ownerName} y cambia cuando {ownerName.split(" ")[0]} la
-          cambia. Duplicada, la copia es tuya y ya no se actualiza.
+          cambia.
         </p>
       </Sheet>
     </>

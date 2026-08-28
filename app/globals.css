@@ -47,6 +47,24 @@
   --line: rgb(var(--paper-rgb) / 0.10);
   --line-strong: rgb(var(--paper-rgb) / 0.22);
   --line-focus: rgb(var(--paper-rgb) / 0.75);
+  /**
+   * The edge of anything that floats over the page.
+   *
+   * Deliberately fainter than --line: a panel already reads as detached
+   * because it is lighter than its ground and casts a shadow, so drawing a
+   * visible rectangle around it on top of that is the third time the same
+   * thing is said — and it is the one that looks drawn rather than lit.
+   */
+  --line-overlay: rgb(var(--paper-rgb) / 0.06);
+
+  /* --- elevation ------------------------------------------------------ */
+  /* Three heights, matched to the three kinds of floating thing: a dialog or
+     sheet that owns the screen, a menu hanging off a control, and a toast
+     passing through. The shadow carries the elevation so the border does not
+     have to. */
+  --shadow-overlay: 0 32px 90px rgb(var(--ink-rgb) / 0.66);
+  --shadow-popover: 0 18px 50px rgb(var(--ink-rgb) / 0.55);
+  --shadow-toast: 0 14px 40px rgb(var(--ink-rgb) / 0.45);
 
   /* --- fills ---------------------------------------------------------- */
   --fill-subtle: rgb(var(--paper-rgb) / 0.05);

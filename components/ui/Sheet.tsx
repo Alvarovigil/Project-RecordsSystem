@@ -110,7 +110,7 @@ export default function Sheet({
               exit={{ opacity: 0, y: 6, scale: 0.99 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
               style={{ width, maxHeight: "min(78vh, 720px)" }}
-              className="relative flex max-w-[92vw] flex-col overflow-hidden border border-paper/12 bg-[#101010] shadow-[0_30px_90px_rgba(0,0,0,0.7)]"
+              className="relative flex max-w-[92vw] flex-col overflow-hidden border border-line-overlay bg-surface-raised shadow-overlay"
             >
               {!bare && <Header id={titleId} title={title} subtitle={subtitle} action={action} onClose={onClose} />}
               {children}
@@ -173,7 +173,7 @@ function PhoneSheet({
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0.02, bottom: 0.9 }}
       onDragEnd={onDragEnd}
-      className="relative flex w-full flex-col overflow-hidden rounded-t-[18px] border-t border-paper/12 bg-[#101010] shadow-[0_-16px_60px_rgba(0,0,0,0.6)]"
+      className="relative flex w-full flex-col overflow-hidden rounded-t-sheet border-t border-line-overlay bg-surface-raised shadow-overlay"
     >
       <div ref={scrollRef} onScroll={onScroll} className="scroll-y flex min-h-0 flex-1 flex-col">
         {children}
@@ -200,21 +200,21 @@ function Header({
   grabber?: boolean;
 }) {
   return (
-    <div className="sticky top-0 z-10 shrink-0 bg-[#101010]/95 backdrop-blur-sm">
+    <div className="sticky top-0 z-10 shrink-0 bg-surface-raised/95 backdrop-blur-sm">
       {grabber && (
         <div className="flex justify-center pb-1 pt-2.5">
           <span className="sheet-grabber" aria-hidden />
         </div>
       )}
       {(title || action || onClose) && (
-        <div className="flex items-start justify-between gap-4 border-b border-paper/10 px-5 py-3.5">
+        <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-3.5">
           <div className="min-w-0">
             {title && (
               <h2 id={id} className="truncate text-[17px] font-medium leading-tight text-paper">
                 {title}
               </h2>
             )}
-            {subtitle && <div className="mt-0.5 text-[12px] text-paper/45">{subtitle}</div>}
+            {subtitle && <div className="mt-0.5 text-sub text-content-muted">{subtitle}</div>}
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {action}
@@ -222,7 +222,7 @@ function Header({
               <button
                 onClick={onClose}
                 aria-label="Cerrar"
-                className="pressable -mr-1 flex h-8 w-8 items-center justify-center text-paper/40 transition hover:text-paper"
+                className="pressable -mr-1 flex h-8 w-8 items-center justify-center text-content-muted transition hover:text-content"
               >
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                   <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
@@ -252,14 +252,14 @@ export function SheetRow({
   onClick?: () => void;
   href?: string;
 }) {
-  const cls = `pressable flex w-full items-center gap-3.5 px-5 py-3.5 text-left text-[15px] transition ${
-    danger ? "text-[#ff6b57]" : "text-paper/90"
-  } hover:bg-paper/[0.05]`;
+  const cls = `pressable flex w-full items-center gap-3.5 px-5 py-3.5 text-left text-body transition ${
+    danger ? "text-[#ff6b57]" : "text-content/90"
+  } hover:bg-fill-subtle`;
   const inner = (
     <>
-      {icon && <span className="flex h-5 w-5 shrink-0 items-center justify-center text-paper/45">{icon}</span>}
+      {icon && <span className="flex h-5 w-5 shrink-0 items-center justify-center text-content-muted">{icon}</span>}
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {detail && <span className="shrink-0 text-[13px] text-paper/40">{detail}</span>}
+      {detail && <span className="shrink-0 text-sub text-content-muted">{detail}</span>}
     </>
   );
   if (href) {

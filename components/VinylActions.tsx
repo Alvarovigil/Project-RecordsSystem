@@ -39,7 +39,7 @@ export default function VinylActions({
           {otherCollections.length === 0 ? "En todas las colecciones" : "Añadir a…"}
         </button>
         {showAddMenu && otherCollections.length > 0 && (
-          <div className="absolute left-0 top-5 z-30 min-w-[160px] bg-ink/95 border border-paper/10 rounded-sm shadow-lg p-1">
+          <div className="absolute left-0 top-5 z-30 min-w-[160px] bg-surface-overlay/95 border border-line-overlay rounded-sm shadow-popover p-1">
             {otherCollections.map((c) => (
               <button
                 key={c.id}

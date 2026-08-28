@@ -123,7 +123,7 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-6 backdrop-blur-sm">
-      <div className="w-[440px] max-w-full border border-paper/12 bg-[#0b0b0b]">
+      <div className="w-[440px] max-w-full border border-line-overlay bg-surface-raised shadow-overlay">
         <div className="flex items-center justify-between border-b border-paper/10 px-6 py-3">
           <span className="mono text-[10px] uppercase tracking-[0.22em] text-paper/40">
             {step === "identity" ? "Tu nombre" : "Tu colección"}

@@ -22,7 +22,7 @@ export default function DemoNotice() {
   if (!available || user || hidden) return null;
 
   return (
-    <div className="pointer-events-auto absolute left-1/2 top-[86px] z-30 flex -translate-x-1/2 items-center gap-4 border border-paper/12 bg-ink/85 px-4 py-2.5 backdrop-blur-sm">
+    <div className="pointer-events-auto absolute left-1/2 top-[86px] z-30 flex -translate-x-1/2 items-center gap-4 border border-line-overlay bg-surface-overlay/85 px-4 py-2.5 shadow-popover backdrop-blur-sm">
       <span className="text-[12px] text-paper/60">
         Colección de ejemplo. Toca, escucha y curiosea: nada se guarda.
       </span>

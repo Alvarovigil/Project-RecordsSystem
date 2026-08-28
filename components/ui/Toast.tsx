@@ -126,10 +126,10 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       dragConstraints={{ top: 0, bottom: 0 }}
       dragElastic={{ top: 0.6, bottom: 0.02 }}
       onDragEnd={onDragEnd}
-      className={`pointer-events-auto flex max-w-[min(92vw,420px)] items-center gap-3 rounded-full border py-2 pl-2 pr-3 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-2xl ${
+      className={`pointer-events-auto flex max-w-[min(92vw,420px)] items-center gap-3 rounded-full border py-2 pl-2 pr-3 shadow-toast backdrop-blur-2xl ${
         toast.tone === "error"
-          ? "border-[#ff6b57]/25 bg-[#2a1512]/80"
-          : "border-white/12 bg-[#1a1a1a]/75"
+          ? "border-[#ff6b57]/20 bg-[#2a1512]/85"
+          : "border-line-overlay bg-surface-overlay/85"
       }`}
     >
       <Thumb media={toast.media} error={toast.tone === "error"} />
@@ -144,7 +144,7 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
             toast.action?.onClick();
             onDismiss();
           }}
-          className="pressable -mr-1 shrink-0 rounded-full bg-white/12 px-3 py-1.5 text-[13px] font-medium text-paper transition-colors hover:bg-white/20"
+          className="pressable -mr-1 shrink-0 rounded-full bg-fill-strong px-3 py-1.5 text-sub font-medium text-paper transition-colors hover:bg-paper hover:text-ink"
         >
           {toast.action.label}
         </button>
@@ -166,14 +166,14 @@ function Thumb({ media, error }: { media?: Media; error?: boolean }) {
       <img
         src={media.src}
         alt=""
-        className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/15"
+        className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-line-strong"
       />
     );
   }
   return (
     <span
       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-        error ? "bg-[#ff6b57]/15 text-[#ff6b57]" : "bg-white/12 text-paper"
+        error ? "bg-[#ff6b57]/15 text-[#ff6b57]" : "bg-fill-strong text-paper"
       }`}
     >
       {media?.icon ?? (error ? <IconAlert /> : <IconCheck />)}
