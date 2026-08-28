@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import TopNav from "./TopNav";
 import TabBar from "./TabBar";
@@ -36,9 +37,53 @@ export default function AppShell({
   return (
     <>
       {!isPhone && !ownsHeader && <TopNav />}
-      {children}
+      {/* The shelf is a 3D canvas edge to edge; blurring it on arrival would
+          be a full-screen filter over a live scene, which is the one place a
+          phone cannot afford one. It has its own way in — the sleeves fold up
+          as their covers decode — so it is left alone. */}
+      {ownsHeader ? children : <PageFade key={pathname}>{children}</PageFade>}
       {isPhone && <TabBar />}
     </>
+  );
+}
+
+/**
+ * How one screen becomes another.
+ *
+ * Hard cuts are what make a set of routes feel like a set of documents. The
+ * fix is not a slide or a push — those imply a spatial relationship between
+ * two screens that mostly do not have one — but a defocus: the new screen
+ * arrives slightly out of focus and settles, the way something does when your
+ * eye lands on it. It is short (220ms), it never moves anything, and it plays
+ * only on the way in, because an exit animation delays the thing you asked
+ * for in order to say goodbye to the thing you left.
+ *
+ * Blur is expensive, so it is spent carefully: one composited layer, removed
+ * the moment it finishes, and skipped entirely for anyone who has asked the
+ * system for less motion.
+ */
+function PageFade({ children }: { children: React.ReactNode }) {
+  const [arrived, setArrived] = useState(false);
+
+  useEffect(() => {
+    // one frame late on purpose: setting the end state in the same paint as
+    // the start state is a transition the browser never runs
+    const id = requestAnimationFrame(() => setArrived(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  return (
+    <div
+      className="page-fade"
+      data-arrived={arrived ? "1" : undefined}
+      // dropped once it has played: a permanent filter on the page root makes
+      // every descendant its own compositing layer for ever
+      onTransitionEnd={(e) => {
+        if (e.propertyName === "filter") e.currentTarget.style.filter = "none";
+      }}
+    >
+      {children}
+    </div>
   );
 }
 

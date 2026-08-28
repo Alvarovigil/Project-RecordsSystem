@@ -1,5 +1,7 @@
 "use client";
 
+import { useImagesReady } from "@/hooks/useImagesReady";
+
 /**
  * A list, as a crate with records in it.
  *
@@ -97,11 +99,16 @@ export default function Crate({
 }) {
   // drawn back to front, so the newest ends up nearest the viewer
   const shown = covers.slice(0, 3).reverse();
+  // a crate whose three sleeves appear one at a time is three events where
+  // there was one object; they arrive together or they wait together
+  const ready = useImagesReady(shown);
   const offset = SLEEVES.length - shown.length;
 
   return (
     <span
-      className={`relative block w-full overflow-hidden ${className}`}
+      className={`relative block w-full overflow-hidden transition-opacity duration-base ease-out ${
+        ready ? "opacity-100" : "opacity-0"
+      } ${className}`}
       style={{ paddingTop: pct(CARD) }}
     >
       {shown.map((src, i) => {

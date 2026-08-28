@@ -6,6 +6,7 @@ import Avatar from "@/components/ui/Avatar";
 import FollowButton from "./FollowButton";
 import ConfirmButton, { UnsaveIcon } from "@/components/ui/ConfirmButton";
 import { useRepository } from "@/hooks/useRepository";
+import { useImagesReady } from "@/hooks/useImagesReady";
 import { useToast } from "@/components/ui/Toast";
 import type { ListWithRecord } from "@/lib/data/types";
 
@@ -90,6 +91,10 @@ export default function ListHoverCard({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // six covers arriving one by one under a stationary pointer is six events
+  // where there is one thing to look at
+  const gridReady = useImagesReady((covers ?? []).slice(0, 6));
+
   const listHref = `/u/${list.owner.username}/${list.slug}`;
 
   const share = async () => {
@@ -143,7 +148,11 @@ export default function ListHoverCard({
           the card does not grow under the pointer — a panel that changes
           height while you are reaching for something in it is a panel that
           moves the thing you were reaching for. */}
-      <ul className="grid grid-cols-3 gap-1.5 px-4 pb-4">
+      <ul
+        className={`grid grid-cols-3 gap-1.5 px-4 pb-4 transition-opacity duration-base ease-out ${
+          covers && gridReady ? "opacity-100" : "opacity-0"
+        }`}
+      >
         {Array.from({ length: SLOTS }, (_, i) => {
           const src = covers?.[i];
           return (

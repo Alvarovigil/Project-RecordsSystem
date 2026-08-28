@@ -10,6 +10,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import AccordionShelf from "./AccordionShelf";
 import Avatar from "@/components/ui/Avatar";
 import { coverFor } from "@/lib/cover";
+import { useImagesReady } from "@/hooks/useImagesReady";
 import type { Collection } from "@/lib/collections";
 import type { ListVisibility, SavedList } from "@/lib/data/types";
 import type { SortMode } from "@/lib/collections";
@@ -119,6 +120,16 @@ export default function MobileShelf({
    * exist on one device and simply do not on the other.
    */
   const [listMenu, setListMenu] = useState<SavedList | null>(null);
+
+  // the covers down the list sheet: one fade for the menu, not one per row
+  const listCovers = ordered.map(
+    (c) =>
+      c.vinylIds
+        .map((id) => allVinilos.find((v) => v.id === id))
+        .filter((v): v is Vinyl => Boolean(v?.cover))
+        .pop()?.cover ?? null,
+  );
+  const listsReady = useImagesReady(listCovers);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
 
@@ -196,7 +207,11 @@ export default function MobileShelf({
             Where the desktop reveals the row's actions when the pointer
             arrives, here the ⋯ is simply always there. A finger has no hover,
             and hiding a control behind a long press is hiding it. */}
-        <ul className="flex flex-col gap-1 px-3 py-3">
+        <ul
+          className={`flex flex-col gap-1 px-3 py-3 transition-opacity duration-base ease-out ${
+            listsReady ? "opacity-100" : "opacity-0"
+          }`}
+        >
           {ordered.map((c, i) => {
             const startsCustom =
               i === primary.length && primary.length > 0 && custom.length > 0;
@@ -409,6 +424,12 @@ function CoverGrid({
   onOpen: (v: Vinyl) => void;
   nowPlayingId?: string;
 }) {
+  // Only the first screenful is waited for. Gating four hundred covers on each
+  // other would mean waiting for the ones nobody has scrolled to yet; the rest
+  // arrive as you reach them, each into a square that is already the right
+  // shape and colour.
+  const ready = useImagesReady(vinilos.slice(0, 8).map(coverFor));
+
   if (vinilos.length === 0) {
     return (
       <div className="px-5 pb-chrome" style={{ paddingTop: "calc(var(--safe-top) + 130px)" }}>
@@ -430,7 +451,11 @@ function CoverGrid({
         paddingBottom: "calc(var(--tabbar-h) + var(--player-h) + 24px)",
       }}
     >
-      <ul className="grid grid-cols-2 gap-x-4 gap-y-7">
+      <ul
+        className={`grid grid-cols-2 gap-x-4 gap-y-7 transition-opacity duration-base ease-out ${
+          ready ? "opacity-100" : "opacity-0"
+        }`}
+      >
         {vinilos.map((v, i) => (
           <li key={v.id}>
             <button onClick={() => onOpen(v)} className="pressable block w-full text-left">

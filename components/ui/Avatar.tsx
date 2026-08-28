@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { coverFor } from "@/lib/cover";
 
 /**
@@ -101,11 +103,29 @@ export function Cover({
   className?: string;
 }) {
   const url = src ?? (vinyl ? coverFor(vinyl) : null);
+  const [shown, setShown] = useState(false);
   return (
     <span className={`block aspect-square w-full overflow-hidden bg-fill-subtle ${className}`}>
       {url && (
+        // A cover that snaps in at full opacity the instant its bytes land is
+        // the flicker you see scrolling any image list on the web. The sunken
+        // square underneath is already the right shape and the right colour,
+        // so the picture only has to arrive into it.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={alt} loading="lazy" className="h-full w-full object-cover" />
+        <img
+          src={url}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setShown(true)}
+          // cached images can be complete before React ever attaches onLoad
+          ref={(el) => {
+            if (el?.complete) setShown(true);
+          }}
+          className={`h-full w-full object-cover transition-opacity duration-base ease-out ${
+            shown ? "opacity-100" : "opacity-0"
+          }`}
+        />
       )}
     </span>
   );

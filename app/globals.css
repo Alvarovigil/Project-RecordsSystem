@@ -509,3 +509,28 @@ body[data-sheet-open="1"] {
   overflow: hidden;
   touch-action: none;
 }
+
+/* ------------------------------------------------------------ navigation */
+/* One screen becoming another. A defocus rather than a slide: two routes are
+   rarely next to each other in space, and pretending otherwise is what makes
+   web transitions feel like a slideshow. Filter and opacity only — both are
+   composited, so nothing here touches layout. */
+.page-fade {
+  opacity: 0;
+  filter: blur(10px);
+  transition:
+    opacity var(--d-base) var(--ease-out),
+    filter var(--d-slow) var(--ease-out);
+}
+.page-fade[data-arrived] {
+  opacity: 1;
+  filter: blur(0px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-fade,
+  .page-fade[data-arrived] {
+    opacity: 1;
+    filter: none;
+    transition: none;
+  }
+}
