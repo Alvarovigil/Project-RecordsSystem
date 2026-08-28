@@ -24,6 +24,7 @@ import { type Collection, type SortMode, sortedVinylIds } from "@/lib/collection
 import { useDevice } from "@/hooks/useDevice";
 import MobileShelf from "@/components/mobile/MobileShelf";
 import RecordSheet from "@/components/mobile/RecordSheet";
+import Loading from "@/components/ui/Loading";
 import MobileSearch from "@/components/mobile/MobileSearch";
 import { useToast, ToastIcon } from "@/components/ui/Toast";
 import type { SavedList } from "@/lib/data/types";
@@ -592,25 +593,11 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           hydrated ? "opacity-0 pointer-events-none" : "opacity-100"
         }`}
       >
-        <div className="w-[320px] border border-paper/10">
-          <div className="flex items-center justify-between border-b border-paper/10 px-4 py-2 mono text-[10px] uppercase tracking-[0.22em] text-paper/40">
-            <span>Sistema · v0.1</span>
-            <span className="loading-dot">●</span>
-          </div>
-          <div className="px-5 pt-5 pb-3">
-            <div className="mono text-[10px] uppercase tracking-[0.22em] text-paper/40">
-              Estado
-            </div>
-            <div className="mt-1.5 text-[14px] text-paper/85">
-              Cargando ficheros
-            </div>
-          </div>
-          <div className="px-5 pb-5">
-            <div className="h-px bg-paper/10 relative overflow-hidden">
-              <div className="absolute inset-y-0 left-0 w-1/3 bg-paper/40 loading-bar" />
-            </div>
-          </div>
-        </div>
+        {/* The mark, turning. This used to be a 320px card with a fake
+            system readout in it — "Sistema · v0.1", "Cargando ficheros", a
+            progress bar measuring nothing. It was set dressing pretending to
+            be information, and it was the first thing anybody saw. */}
+        <Loading size={64} label="Cargando tu colección" />
       </div>
 
       {/* everything else fades IN when hydrated, and fades briefly on

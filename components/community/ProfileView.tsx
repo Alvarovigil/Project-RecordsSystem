@@ -16,6 +16,7 @@ import { useRepository } from "@/hooks/useRepository";
 import { useRelationship } from "@/hooks/useRelationship";
 import type { ListWithRecord, Profile, ProfileStats, SavedList } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
+import Loading from "@/components/ui/Loading";
 
 /**
  * One profile screen, for you and for everyone else.
@@ -354,7 +355,11 @@ function PeopleSheet({
       width={420}
     >
       <div className="px-5 py-1">
-        {rows === null && <p className="py-6 text-sub text-content-faint">Cargando…</p>}
+        {rows === null && (
+          <div className="flex justify-center py-8">
+            <Loading size={40} />
+          </div>
+        )}
         {rows?.length === 0 && (
           <p className="py-6 text-sub text-content-muted">
             {which === "followers"

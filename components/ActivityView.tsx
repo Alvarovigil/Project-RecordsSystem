@@ -6,6 +6,7 @@ import { Page } from "@/components/app/AppShell";
 import Avatar, { Cover } from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
+import { LoadingScreen } from "@/components/ui/Loading";
 import { useRepository } from "@/hooks/useRepository";
 import { useNotifications } from "@/hooks/useNotifications";
 import { groupActivity, namesOf, type ActivityGroup } from "@/lib/activity";
@@ -89,7 +90,7 @@ export default function ActivityView() {
       )}
 
       {events === null ? (
-        <p className="text-sub text-content-faint">Cargando…</p>
+        <LoadingScreen label="Cargando la actividad" />
       ) : groups.length === 0 ? (
         <EmptyState
           title="Todavía no se mueve nada"

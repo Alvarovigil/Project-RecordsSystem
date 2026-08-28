@@ -622,3 +622,29 @@ body[data-sheet-open="1"] {
 [data-landing="gate"] .landing-dims {
   opacity: 0.32;
 }
+
+/* ------------------------------------------------------------- the loader */
+/**
+ * The globe turning inside the mark.
+ *
+ * A meridian on a rotating sphere is an ellipse whose width goes to zero at
+ * the halfway point and comes back inverted — so the animation is a scaleX
+ * from 1 to -1 and round again, about the globe's own centre. That is the
+ * whole trick, and it costs one composited transform per frame.
+ *
+ * 2.6s because a loader that spins fast reads as urgency, and this one is
+ * saying "a moment", not "hurry".
+ */
+@keyframes loader-meridian {
+  0% { transform: scaleX(1); }
+  50% { transform: scaleX(-1); }
+  100% { transform: scaleX(1); }
+}
+.loader-meridian {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: loader-meridian 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loader-meridian { animation: none; }
+}
