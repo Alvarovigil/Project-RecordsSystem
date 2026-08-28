@@ -105,6 +105,17 @@ type Props = {
    * sleeve under the cursor stops being a background.
    */
   ambient?: boolean;
+  /**
+   * The same rack, stood on its end.
+   *
+   * A phone is the wrong shape for a row you walk along and the wrong grip:
+   * the thumb travels up and down. So the wheel turns vertically, the camera
+   * climbs above the strip and looks down at it, and every sleeve lies face-up
+   * in a pile with its printed edge toward you — the way records sit when you
+   * take them out of the rack. Nothing else changes: same boxes, same spines,
+   * same cardboard, same single number driving the whole thing.
+   */
+  vertical?: boolean;
   /** records per second of drift in ambient mode */
   drift?: number;
   /**
@@ -354,7 +365,16 @@ function spineInk(edge: string): { bg: string; ink: string; halo: string } {
 }
 
 const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
-  { vinilos, onOpen, onActiveChange, onCoverHalfWidth, ambient = false, drift = 0.09, handleRef },
+  {
+    vinilos,
+    onOpen,
+    onActiveChange,
+    onCoverHalfWidth,
+    ambient = false,
+    vertical = false,
+    drift = 0.09,
+    handleRef,
+  },
   ref,
 ) {
   // animation tuning (fixed)
@@ -372,7 +392,27 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   const zoom = 8;
   const camX = 0;
   const camY = 0.3;
-  const lights = {
+  /**
+   * Light comes from where the viewer is.
+   *
+   * The rack is lit from in front because that is where you stand. Leaning
+   * over a pile, the same two lamps sit below the horizon and the near end of
+   * the stack — the part closest to you — goes black. So in vertical they
+   * climb with the camera and look down with it.
+   */
+  const lights = vertical
+    ? {
+        ambient: 1.9,
+        light1X: 3,
+        light1Y: 11,
+        light1Z: 9,
+        light1Intensity: 4,
+        light2X: -4,
+        light2Y: 8,
+        light2Z: 11,
+        light2Intensity: 3.4,
+      }
+    : {
     ambient: 1.6,
     light1X: 2,
     light1Y: 0,
@@ -382,15 +422,36 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     light2Y: 0,
     light2Z: 14,
     light2Intensity: 4,
-  };
-  const fov = 28;
-  const stripY = -1.1;
+      };
+  /**
+   * Looking down at a pile needs a wider lens than looking along a rack.
+   *
+   * A phone in portrait is 0.46 as wide as it is tall, and a 28° vertical
+   * field of view leaves barely 13° across — at which point a 3-unit sleeve
+   * has to be seventeen units away to fit, and the perspective flattens into
+   * an elevation drawing. Widening the lens keeps the camera close enough for
+   * the pile to have depth in it.
+   */
+  const fov = vertical ? 40 : 28;
+  /** how far above the plane of the pile the camera sits */
+  const CENITAL = 0.82; // ~47°
+  // horizontally the strip sits below the eye line so the covers read against
+  // the empty top half; looking down at a pile there is no "below" to use
+  const stripY = vertical ? 0 : -1.1;
   const spacing = 0.45;
   const visibleX = 6;
   const fanStrength = 0.08;
   const maxOpen = 1.3;
-  const fogNear = 6;
-  const fogFar = 11;
+  /**
+   * Fog measured from where the camera actually is.
+   *
+   * Fixed distances were fine while the camera never moved; leaning over the
+   * pile puts it eleven units out, which is past the old far plane — the whole
+   * stack came out black. The haze still has to be there (it is what makes the
+   * far end of the pile recede) so it travels with the camera instead.
+   */
+  const fogNear = vertical ? 9 : 6;
+  const fogFar = vertical ? 20 : 11;
   // glossier than the cardboard sides so light catches highlights on the cover
   const coverRoughness = 0.35;
   const coverMetalness = 0.05;
@@ -498,7 +559,11 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       if (t.closest("[data-scrollable]")) return;
       if (openTarget.current > 0) return;
       e.preventDefault();
-      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      const delta = vertical
+        ? e.deltaY
+        : Math.abs(e.deltaX) > Math.abs(e.deltaY)
+          ? e.deltaX
+          : e.deltaY;
       target.current = clampToList(target.current + delta * 0.005);
       scheduleSnap();
     };
@@ -512,16 +577,18 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     let startT = 0;
     let dragging = false;
     let moved = false;
+    // the axis the strip runs along is the axis the finger works on
+    const axisOf = (e: PointerEvent) => (vertical ? e.clientY : e.clientX);
     const onDown = (e: PointerEvent) => {
       if (openTarget.current > 0) return; // no drag while opened
       dragging = true;
       moved = false;
-      startX = e.clientX;
+      startX = axisOf(e);
       startT = target.current;
     };
     const onMove = (e: PointerEvent) => {
       if (!dragging) return;
-      const dx = e.clientX - startX;
+      const dx = axisOf(e) - startX;
       if (Math.abs(dx) > 4) moved = true;
       target.current = clampToList(startT - dx * 0.01);
     };
@@ -546,8 +613,10 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
 
     const onKey = (e: KeyboardEvent) => {
       if (openTarget.current > 0) return;
-      if (e.key === "ArrowRight") target.current = clampToList(Math.round(target.current) + 1);
-      else if (e.key === "ArrowLeft") target.current = clampToList(Math.round(target.current) - 1);
+      const fwd = vertical ? "ArrowDown" : "ArrowRight";
+      const back = vertical ? "ArrowUp" : "ArrowLeft";
+      if (e.key === fwd) target.current = clampToList(Math.round(target.current) + 1);
+      else if (e.key === back) target.current = clampToList(Math.round(target.current) - 1);
     };
     window.addEventListener("keydown", onKey);
 
@@ -560,7 +629,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       window.removeEventListener("pointercancel", onUp);
       window.removeEventListener("keydown", onKey);
     };
-  }, [ambient]);
+  }, [ambient, vertical]);
 
   useEffect(() => {
     onActiveChange?.(vinilos[active]);
@@ -585,6 +654,14 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
           antialias: true,
         }}
       >
+        {/* Standing in front of a rack, or leaning over a pile. 46° is the
+            angle at which a stack still reads as a stack: flatter and the
+            covers are hidden behind each other, steeper and the printed edges
+            — the only thing you can read while they are stacked — disappear. */}
+        {/* Standing in front of a rack, or leaning over a pile. The distance
+            is not a taste decision: it is whatever puts a sleeve across most
+            of the screen at this lens and this aspect, so the shelf fills a
+            phone the same way it fills a desktop. */}
         <PerspectiveCamera makeDefault position={[camX, camY, zoom]} fov={fov} />
         <color attach="background" args={["#0a0a0a"]} />
         <FogRig openProgressRef={openProgress} near={fogNear} far={fogFar} />
@@ -607,12 +684,15 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
           openProgressRef={openProgress}
           baseZ={zoom}
           fov={fov}
+          vertical={vertical}
+          cenital={CENITAL}
           onCoverHalfWidth={onCoverHalfWidth}
         />
 
         <Suspense fallback={null}>
           <Strip
             ambient={ambient}
+            vertical={vertical}
             drift={drift}
             vinilos={vinilos}
             targetRef={target}
@@ -651,6 +731,7 @@ export default memo(VinylShelf3D);
 
 function Strip({
   ambient,
+  vertical,
   drift,
   vinilos,
   targetRef,
@@ -677,6 +758,7 @@ function Strip({
   hoverLift,
 }: {
   ambient: boolean;
+  vertical: boolean;
   drift: number;
   vinilos: Vinyl[];
   targetRef: React.MutableRefObject<number>;
@@ -833,6 +915,7 @@ function Strip({
           <Sleeve
             key={`${v.id}-${c}`}
             vinyl={v}
+            vertical={vertical}
             baseIndex={i + c * N}
             modulus={modulus}
             currentRef={currentRef}
@@ -862,6 +945,7 @@ function Strip({
 
 function Sleeve({
   vinyl,
+  vertical,
   baseIndex,
   modulus,
   currentRef,
@@ -884,6 +968,7 @@ function Sleeve({
   onClick,
 }: {
   vinyl: Vinyl;
+  vertical: boolean;
   baseIndex: number;
   modulus: number;
   currentRef: React.MutableRefObject<number>;
@@ -1069,7 +1154,16 @@ function Sleeve({
     const flipPhase = EASINGS[flipEasing](flipPhaseRaw);
 
     const tilt = Math.sign(x) * Math.min(maxOpen, Math.abs(x) * fanStrength);
-    const baseRot = Math.PI / 2 + tilt;
+    /**
+     * The closed pose, which is the whole difference between the two shelves.
+     *
+     * Standing in a rack, a sleeve is turned a quarter turn about its vertical
+     * axis: spine out, cover to the side. Lying in a pile it is turned the
+     * same quarter turn about its horizontal one: cover up, printed edge
+     * toward you. Same rotation, different axis — and opening it is the same
+     * move undone in both cases, which is why one number still drives it all.
+     */
+    const baseRot = (vertical ? -Math.PI / 2 : Math.PI / 2) + tilt;
 
     const centerWeight = Math.max(0, 1 - Math.abs(x) / (spacing * 0.6));
 
@@ -1089,7 +1183,8 @@ function Sleeve({
     // close to 1.
     const flipReadyness = Math.pow(centerWeight, 5);
     const flipFactor = flipPhase * flipReadyness;
-    meshGroupRef.current.rotation.y = baseRot * (1 - flipFactor);
+    if (vertical) meshGroupRef.current.rotation.x = baseRot * (1 - flipFactor);
+    else meshGroupRef.current.rotation.y = baseRot * (1 - flipFactor);
 
     // hover lift fades out as we open
     // easeInOutQuint — strong S-curve, very soft entry AND exit
@@ -1097,13 +1192,22 @@ function Sleeve({
     const hoverEased =
       h < 0.5 ? 16 * h * h * h * h * h : 1 - Math.pow(-2 * h + 2, 5) / 2;
     const hoverLiftValue = hoverEased * hoverLift * (1 - open);
-    meshGroupRef.current.position.x = x;
     // lift uses a softer curve so neighbours still rise nicely as they slide
     // toward centre — only the FLIP is sharply gated, not the lift itself
     const liftReadyness = Math.pow(centerWeight, 1.4);
     // the reveal also lifts the sleeve the last few millimetres into the strip
-    meshGroupRef.current.position.y =
-      movePhase * liftReadyness * 4.4 + hoverLiftValue - (1 - reveal) * 0.3;
+    const lift = movePhase * liftReadyness * 4.4 + hoverLiftValue - (1 - reveal) * 0.3;
+    if (vertical) {
+      // the row runs down the screen, and "lifting" a record out of a pile is
+      // lifting it toward you rather than upward
+      meshGroupRef.current.position.x = 0;
+      meshGroupRef.current.position.y = -x;
+      meshGroupRef.current.position.z = lift;
+    } else {
+      meshGroupRef.current.position.x = x;
+      meshGroupRef.current.position.y = lift;
+      meshGroupRef.current.position.z = 0;
+    }
     const s = 0.97 + reveal * 0.03;
     meshGroupRef.current.scale.set(s, s, 1);
 
@@ -1208,11 +1312,16 @@ function CameraRig({
   openProgressRef,
   baseZ,
   fov,
+  vertical,
+  cenital,
   onCoverHalfWidth,
 }: {
   openProgressRef: React.MutableRefObject<number>;
   baseZ: number;
   fov: number;
+  vertical: boolean;
+  /** radians above the plane of the pile */
+  cenital: number;
   /** half the on-screen width of a centred sleeve, in CSS pixels */
   onCoverHalfWidth?: (px: number) => void;
 }) {
@@ -1220,9 +1329,34 @@ function CameraRig({
   const lastReported = useRef(-1);
   useFrame(() => {
     const aspect = size.width / size.height;
-    const openZ = aspect > 1.5 ? baseZ + 1.5 : baseZ + 4;
     const t = EASINGS.easeInOutCubic(openProgressRef.current);
-    camera.position.z = baseZ * (1 - t) + openZ * t;
+
+    if (vertical) {
+      /**
+       * The distance is derived, not chosen.
+       *
+       * A phone's width is the constraint — the sleeve has to fit across it
+       * with a margin — so the camera sits wherever the horizontal field of
+       * view makes that true, and then climbs to the viewing angle keeping
+       * that distance. Hard-coding a number instead means the shelf is framed
+       * for exactly one handset and cropped on every other.
+       */
+      const halfV = (fov * Math.PI) / 360;
+      const halfH = Math.atan(Math.tan(halfV) * aspect);
+      // 1.24: the sleeve fills most of the width but not all of it. A cover
+      // touching both edges reads as a background image rather than as an
+      // object lying on something, and the ones nearer the camera down the
+      // pile are larger still — without the margin they get cropped.
+      const want = (SLEEVE_W * 1.24 * (1 + 0.3 * t)) / 2 / Math.tan(halfH);
+      const d = want;
+      camera.position.set(0, d * Math.sin(cenital), d * Math.cos(cenital));
+      // opening a record stands it up to face you, so the camera comes level
+      // with it rather than continuing to look down on it
+      camera.rotation.set(-cenital * (1 - t), 0, 0);
+    } else {
+      const openZ = aspect > 1.5 ? baseZ + 1.5 : baseZ + 4;
+      camera.position.z = baseZ * (1 - t) + openZ * t;
+    }
 
     // Project the sleeve to screen space so the UI can lay itself out around
     // the real cover instead of guessing with percentages.

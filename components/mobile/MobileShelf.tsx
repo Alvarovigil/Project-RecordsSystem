@@ -7,7 +7,17 @@ import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import Button from "@/components/ui/Button";
 import ListEditSheet from "./ListEditSheet";
 import EmptyState from "@/components/ui/EmptyState";
-import AccordionShelf from "./AccordionShelf";
+import dynamic from "next/dynamic";
+
+/**
+ * The 3D engine, downloaded only when a phone actually opens the shelf.
+ *
+ * It used to be desktop-only on purpose — a phone never paid for three.js at
+ * all. Now it does, and that is a real cost paid for a real reason: the shelf
+ * IS the product, and a flat imitation of it in CSS was a different, worse
+ * thing wearing its name.
+ */
+const VinylShelf3D = dynamic(() => import("@/components/VinylShelf3D"), { ssr: false });
 import Avatar from "@/components/ui/Avatar";
 import { coverFor } from "@/lib/cover";
 import { useImagesReady } from "@/hooks/useImagesReady";
@@ -179,15 +189,9 @@ export default function MobileShelf({
       </header>
 
       {view === "shelf" ? (
-        <AccordionShelf
-          vinilos={vinilos}
-          onOpen={onOpen}
-          onPlay={onPlay}
-          onRemove={onRemoveFromList}
-          listName={activeName}
-          nowPlayingId={nowPlayingId}
-          isPlaying={isPlaying}
-        />
+        <div className="fixed inset-0">
+          <VinylShelf3D vertical vinilos={vinilos} onOpen={onOpen} />
+        </div>
       ) : (
         <CoverGrid vinilos={vinilos} onOpen={onOpen} nowPlayingId={nowPlayingId} />
       )}
