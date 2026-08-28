@@ -24,6 +24,29 @@ export default function Landing() {
     <main className="relative bg-ink text-paper">
       <Backdrop />
       <StickyMark />
+        {/**
+       * The header is fixed with the mark it sits beside.
+       *
+       * Half a header that scrolls and half that does not is two headers.
+       * The claim and the way in belong to the whole page, the same way the
+       * wordmark does, so they stay in the corners while everything else
+       * moves underneath. On a phone the mark is centred above them and this
+       * row is what is left, so it starts below it.
+       */}
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex items-start justify-between px-5 pt-[68px] sm:px-8 sm:pt-6">
+        {/* Not a link — the claim of the whole thing, held in the corner.
+            Two sentences, and the full stop between them is doing the work:
+            it makes the second half land as a separate promise rather than
+            as a list of two nouns. */}
+        <span className="max-w-[46vw] text-[11px] uppercase leading-tight tracking-[0.05em] text-paper/80 sm:max-w-none sm:text-[13px]">
+          Your records. Your people.
+        </span>
+
+        <div className="pointer-events-auto">
+          <SignInButton variant="quiet" />
+        </div>
+      </header>
+
       <SoundGate />
       <AboutProject />
 
@@ -37,31 +60,6 @@ export default function Landing() {
          * under it; and signing in pinned to the corner on its own. From `sm`
          * up there is room for the row that was designed, and it comes back.
          */}
-        <header className="relative flex flex-col items-center gap-3 px-5 pb-2 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-0 sm:px-8 sm:py-6">
-          {/* The mark is fixed to the window and lives in <StickyMark/> below;
-              this is the hole it would have occupied, so the claim and the
-              sign-in still sit under it rather than jumping up the page. */}
-          {/* Only on a phone, where the mark sits above this row. From sm up
-              the mark is centred over the middle of the header and the row has
-              its two ends back — a spacer there would push the claim into the
-              corner the sign-in is using, which is exactly what it did. */}
-          <span aria-hidden className="block h-[52px] sm:hidden" />
-
-          {/* Not a link — the claim of the whole thing, held in the corner.
-              Two sentences, and the full stop between them is doing the work:
-              it makes the second half land as a separate promise rather than
-              as a list of two nouns. */}
-          <span className="text-center text-[12px] uppercase tracking-[0.04em] text-paper/85 sm:max-w-none sm:text-left sm:text-[15px] sm:text-paper">
-            Your records. Your people.
-          </span>
-
-          {/* Under the claim on a phone, in the right-hand end of the row
-              from sm up. Never absolute: the mark already owns that corner. */}
-          <div>
-            <SignInButton variant="quiet" />
-          </div>
-        </header>
-
         {/* the contents of the record, at the foot of the sleeve */}
         {/* pb-28 on a phone: the now-playing bar and the "sobre el proyecto"
             link are both fixed to the bottom, and the index used to run
@@ -333,10 +331,21 @@ function StickyMark() {
       style={{ opacity: 0.92 + (1 - e) * 0.08 }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
+      {/**
+       * Inverted against whatever it is over.
+       *
+       * `difference` subtracts what is underneath, so the mark is white on the
+       * black of the page and turns into the negative of a sleeve as one
+       * passes behind it — which is the one moment this page has where the
+       * artwork and the name are the same object. It also solves the problem
+       * the drop shadow was solving badly: a white wordmark over a pale cover
+       * used to disappear, and now it cannot, because it is defined by
+       * contrast rather than by lying on top.
+       */}
       <img
         src="/logo.svg"
         alt="Rackr Club"
-        className="w-auto drop-shadow-[0_8px_36px_rgba(0,0,0,0.95)]"
+        className="w-auto mix-blend-difference"
         style={{ height: `calc(var(--mark-max) - (var(--mark-max) - var(--mark-min)) * ${e})` }}
       />
     </div>

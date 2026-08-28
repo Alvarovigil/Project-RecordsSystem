@@ -57,6 +57,21 @@ export default function SoundGate() {
   const [current, setCurrent] = useState<Track | null>(null);
   const [playing, setPlaying] = useState(false);
 
+  /**
+   * Whether the track's name is showing.
+   *
+   * Opens on every change of song and closes three seconds later — long enough
+   * to read what you are hearing, short enough that the corner goes back to
+   * being a meter and two buttons.
+   */
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!current) return;
+    setOpen(true);
+    const t = setTimeout(() => setOpen(false), 3000);
+    return () => clearTimeout(t);
+  }, [current]);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const needleRef = useRef<HTMLAudioElement | null>(null);
   // the order is shuffled once, then walked: a random pick every time repeats
@@ -301,13 +316,27 @@ export default function SoundGate() {
             <Bars animate={playing} />
           </span>
 
-          {current ? (
-            <span className="min-w-0 flex-1 truncate sm:max-w-[300px]">
-              {current.artist} — {current.title}
-            </span>
-          ) : (
-            <span>Sin sonido</span>
-          )}
+          {/**
+           * The name announces itself and then gets out of the way.
+           *
+           * A track title parked in the corner of a landing page for as long
+           * as the song lasts is a label nobody is reading after the first
+           * three seconds — but the three seconds matter, because that is when
+           * you want to know what you are hearing. So it opens on every change
+           * of track, waits, and folds back to the meter and the controls.
+           *
+           * Folded by max-width rather than by unmounting: the text stays in
+           * the DOM for anyone listening to the page, the two states are the
+           * same element so the transition is continuous, and the controls
+           * slide rather than jump because nothing is being added or removed.
+           */}
+          <span
+            className={`min-w-0 truncate transition-[max-width,opacity] duration-slow ease-out sm:max-w-[300px] ${
+              open ? "max-w-[52vw] opacity-100 sm:max-w-[300px]" : "max-w-0 opacity-0 sm:max-w-0"
+            }`}
+          >
+            {current ? `${current.artist} — ${current.title}` : "Sin sonido"}
+          </span>
 
           <span className="flex shrink-0 items-center gap-2.5">
             <button
