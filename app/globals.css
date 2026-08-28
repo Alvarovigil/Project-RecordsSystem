@@ -87,7 +87,20 @@
   --r-control: 10px;
   --r-md: 8px;
   --r-lg: 14px;
-  --r-sheet: 18px;
+  /**
+   * The radius of the phone itself.
+   *
+   * A sheet rising from the bottom of the screen has one job before it has
+   * any other: to look like it belongs to the device it is on. Every modern
+   * iPhone rounds its display at somewhere between 44 and 55pt, and a panel
+   * that meets those corners with 18px reads as a web page's idea of a sheet —
+   * the two radii sit next to each other and disagree.
+   *
+   * 34px is the compromise the platform's own sheets make: rounder than a card,
+   * short of the screen's own corner, so the gap between the two never looks
+   * like a mistake.
+   */
+  --r-sheet: 34px;
   --r-full: 999px;
 
   /* --- type ----------------------------------------------------------- */
