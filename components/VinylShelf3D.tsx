@@ -564,6 +564,18 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   const target = useRef(0);
   const current = useRef(0);
   const [active, setActive] = useState(0);
+  /**
+   * The two halves of a gesture that keeps going after the finger stops.
+   *
+   * `dragging` means the shelf is attached to a thumb and must follow it
+   * exactly — any smoothing there is felt as lag, because you can see the
+   * distance between your finger and the thing it is supposedly holding.
+   * `velocity` is what is left when you let go, in records per second, and it
+   * is what the frame loop spends down against friction.
+   */
+  const dragging = useRef(false);
+  const velocity = useRef(0);
+
   // open state — 0 = closed (carousel), 1 = fully opened (cover face-on)
   const openTarget = useRef(0);
   const openProgress = useRef(0);
@@ -674,20 +686,37 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     // and r3f can still receive its synthesized click events on the canvas.
     let startX = 0;
     let startT = 0;
-    let dragging = false;
     let moved = false;
     // the axis the strip runs along is the axis the finger works on
     const axisOf = (e: PointerEvent) => (vertical ? e.clientY : e.clientX);
+    let lastPos = 0;
+    let lastAt = 0;
     const onDown = (e: PointerEvent) => {
       if (openTarget.current > 0) return; // no drag while opened
-      dragging = true;
+      dragging.current = true;
+      velocity.current = 0; // catching a moving shelf stops it, like a list
       moved = false;
       startX = axisOf(e);
       startT = target.current;
+      lastPos = startX;
+      lastAt = performance.now();
     };
     const onMove = (e: PointerEvent) => {
-      if (!dragging) return;
-      const dx = axisOf(e) - startX;
+      if (!dragging.current) return;
+      const now = performance.now();
+      const pos = axisOf(e);
+      const dt = (now - lastAt) / 1000;
+      if (dt > 0.001) {
+        // Records per second, low-passed. A raw sample is one frame of noise —
+        // fingers do not move smoothly and the last one before release is
+        // usually the worst of them, which is exactly the one a naive
+        // implementation would throw with.
+        const raw = ((pos - lastPos) * (vertical ? 1 : -1) * 0.01) / dt;
+        velocity.current = velocity.current * 0.72 + raw * 0.28;
+        lastPos = pos;
+        lastAt = now;
+      }
+      const dx = pos - startX;
       // A finger is not a mouse. Four pixels is a steady hand on a trackpad and
       // an ordinary tap on glass, so on touch that threshold turned taps into
       // drags and threw the click away.
@@ -700,9 +729,15 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       target.current = clampToList(startT + (vertical ? dx : -dx) * 0.01);
     };
     const onUp = () => {
-      if (!dragging) return;
-      dragging = false;
-      target.current = clampToList(Math.round(target.current));
+      if (!dragging.current) return;
+      dragging.current = false;
+      // A throw carries on; a tap does not. Anything slower than this is a
+      // hand coming to rest, and honouring it would drift the shelf under a
+      // finger that had stopped meaning it.
+      if (!moved || Math.abs(velocity.current) < 0.6) {
+        velocity.current = 0;
+        target.current = clampToList(Math.round(target.current));
+      }
       if (!moved) return;
       /**
        * Swallow the click a drag leaves behind — and always take the trap back
@@ -812,6 +847,8 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
         <Suspense fallback={null}>
           <Strip
             ambient={ambient}
+            draggingRef={dragging}
+            velocityRef={velocity}
             vertical={vertical}
             wheelR={WHEEL_R}
             wheelStep={WHEEL_STEP}
@@ -854,6 +891,8 @@ export default memo(VinylShelf3D);
 
 function Strip({
   ambient,
+  draggingRef,
+  velocityRef,
   vertical,
   wheelR,
   wheelStep,
@@ -884,6 +923,8 @@ function Strip({
   hoverLift,
 }: {
   ambient: boolean;
+  draggingRef: React.MutableRefObject<boolean>;
+  velocityRef: React.MutableRefObject<number>;
   vertical: boolean;
   wheelR: number;
   wheelStep: number;
@@ -977,6 +1018,46 @@ function Strip({
       currentRef.current = targetRef.current;
       return;
     }
+    /**
+     * A throw that keeps going, and a settle that does not clunk.
+     *
+     * What made this feel hard was not the smoothing — it was that letting go
+     * rounded to the nearest record in the same frame. A list on a phone does
+     * three things and it did none of them: it follows the finger exactly, it
+     * carries on when you let go, and it comes to rest by easing rather than
+     * by arriving.
+     *
+     * Friction is exponential, so the deceleration is steep at first and long
+     * at the end — the shape a heavy thing sliding on a smooth surface has,
+     * and the one every list on every phone imitates. The settle happens while
+     * there is still a little speed left, so the last of the movement is the
+     * ease into the nearest record and not a stop followed by a jump.
+     */
+    if (draggingRef.current) {
+      // attached to a thumb: any smoothing here reads as lag, because you can
+      // see the gap between your finger and what it is holding
+      currentRef.current = targetRef.current;
+      return;
+    }
+
+    if (velocityRef.current !== 0) {
+      const dt = Math.min(delta, 0.05);
+      targetRef.current += velocityRef.current * dt;
+      velocityRef.current *= Math.exp(-2.6 * dt);
+      if (Math.abs(velocityRef.current) < 0.45) {
+        velocityRef.current = 0;
+        targetRef.current = Math.round(targetRef.current);
+      }
+      if (N > 0 && N <= 8) {
+        // a short list has ends, and running off them is not momentum
+        const clamped = Math.max(0, Math.min(N - 1, targetRef.current));
+        if (clamped !== targetRef.current) {
+          targetRef.current = clamped;
+          velocityRef.current = 0;
+        }
+      }
+    }
+
     // while opened, snap directly to the new vinyl (no inter-vinyl animation)
     if (openTargetRef.current > 0) {
       currentRef.current = targetRef.current;
