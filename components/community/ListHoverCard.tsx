@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Avatar from "@/components/ui/Avatar";
 import FollowButton from "./FollowButton";
-import ConfirmButton, { UnsaveIcon } from "@/components/ui/ConfirmButton";
+
 import { useRepository } from "@/hooks/useRepository";
 import { useImagesReady } from "@/hooks/useImagesReady";
 import { useToast } from "@/components/ui/Toast";
@@ -55,6 +55,8 @@ export default function ListHoverCard({
   const toast = useToast();
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const [covers, setCovers] = useState<string[] | null>(null);
+  const [menu, setMenu] = useState(false);
+  const [armed, setArmed] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const W = 300;
   /** three across, two down: enough to recognise, not enough to browse */
@@ -132,10 +134,47 @@ export default function ListHoverCard({
       style={{ top: pos.top, left: pos.left, width: W }}
       className="fixed z-[80] overflow-hidden rounded-lg border border-line-overlay bg-surface-overlay/95 shadow-popover backdrop-blur-xl"
     >
-      <div className="px-4 pb-3.5 pt-4">
-        <Link href={listHref} className="block">
-          <p className="truncate text-body font-medium text-paper hover:underline">{title}</p>
-        </Link>
+      <div className="relative px-4 pb-3.5 pt-4">
+        <div className="flex items-start gap-2">
+          <Link href={listHref} className="block min-w-0 flex-1">
+            <p className="truncate text-body font-medium text-paper hover:underline">{title}</p>
+          </Link>
+          {/* The actions moved up here, behind the same ⋯ they live behind
+              everywhere else in the app. Along the bottom they were three
+              buttons with icons competing with the artwork above them — and
+              this card's job is to show you what the list IS, not to be a
+              toolbar. */}
+          <button
+            onClick={() => setMenu((m) => !m)}
+            aria-label={`Más opciones de ${title}`}
+            aria-expanded={menu}
+            className="pressable -mr-1 -mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-content-muted transition-colors hover:bg-fill hover:text-paper"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden>
+              <circle cx="8" cy="3.2" r="1.35" fill="currentColor" />
+              <circle cx="8" cy="8" r="1.35" fill="currentColor" />
+              <circle cx="8" cy="12.8" r="1.35" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
+
+        {menu && (
+          <div className="absolute right-3 top-11 z-10 w-[196px] rounded-[12px] bg-surface-overlay p-1 shadow-popover ring-1 ring-inset ring-paper/[0.08]">
+            <MenuRow label="Compartir enlace" onClick={() => { void share(); setMenu(false); }} />
+            <MenuRow label={`Ver el perfil de ${list.owner.displayName}`} href={`/u/${list.owner.username}`} />
+            <MenuRow
+              danger
+              label={armed ? "¿Seguro? Toca otra vez" : "Quitar de mi colección"}
+              onClick={() => {
+                // still two presses: it is the one thing here you cannot undo
+                // from inside this card
+                if (!armed) return setArmed(true);
+                onUnfollow();
+                onClose();
+              }}
+            />
+          </div>
+        )}
         {list.description && (
           <p className="mt-1 line-clamp-2 text-sub leading-snug text-content-muted">
             {list.description}
@@ -195,81 +234,42 @@ export default function ListHoverCard({
         />
       </div>
 
-      {/* The ⋯ menu, opened flat. There is room here, and a menu inside a card
-          that only exists while the pointer hovers it is a door behind a door. */}
-      <div className="flex items-center border-t border-line">
-        <CardAction label="Compartir" onClick={share}>
-          <path
-            d="M7 9.5V2.5M7 2.5 4.6 4.9M7 2.5l2.4 2.4M2.6 8v3.4h8.8V8"
-            stroke="currentColor"
-            strokeWidth="1.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-          />
-        </CardAction>
-        <span aria-hidden className="h-6 w-px shrink-0 bg-line" />
-        <CardAction label="Ver perfil" href={`/u/${list.owner.username}`}>
-          <g stroke="currentColor" strokeWidth="1.2" fill="none">
-            <circle cx="7" cy="5" r="2.4" />
-            <path d="M2.8 12c0-2.3 1.9-3.6 4.2-3.6s4.2 1.3 4.2 3.6" strokeLinecap="round" />
-          </g>
-        </CardAction>
-        <span aria-hidden className="h-6 w-px shrink-0 bg-line" />
-        {/* the one destructive thing, and still behind two presses */}
-        <ConfirmButton
-          icon={<UnsaveIcon />}
-          label="Quitar de mi colección"
-          confirmLabel="Quitar de mi colección"
-          onConfirm={() => {
-            onUnfollow();
-            onClose();
-          }}
-          className="h-11 flex-1 justify-center"
-        />
-      </div>
     </div>
   );
 }
 
 /**
- * One of the three doors along the bottom.
+ * A row in the card's own ⋯ menu.
  *
- * Icon over label, not icon alone: three unlabelled glyphs in a row is a
- * puzzle, and this card exists to save someone a click, not to charge them one
- * in guesses.
+ * Left-aligned words, no icons: three glyphs in a row along the bottom of a
+ * card is a puzzle, and this card exists to save somebody a click rather than
+ * charge them one in guesses.
  */
-function CardAction({
+function MenuRow({
   label,
   onClick,
   href,
-  children,
+  danger = false,
 }: {
   label: string;
   onClick?: () => void;
   href?: string;
-  children: React.ReactNode;
+  danger?: boolean;
 }) {
-  const cls =
-    "pressable flex h-11 flex-1 items-center justify-center gap-1.5 text-caption text-content-muted transition-colors hover:bg-fill-subtle hover:text-paper";
-  const inner = (
-    <>
-      <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden>
-        {children}
-      </svg>
-      <span>{label}</span>
-    </>
-  );
+  const cls = `pressable block w-full rounded-[8px] px-2.5 py-2 text-left text-sub transition-colors ${
+    danger ? "text-[#ff6b57] hover:bg-[#ff6b57]/10" : "text-content-secondary hover:bg-fill hover:text-paper"
+  }`;
   if (href) {
     return (
       <Link href={href} className={cls}>
-        {inner}
+        {label}
       </Link>
     );
   }
   return (
     <button type="button" onClick={onClick} className={cls}>
-      {inner}
+      {label}
     </button>
   );
 }
+
