@@ -187,6 +187,14 @@ export interface LibraryRepository {
   listsOfProfile(profileId: string): Promise<ListWithRecord[]>;
   /** full records of any list you're allowed to read, owned by you or not */
   releasesOfList(listId: string): Promise<Vinyl[]>;
+  /**
+   * A handful of cover URLs per list, for the mosaics.
+   *
+   * One request for every list on a screen rather than one per list: a profile
+   * with fourteen lists would otherwise open fourteen connections to draw its
+   * thumbnails. Covers only — nothing here needs the rest of the record.
+   */
+  coversOfLists(listIds: string[]): Promise<Record<string, string[]>>;
 
   // ---- profiles -----------------------------------------------------------
   /** where you stand with someone: both directions, plus "this is you" */

@@ -387,6 +387,21 @@ export function createLocalRepository(): LibraryRepository {
       return listsOfUser(profileId, ids).map((l) => toCommunityList(l, profileId));
     },
 
+    async coversOfLists(listIds) {
+      const all = readReleases();
+      const out: Record<string, string[]> = {};
+      for (const id of listIds) {
+        const ids = id.startsWith("cl-") ? (getGeneratedList(id)?.vinylIds ?? []) : idsOf(id);
+        out[id] = ids
+          .map((r) => all.find((v) => v.id === r))
+          .filter((v): v is Vinyl => Boolean(v))
+          .slice(0, 4)
+          .map((v) => v.cover ?? "")
+          .filter(Boolean);
+      }
+      return out;
+    },
+
     async releasesOfList(listId) {
       const all = readReleases();
       // yours, or one of the generated community lists

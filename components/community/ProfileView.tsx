@@ -14,7 +14,6 @@ import ListCard from "./ListCard";
 import EditProfileSheet from "./EditProfileSheet";
 import { useRepository } from "@/hooks/useRepository";
 import { useRelationship } from "@/hooks/useRelationship";
-import { coverFor } from "@/lib/cover";
 import type { ListWithRecord, Profile, ProfileStats, SavedList } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 
@@ -55,6 +54,7 @@ export default function ProfileView({
   const [lists, setLists] = useState<ListWithRecord[] | null>(null);
   const [saved, setSaved] = useState<SavedList[]>([]);
   const [releases, setReleases] = useState<Vinyl[]>([]);
+  const [covers, setCovers] = useState<Record<string, string[]>>({});
   const [tab, setTab] = useState<"lists" | "records" | "saved">("lists");
   const [people, setPeople] = useState<"followers" | "following" | null>(null);
   const [editing, setEditing] = useState(false);
@@ -72,6 +72,15 @@ export default function ProfileView({
       if (p) setProfile(p);
       setStats(s);
       setLists(l);
+      // The mosaics used to be built by cross-referencing each list's ids
+      // against your own library — which only exists for your own profile, and
+      // only on the local backend. Everyone else got fourteen empty squares.
+      if (l.length) {
+        repo
+          .coversOfLists(l.map((x) => x.id))
+          .then(setCovers)
+          .catch(() => {});
+      }
     });
   }, [repo, profileId]);
 
@@ -81,21 +90,22 @@ export default function ProfileView({
   // question, and answering it here would mean four requests on every visit.
   useEffect(() => {
     if (!isYou) return;
-    repo.savedLists().then(setSaved).catch(() => {});
+    repo
+      .savedLists()
+      .then((all) => {
+        setSaved(all);
+        if (all.length) {
+          repo
+            .coversOfLists(all.map((x) => x.id))
+            .then((c) => setCovers((prev) => ({ ...prev, ...c })))
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
     repo.listReleases().then(setReleases).catch(() => {});
   }, [repo, isYou]);
 
-  const coversOf = useCallback(
-    (l: ListWithRecord) => {
-      const ids = (l as ListWithRecord & { vinylIds?: string[] }).vinylIds ?? [];
-      return ids
-        .map((id) => releases.find((r) => r.id === id))
-        .filter((v): v is Vinyl => Boolean(v))
-        .slice(0, 4)
-        .map(coverFor);
-    },
-    [releases],
-  );
+  const coversOf = useCallback((l: ListWithRecord) => covers[l.id] ?? [], [covers]);
 
   const tabs = [
     { value: "lists" as const, label: "Listas", count: stats?.lists },

@@ -393,6 +393,24 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       return ((data ?? []) as any[]).map(withOwner);
     },
 
+    async coversOfLists(listIds) {
+      if (listIds.length === 0) return {};
+      const { data } = await sb
+        .from("list_items")
+        .select("list_id, position, releases!inner(cover_url)")
+        .in("list_id", listIds)
+        .order("position")
+        .limit(400);
+      const out: Record<string, string[]> = {};
+      for (const row of (data ?? []) as any[]) {
+        const url = row.releases?.cover_url;
+        if (!url) continue;
+        const bucket = (out[row.list_id] ??= []);
+        if (bucket.length < 4) bucket.push(url);
+      }
+      return out;
+    },
+
     async releasesOfList(listId) {
       const { data } = await sb
         .from("list_items")
