@@ -138,11 +138,16 @@ export default function ProfileView({
           {/* The action sits at the top on desktop where there is room, and
               moves below the stats on a phone — full width, reachable, and not
               competing with the name for the same 40px. */}
-          <div className="hidden shrink-0 sm:block">
+          <div className="hidden shrink-0 items-center gap-2.5 sm:flex">
             {isYou ? (
-              <Button variant="secondary" onClick={() => setEditing(true)}>
-                Editar perfil
-              </Button>
+              <>
+                <Button variant="secondary" onClick={() => setEditing(true)}>
+                  Editar perfil
+                </Button>
+                <Button variant="ghost" href="/ajustes">
+                  Ajustes
+                </Button>
+              </>
             ) : (
               <FollowButton profileId={profileId} displayName={profile?.displayName ?? ""} />
             )}
@@ -163,11 +168,20 @@ export default function ProfileView({
           <Stat n={stats?.following} label="siguiendo" onClick={() => setPeople("following")} />
         </div>
 
+        {/* Ajustes had no door on a phone at all. The account menu that holds
+            it on a desktop does not exist under a thumb — there is a tab bar
+            instead — so the settings for an account live where the account
+            does: on your own profile, next to editing it. */}
         <div className="mt-5 sm:hidden">
           {isYou ? (
-            <Button variant="secondary" block onClick={() => setEditing(true)}>
-              Editar perfil
-            </Button>
+            <div className="flex gap-2.5">
+              <Button variant="secondary" block onClick={() => setEditing(true)}>
+                Editar perfil
+              </Button>
+              <Button variant="secondary" block href="/ajustes">
+                Ajustes
+              </Button>
+            </div>
           ) : (
             <FollowButton profileId={profileId} displayName={profile?.displayName ?? ""} block />
           )}
