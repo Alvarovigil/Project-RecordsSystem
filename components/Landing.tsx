@@ -125,6 +125,15 @@ export default function Landing() {
               </li>
             ))}
           </ul>
+
+          {/* the other door to Sobre el proyecto, for a screen with no spare
+              corners — see AboutProject */}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("rackr:about"))}
+            className="mt-8 text-[11px] uppercase tracking-[0.05em] text-paper/60 transition hover:text-paper sm:hidden"
+          >
+            Sobre el proyecto
+          </button>
         </div>
       </section>
 

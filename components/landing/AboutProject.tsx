@@ -14,6 +14,20 @@ export default function AboutProject() {
   const [open, setOpen] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
 
+  /**
+   * Opened from anywhere, without anybody holding a handle to it.
+   *
+   * The phone's trigger lives inside the hero, three components away from this
+   * one. Threading state up and back down for a panel that opens once is more
+   * plumbing than the feature is worth; an event names the intention and both
+   * doors are equal.
+   */
+  useEffect(() => {
+    const onAsk = () => setOpen(true);
+    window.addEventListener("rackr:about", onAsk);
+    return () => window.removeEventListener("rackr:about", onAsk);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -26,9 +40,13 @@ export default function AboutProject() {
 
   return (
     <>
+      {/* The corner trigger is a desktop object: on a phone there is no
+          spare corner, so this link lives in the flow under the index and asks
+          for the panel by name. Same panel, two doors, one of which is not
+          fighting the player for the bottom of the screen. */}
       <button
         onClick={() => setOpen(true)}
-        className="landing-hides fixed bottom-5 left-5 z-[70] text-[11px] uppercase tracking-[0.05em] text-paper/80 transition hover:text-paper sm:text-[13px]"
+        className="landing-hides fixed bottom-5 left-5 z-[70] hidden text-[13px] uppercase tracking-[0.05em] text-paper/80 transition hover:text-paper sm:block"
       >
         Sobre el proyecto
       </button>
