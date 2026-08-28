@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import Button from "@/components/ui/Button";
 
 /**
@@ -19,9 +18,8 @@ import Button from "@/components/ui/Button";
  * de inicio" only exists in Safari's own.
  *
  * So the second-best thing is done properly: show the icon they are about to
- * get, name the exact words they are looking for, and point at the corner of
- * the screen where the button actually is. Nobody discovers that menu on
- * purpose.
+ * get, and name the exact words they are looking for. Nobody discovers that
+ * menu on purpose.
  *
  * The four situations that are not iOS:
  *
@@ -37,7 +35,8 @@ import Button from "@/components/ui/Button";
 
 type Deferred = Event & { prompt: () => Promise<void> };
 
-type Situation = "installed" | "promptable" | "ios" | "in-app" | "desktop" | "android-other";
+type Situation =
+  "installed" | "promptable" | "ios" | "in-app" | "desktop" | "android-other";
 
 export default function InstallCTA({ url }: { url: string }) {
   const [deferred, setDeferred] = useState<Deferred | null>(null);
@@ -55,17 +54,29 @@ export default function InstallCTA({ url }: { url: string }) {
     // the UA; WhatsApp's Android webview says "wv". Missing one only means
     // someone sees the generic instructions, which is the safe direction.
     const inApp = /Instagram|FBAN|FBAV|Line\/|Twitter|; wv\)/.test(ua);
-    const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    const ios =
+      /iPhone|iPad|iPod/.test(ua) ||
+      (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
     const android = /Android/.test(ua);
 
     setSituation(
-      standalone ? "installed" : inApp ? "in-app" : ios ? "ios" : android ? "android-other" : "desktop",
+      standalone
+        ? "installed"
+        : inApp
+          ? "in-app"
+          : ios
+            ? "ios"
+            : android
+              ? "android-other"
+              : "desktop",
     );
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
       setDeferred(e as Deferred);
-      setSituation((s) => (s === "installed" || s === "in-app" ? s : "promptable"));
+      setSituation((s) =>
+        s === "installed" || s === "in-app" ? s : "promptable",
+      );
     };
     const onInstalled = () => setSituation("installed");
 
@@ -157,14 +168,6 @@ export default function InstallCTA({ url }: { url: string }) {
           </Centered>
         )}
       </div>
-
-      <p className="mt-10 text-center text-sub leading-relaxed text-content-muted">
-        Sin tienda de aplicaciones y sin descarga.{" "}
-        <Link href="/explorar" className="text-paper underline underline-offset-4">
-          Curiosea antes
-        </Link>{" "}
-        si lo prefieres.
-      </p>
     </>
   );
 }
@@ -181,7 +184,9 @@ function Centered({
   return (
     <div className="text-center">
       <p className="text-heading font-medium text-paper">{title}</p>
-      <p className="mx-auto mt-2 max-w-[38ch] text-sub leading-relaxed text-content-muted">{body}</p>
+      <p className="mx-auto mt-2 max-w-[38ch] text-sub leading-relaxed text-content-muted">
+        {body}
+      </p>
       {children && <div className="mt-6 flex justify-center">{children}</div>}
     </div>
   );
@@ -190,10 +195,9 @@ function Centered({
 /**
  * The two taps, drawn rather than described.
  *
- * The first step is a place, not an instruction — so it points at the place,
- * with the arrow aimed at the real corner of the real toolbar. The second is a
- * row in a menu, so it shows the row: the same glyph and the same words the
- * sheet uses, which turns "look for it" into "recognise it".
+ * The second step is a row in a menu, so it shows the row: the same words and
+ * the same glyph the sheet uses, which turns "look for it" into "recognise
+ * it".
  */
 function IosSteps() {
   return (
@@ -202,15 +206,16 @@ function IosSteps() {
         Dos toques y la tienes
       </p>
       <p className="mx-auto mt-2 max-w-[40ch] text-center text-sub leading-relaxed text-content-muted">
-        Safari no deja que una web se instale sola. Apple lo decidió así a propósito, y estos son
-        los dos toques que hacen lo mismo.
+        Safari no deja que una web se instale sola. Apple lo decidió así a
+        propósito, y estos son los dos toques que hacen lo mismo.
       </p>
 
       <ol className="mx-auto mt-7 max-w-[380px] space-y-3">
         <li className="flex items-center gap-3.5 border border-line bg-fill-subtle/40 px-4 py-3.5">
           <Num>1</Num>
           <span className="min-w-0 flex-1 text-sub leading-snug text-content-secondary">
-            Toca <Share /> <b className="text-paper">Compartir</b>, en la barra de abajo de Safari.
+            Toca <Share /> <b className="text-paper">Compartir</b>, en la barra
+            de abajo de Safari.
           </span>
         </li>
 
@@ -226,28 +231,32 @@ function IosSteps() {
             <span className="flex-1 text-[15px] font-medium text-ink">
               Añadir a pantalla de inicio
             </span>
-            <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
-              <rect x="1.4" y="1.4" width="15.2" height="15.2" rx="4" stroke="#0a0a0a" strokeWidth="1.3" />
-              <path d="M9 5.4v7.2M5.4 9h7.2" stroke="#0a0a0a" strokeWidth="1.3" strokeLinecap="round" />
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 18 18"
+              fill="none"
+              aria-hidden
+            >
+              <rect
+                x="1.4"
+                y="1.4"
+                width="15.2"
+                height="15.2"
+                rx="4"
+                stroke="#0a0a0a"
+                strokeWidth="1.3"
+              />
+              <path
+                d="M9 5.4v7.2M5.4 9h7.2"
+                stroke="#0a0a0a"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+              />
             </svg>
           </div>
         </li>
       </ol>
-
-      {/* Safari's share button lives in the bottom bar. An arrow at the foot of
-          the page is the shortest possible sentence about where to look. */}
-      <div className="mt-8 flex flex-col items-center gap-1.5 text-content-faint">
-        <span className="text-caption uppercase tracking-label">Está aquí abajo</span>
-        <svg width="16" height="22" viewBox="0 0 16 22" fill="none" aria-hidden className="animate-nudge">
-          <path
-            d="M8 1v18M2.5 13.5 8 19.5l5.5-6"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </div>
     </div>
   );
 }
