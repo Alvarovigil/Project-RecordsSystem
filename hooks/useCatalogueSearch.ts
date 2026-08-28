@@ -55,6 +55,15 @@ export function useCatalogueSearch({
   const [people, setPeople] = useState<Profile[]>([]);
   const [communityLists, setCommunityLists] = useState<ListWithRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  /**
+   * When the catalogue could not answer properly, and why.
+   *
+   * Kept separate from `results` because the two are not exclusive: a
+   * throttled search often returns *some* rows, and showing them with no word
+   * about the rest is how "no está en Discogs" gets believed about a record
+   * that is. null means the answer is whole.
+   */
+  const [degraded, setDegraded] = useState<"rate-limit" | "down" | "partial" | null>(null);
   const [adding, setAdding] = useState<number | null>(null);
   const [savedIn, setSavedIn] = useState<Record<string, SaveRecord>>({});
 
@@ -62,6 +71,7 @@ export function useCatalogueSearch({
   useEffect(() => {
     if (mode !== "vinyls" || !query.trim()) {
       setResults([]);
+      setDegraded(null);
       return;
     }
     let cancelled = false;
@@ -70,9 +80,15 @@ export function useCatalogueSearch({
       try {
         const r = await fetch(`/api/discogs/search?q=${encodeURIComponent(query)}`);
         const data = await r.json();
-        if (!cancelled) setResults(data.results ?? []);
+        if (cancelled) return;
+        setResults(data.results ?? []);
+        setDegraded(r.ok ? (data.degraded ?? null) : "down");
       } catch {
-        if (!cancelled) setResults([]);
+        // the network, not them: same consequence, same honesty
+        if (!cancelled) {
+          setResults([]);
+          setDegraded("down");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -171,6 +187,8 @@ export function useCatalogueSearch({
     people,
     communityLists,
     loading,
+    /** null when the catalogue answered in full; see CatalogueNotice */
+    degraded,
     adding,
     savedIn,
     addFromCatalogue,

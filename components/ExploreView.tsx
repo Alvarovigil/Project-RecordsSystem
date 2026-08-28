@@ -7,6 +7,7 @@ import { Page, PageHeader, Section } from "@/components/app/AppShell";
 import { Cover } from "@/components/ui/Avatar";
 import Segmented from "@/components/ui/Segmented";
 import EmptyState, { CoverGridSkeleton } from "@/components/ui/EmptyState";
+import CatalogueNotice from "@/components/ui/CatalogueNotice";
 import PersonRow from "@/components/community/PersonRow";
 import ListCard from "@/components/community/ListCard";
 import { useRepository } from "@/hooks/useRepository";
@@ -362,6 +363,14 @@ export default function ExploreView() {
       {/* ---------------------------------------------------------- results */}
       {searching && (
         <div className="mt-6">
+          {/* said before the results, not after: someone who reads "nada para
+              «x»" and then scrolls past a note explaining why has already
+              drawn their conclusion */}
+          {catalogue.degraded && (
+            <div className="mb-6">
+              <CatalogueNotice degraded={catalogue.degraded} />
+            </div>
+          )}
           {total === 0 && !loadingAnything ? (
             <EmptyState
               title={`Nada para «${query}»`}

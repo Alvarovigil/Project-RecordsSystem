@@ -11,6 +11,7 @@ import { useCatalogueSearch, type DiscogsResult } from "@/hooks/useCatalogueSear
 import BarcodeScanner, { useCanScan } from "@/components/BarcodeScanner";
 import type { Collection } from "@/lib/collections";
 import type { Vinyl } from "@/lib/types";
+import CatalogueNotice from "@/components/ui/CatalogueNotice";
 
 /**
  * Adding a record, on a phone.
@@ -223,6 +224,12 @@ export default function MobileSearch({
                     : { label: "Borrar búsqueda", onClick: () => setQ("") }
                 }
               />
+            </div>
+          )}
+
+          {mode === "vinyls" && (
+            <div className="px-4 pb-1 pt-3">
+              <CatalogueNotice degraded={search.degraded} compact />
             </div>
           )}
 

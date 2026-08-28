@@ -37,17 +37,40 @@ function norm(s: string) {
   return stripAccents(s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-async function discogsSearch(params: Record<string, string>) {
+/**
+ * How this request went upstream, so the interface can say so.
+ *
+ * A search here fans out into a dozen Discogs queries, and Discogs allows
+ * sixty a minute. When it starts refusing them this route used to return an
+ * empty list — indistinguishable, from the outside, from "that record does not
+ * exist". Two people searching at once was enough to make the app look broken
+ * and the catalogue look empty. The counting is cheap; the honesty is not
+ * optional.
+ */
+type Health = { ok: number; failed: number; rateLimited: boolean };
+
+async function discogsSearch(params: Record<string, string>, health: Health) {
   const url = new URL("https://api.discogs.com/database/search");
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("per_page", "100");
-  const r = await fetch(url, {
-    headers: { "User-Agent": DISCOGS_UA, Authorization: `Discogs token=${token()}` },
-    next: { revalidate: 60 },
-  });
-  if (!r.ok) return [] as DiscogsResult[];
-  const data = await r.json();
-  return (data.results ?? []) as DiscogsResult[];
+  try {
+    const r = await fetch(url, {
+      headers: { "User-Agent": DISCOGS_UA, Authorization: `Discogs token=${token()}` },
+      next: { revalidate: 60 },
+    });
+    if (!r.ok) {
+      health.failed += 1;
+      // 429 is the documented limit; Discogs also answers 502/503 under load
+      if (r.status === 429) health.rateLimited = true;
+      return [] as DiscogsResult[];
+    }
+    health.ok += 1;
+    const data = await r.json();
+    return (data.results ?? []) as DiscogsResult[];
+  } catch {
+    health.failed += 1;
+    return [] as DiscogsResult[];
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -118,7 +141,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const all = await Promise.all(queries.map(discogsSearch));
+  const health: Health = { ok: 0, failed: 0, rateLimited: false };
+  const all = await Promise.all(queries.map((q) => discogsSearch(q, health)));
 
   // dedupe by master_id, preferring RELEASES over masters (releases carry
   // format / cover / year info we need; masters are sparser).
@@ -229,5 +253,17 @@ export async function GET(req: NextRequest) {
       );
   }
 
-  return Response.json({ results });
+  /**
+   * `degraded` says the answer is incomplete and why. The interface turns it
+   * into a sentence; nothing here decides what that sentence is.
+   */
+  const degraded = health.rateLimited
+    ? "rate-limit"
+    : health.ok === 0 && health.failed > 0
+      ? "down"
+      : health.failed > 0
+        ? "partial"
+        : null;
+
+  return Response.json({ results, degraded });
 }

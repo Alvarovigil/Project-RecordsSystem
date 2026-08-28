@@ -7,6 +7,7 @@ import type { Vinyl } from "@/lib/types";
 import type { Collection } from "@/lib/collections";
 import { DestinationBar, RowSave } from "./SaveToList";
 import BarcodeScanner, { BarcodeIcon, useCanScan } from "./BarcodeScanner";
+import CatalogueNotice from "./ui/CatalogueNotice";
 import { useCatalogueSearch, type DiscogsResult as SearchResult } from "@/hooks/useCatalogueSearch";
 
 type Props = {
@@ -60,6 +61,7 @@ export default function SearchOverlay({
   const {
     localResults,
     addable,
+    degraded,
     people,
     communityLists,
     loading,
@@ -233,6 +235,11 @@ export default function SearchOverlay({
                 </span>
               </span>
             </button>
+          )}
+          {mode === "vinyls" && (
+            <div className="px-2 pb-1 pt-2">
+              <CatalogueNotice degraded={degraded} compact />
+            </div>
           )}
           {mode === "vinyls" && loading && rowCount === 0 && (
             <div className="text-paper/50 text-sm py-3">Buscando…</div>
