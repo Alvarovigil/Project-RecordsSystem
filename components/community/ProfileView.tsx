@@ -67,7 +67,9 @@ export default function ProfileView({
       repo.profileStats(profileId),
       repo.listsOfProfile(profileId),
     ]).then(([p, s, l]) => {
-      setProfile(p);
+      // never overwrite a profile the server already resolved with a null: a
+      // failed lookup should leave the page as it was, not blank the name
+      if (p) setProfile(p);
       setStats(s);
       setLists(l);
     });

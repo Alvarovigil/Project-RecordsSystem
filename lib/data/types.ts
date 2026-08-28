@@ -175,7 +175,15 @@ export interface LibraryRepository {
   // ---- community ----------------------------------------------------------
   listsWithRelease(releaseId: string): Promise<ListWithRecord[]>;
   friendsWithRelease(releaseId: string): Promise<FriendWithRecord[]>;
-  getProfile(username: string): Promise<Profile | null>;
+  /**
+   * By handle or by id — callers legitimately hold one or the other.
+   *
+   * It used to take a handle only, and the profile screen passes an id. The
+   * query matched nothing, returned null, and that null overwrote the profile
+   * the server had already resolved: a page showing the right counts above a
+   * blank name and a bare "@".
+   */
+  getProfile(handleOrId: string): Promise<Profile | null>;
   listsOfProfile(profileId: string): Promise<ListWithRecord[]>;
   /** full records of any list you're allowed to read, owned by you or not */
   releasesOfList(listId: string): Promise<Vinyl[]>;

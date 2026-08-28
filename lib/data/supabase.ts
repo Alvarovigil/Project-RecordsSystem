@@ -351,11 +351,13 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       }));
     },
 
-    async getProfile(username) {
+    async getProfile(handleOrId) {
+      // a uuid is an id, anything else is a handle
+      const isId = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(handleOrId);
       const { data } = await sb
         .from("profiles")
         .select("id, username, display_name, bio, avatar_url")
-        .eq("username", username)
+        .eq(isId ? "id" : "username", handleOrId)
         .maybeSingle();
       return data
         ? {
