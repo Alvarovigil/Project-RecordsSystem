@@ -11,7 +11,9 @@ export default function SignInButton({ variant = "solid" }: { variant?: "solid" 
     return (
       <button
         onClick={signInWithGoogle}
-        className="text-[13px] uppercase tracking-[0.04em] text-paper transition hover:text-paper/60 sm:text-[15px]"
+        // the same size and weight as the claim in the opposite corner: two
+        // labels holding the two ends of one row have to be one thing
+        className="text-[11px] uppercase tracking-[0.05em] text-paper/80 transition hover:text-paper sm:text-[13px]"
       >
         Iniciar sesión
       </button>

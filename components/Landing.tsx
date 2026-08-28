@@ -33,7 +33,10 @@ export default function Landing() {
        * moves underneath. On a phone the mark is centred above them and this
        * row is what is left, so it starts below it.
        */}
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex items-start justify-between px-5 pt-[68px] sm:px-8 sm:pt-6">
+      {/* Dimmed, not hidden, while the door is up: the corners keep saying
+          what this is and where the way in is, without competing with the
+          screen doing the introducing. */}
+      <header className="landing-dims pointer-events-none fixed inset-x-0 top-0 z-[60] flex items-start justify-between px-5 pt-[68px] sm:px-8 sm:pt-6">
         {/* Not a link — the claim of the whole thing, held in the corner.
             Two sentences, and the full stop between them is doing the work:
             it makes the second half land as a separate promise rather than
@@ -77,7 +80,10 @@ export default function Landing() {
            */}
           <Link
             href="/coleccion"
-            className="pressable inline-flex h-9 items-center rounded-full bg-paper px-4 text-[12px] font-medium uppercase tracking-[0.07em] text-ink transition hover:bg-paper/90"
+            // select-none: dragging across a white pill used to leave the
+            // page's own selection colour — paper on paper — which looked
+            // like the button was breaking rather than being highlighted
+            className="pressable inline-flex h-9 select-none items-center rounded-full bg-paper px-4 text-[12px] font-medium uppercase tracking-[0.07em] text-ink transition-colors hover:bg-paper/85"
           >
             Empezar gratis
           </Link>
@@ -314,6 +320,22 @@ function Backdrop() {
  */
 function StickyMark() {
   const [t, setT] = useState(0);
+  /**
+   * Small while the door is up.
+   *
+   * Behind the gate the page is out of focus and the screen belongs to the
+   * introduction. A wordmark at hero size up there would be a second, sharper
+   * title over a blurred one — so it goes to its scrolled size and waits, and
+   * grows into place when you come in.
+   */
+  const [gated, setGated] = useState(false);
+  useEffect(() => {
+    const read = () => setGated(document.documentElement.dataset.landing === "gate");
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-landing"] });
+    return () => mo.disconnect();
+  }, []);
 
   useEffect(() => {
     let frame = 0;
@@ -336,11 +358,11 @@ function StickyMark() {
   }, []);
 
   // eased so most of the shrink happens early and the last stretch settles
-  const e = t * t * (3 - 2 * t);
+  const e = gated ? 1 : t * t * (3 - 2 * t);
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed left-1/2 top-4 z-[60] -translate-x-1/2 sm:top-5"
+      className="landing-dims pointer-events-none fixed left-1/2 top-4 z-[60] -translate-x-1/2 sm:top-5"
       style={{ opacity: 0.92 + (1 - e) * 0.08 }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -358,7 +380,7 @@ function StickyMark() {
       <img
         src="/logo.svg"
         alt="Rackr Club"
-        className="w-auto mix-blend-difference"
+        className="w-auto mix-blend-difference transition-[height] duration-slow ease-out"
         style={{ height: `calc(var(--mark-max) - (var(--mark-max) - var(--mark-min)) * ${e})` }}
       />
     </div>

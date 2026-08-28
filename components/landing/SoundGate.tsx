@@ -290,25 +290,61 @@ export default function SoundGate() {
     <>
       {!entered && (
         <div className="landing-gate fixed inset-0 z-[80] flex-col items-center justify-center px-6 pb-24 text-center">
-          <span aria-hidden className="mono flex items-center gap-2 text-[15px] text-paper/60">
-            [ <Bars animate /> ]
+          {/**
+           * The door says what the place is, in the words the place uses
+           * everywhere else.
+           *
+           * It used to be one long sentence in the middle of the screen and a
+           * button the size of a headline — the button was the biggest thing
+           * on the page, so the first thing anybody read was an instruction
+           * about audio rather than what they had arrived at.
+           *
+           * Now it reads in the order the outside world already meets this in:
+           * the name, the line that rides beside it everywhere, and then what
+           * it is for. The same three lines as the shared card and the app
+           * listing, so arriving here confirms what brought you rather than
+           * introducing something new.
+           */}
+          <span aria-hidden className="mono flex items-center text-[15px] text-paper/50">
+            <Bars animate />
           </span>
 
-          <p className="mt-8 max-w-[24ch] text-[26px] leading-[1.25] text-paper md:max-w-[33ch] md:text-[34px]">
-            Esto es Rackr Club: tus vinilos ordenados, sonando, y la gente que
-            tiene los mismos que tú.
+          {/* No name here: the mark is on screen above this, dimmed but
+              legible, and printing "RACKR CLUB" underneath it says the same
+              thing twice in two typefaces. */}
+          <h1 className="mt-7 max-w-[18ch] text-[30px] leading-[1.1] tracking-[-0.02em] text-paper md:max-w-[20ch] md:text-[44px]">
+            Tu colección de vinilos, más allá de la estantería.
+          </h1>
+          <p className="mt-4 max-w-[34ch] text-[15px] leading-relaxed text-paper/60 md:text-[17px]">
+            Organiza, descubre y comparte tu colección con el club.
           </p>
 
           <button
             onClick={() => enter(true)}
-            className="mt-10 border border-paper bg-paper px-3 py-0.5 text-[30px] uppercase leading-[1.12] tracking-[-0.01em] text-ink transition hover:bg-transparent hover:text-paper sm:text-[42px] md:px-4 md:text-[54px]"
+            className="pressable mt-9 inline-flex h-11 select-none items-center gap-2.5 rounded-full bg-paper px-6 text-[13px] font-medium uppercase tracking-[0.07em] text-ink transition-colors hover:bg-paper/85"
           >
-            Entrar con sonido
+            {/* The icon carries the part the words dropped: this one turns the
+                sound on. "Vamos allá" is the invitation; the speaker is the
+                small print, and it belongs in a shape rather than in four more
+                words. */}
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path
+                d="M3.2 6.1h2.1L8.4 3.4v9.2L5.3 9.9H3.2z"
+                fill="currentColor"
+              />
+              <path
+                d="M10.6 6.2a2.6 2.6 0 0 1 0 3.6M12.4 4.4a5.1 5.1 0 0 1 0 7.2"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+              />
+            </svg>
+            Vamos allá
           </button>
 
           <button
             onClick={() => enter(false)}
-            className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[13px] uppercase tracking-[0.04em] text-paper underline-offset-4 transition hover:text-paper/60 hover:underline sm:text-[15px]"
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-[0.05em] text-paper/60 underline-offset-4 transition hover:text-paper hover:underline sm:text-[13px]"
           >
             Entrar en silencio
           </button>

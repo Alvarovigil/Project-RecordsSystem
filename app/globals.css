@@ -612,3 +612,13 @@ body[data-sheet-open="1"] {
 @media (min-width: 768px) {
   :root { --mark-max: 104px; --mark-min: 34px; }
 }
+
+/* The page's own furniture while the door is up: still there, out of the way.
+   Hiding it entirely made the arrival feel like two different sites; at a
+   third of its weight it reads as the room behind the person talking. */
+.landing-dims {
+  transition: opacity 900ms ease;
+}
+[data-landing="gate"] .landing-dims {
+  opacity: 0.32;
+}
