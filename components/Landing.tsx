@@ -92,9 +92,35 @@ export default function Landing() {
               <li key={c.id}>
                 <a
                   href={`#${c.id}`}
-                  className="block text-[34px] uppercase tracking-[-0.01em] text-paper/85 transition hover:text-paper sm:text-[46px] md:text-[58px]"
+                  className="group block text-[34px] uppercase tracking-[-0.01em] text-paper/85 transition hover:text-paper sm:text-[46px] md:text-[58px]"
                 >
-                  {c.word}
+                  {/* EL CLⓊB. The U becomes a record when you point at it —
+                      the one letter in the word that is already the right
+                      shape. A joke that costs nothing and only ever appears to
+                      somebody who was reaching for it anyway. */}
+                  {c.id === "el-club" ? (
+                    <>
+                      El cl
+                      <span className="relative inline-block">
+                        <span className="transition-opacity duration-fast group-hover:opacity-0">
+                          u
+                        </span>
+                        <span
+                          aria-hidden
+                          className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-fast group-hover:opacity-100"
+                        >
+                          {/* Sized and dropped to sit where the U sits: a
+                              record on the baseline, not a full-height O
+                              floating in the middle of a word. */}
+                          <span className="block aspect-square w-[0.52em] translate-y-[0.08em] rounded-full border-[0.06em] border-current" />
+                          <span className="absolute block aspect-square w-[0.08em] translate-y-[0.08em] rounded-full bg-current" />
+                        </span>
+                      </span>
+                      b
+                    </>
+                  ) : (
+                    c.word
+                  )}
                 </a>
               </li>
             ))}
