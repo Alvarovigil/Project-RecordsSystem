@@ -93,12 +93,16 @@ export default function ExploreView() {
 
     if (!q) {
       setLoading(true);
-      Promise.all([repo.popularLists(), repo.suggestedProfiles()]).then(([l, p]) => {
-        if (!alive) return;
-        setLists(l);
-        setPeople(p);
-        setLoading(false);
-      });
+      Promise.all([repo.popularLists(), repo.suggestedProfiles()])
+        .then(([l, p]) => {
+          if (!alive) return;
+          setLists(l);
+          setPeople(p);
+          setLoading(false);
+        })
+        // without this a failed read leaves the skeleton pulsing for ever,
+        // which is the one state that never resolves itself
+        .catch(() => alive && setLoading(false));
       return () => {
         alive = false;
       };
@@ -108,12 +112,14 @@ export default function ExploreView() {
     // 220ms is roughly the gap between words when someone types a title; below
     // it you fire a request per letter, above it the results feel detached
     const t = setTimeout(() => {
-      Promise.all([repo.searchLists(q), repo.searchProfiles(q)]).then(([l, p]) => {
-        if (!alive) return;
-        setLists(l);
-        setPeople(p);
-        setLoading(false);
-      });
+      Promise.all([repo.searchLists(q), repo.searchProfiles(q)])
+        .then(([l, p]) => {
+          if (!alive) return;
+          setLists(l);
+          setPeople(p);
+          setLoading(false);
+        })
+        .catch(() => alive && setLoading(false));
     }, 220);
 
     return () => {
@@ -267,6 +273,16 @@ export default function ExploreView() {
           <Section title="Listas de la comunidad">
             {loading && lists.length === 0 ? (
               <CoverGridSkeleton count={8} />
+            ) : lists.length === 0 ? (
+              /* A heading with nothing under it is the worst of both: it does
+                 not say "there is nothing here" and it does not say "something
+                 went wrong" — it just looks like the page stopped loading. */
+              <EmptyState
+                compact
+                title="Todavía no hay listas que enseñarte"
+                body="O nadie ha publicado una lista pública, o no hemos podido leerlas. Prueba a recargar; si sigue vacío, busca algo concreto."
+                action={{ label: "Recargar", onClick: () => window.location.reload() }}
+              />
             ) : (
               <ul className="grid grid-cols-2 gap-x-9 gap-y-14 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
                 {lists.slice(0, 8).map((l) => (
