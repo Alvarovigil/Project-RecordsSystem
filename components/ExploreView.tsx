@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Page, PageHeader, Section } from "@/components/app/AppShell";
 import { Cover } from "@/components/ui/Avatar";
-import Segmented from "@/components/ui/Segmented";
 import EmptyState, { CoverGridSkeleton } from "@/components/ui/EmptyState";
 import CatalogueNotice from "@/components/ui/CatalogueNotice";
 import PersonRow from "@/components/community/PersonRow";
@@ -207,30 +206,7 @@ export default function ExploreView() {
 
       <div className="sticky top-0 z-20 -mx-5 bg-surface/95 px-5 pb-3 pt-1 backdrop-blur-sm sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-7 sm:pt-0 sm:backdrop-blur-none">
         <div className="mx-auto w-full max-w-[560px]">
-          <div className="relative w-full">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-content-muted">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 16 16"
-                fill="none"
-                aria-hidden
-              >
-                <circle
-                  cx="7"
-                  cy="7"
-                  r="4.8"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                />
-                <path
-                  d="M10.6 10.6 L14 14"
-                  stroke="currentColor"
-                  strokeWidth="1.3"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </span>
+          <div className="relative w-full border-b border-line transition-colors focus-within:border-line-strong">
             <input
               ref={inputRef}
               value={query}
@@ -242,7 +218,19 @@ export default function ExploreView() {
               autoCorrect="off"
               aria-label="Buscar discos, listas o personas"
               placeholder="Busca discos, listas o personas"
-              className="h-12 w-full rounded-full border border-line bg-fill-subtle pl-11 pr-11 text-body text-paper outline-none transition-colors placeholder:text-content-muted hover:border-line-strong focus:border-line-strong focus:bg-fill-subtle/80"
+              /**
+               * The query, set as type rather than typed into a widget.
+               *
+               * A rounded box with a magnifying glass in it is the search
+               * field every site has, and it looked borrowed here — the rest
+               * of this product is words, hairlines and mono micro-type, with
+               * no chrome anywhere. So the field is the sentence: large,
+               * centred under the title, on a rule that lights up when the
+               * cursor is in it. The magnifier goes for the same reason it
+               * went from the bar — the placeholder already says what to do,
+               * and the icon was saying it a second time in another language.
+               */
+              className="w-full bg-transparent pb-3 pt-1 text-center text-title text-paper outline-none placeholder:text-content-faint"
             />
             {searching && (
               <button
@@ -251,7 +239,7 @@ export default function ExploreView() {
                   inputRef.current?.focus();
                 }}
                 aria-label="Borrar búsqueda"
-                className="pressable absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-content-muted hover:bg-fill hover:text-paper"
+                className="pressable absolute right-0 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-content-faint transition-colors hover:text-paper"
               >
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                   <path
@@ -265,19 +253,49 @@ export default function ExploreView() {
             )}
           </div>
 
+          {/**
+           * The scopes as a line of words, not as a switch.
+           *
+           * A segmented pill is a control you press; these are the four shapes
+           * one answer can take, and they read better as a caption under the
+           * question — the same mono micro-type that names every region on
+           * every other screen. It also stops the two most prominent objects
+           * on the page from both being rounded rectangles fighting for the
+           * middle of the screen.
+           *
+           * The counts do the work the pill was doing: they say where the
+           * answers are before you choose, so choosing is informed rather than
+           * exploratory.
+           */}
           {searching && (
-            <div className="mt-3 flex justify-center overflow-x-auto">
-              <Segmented
-                size="sm"
-                value={scope}
-                onChange={setScope}
-                segments={[
-                  { value: "all", label: "Todo" },
-                  { value: "records", label: "Discos", count: counts.records },
-                  { value: "lists", label: "Listas", count: counts.lists },
-                  { value: "people", label: "Gente", count: counts.people },
-                ]}
-              />
+            <div className="mt-4 flex flex-wrap items-baseline justify-center gap-x-6 gap-y-2">
+              {(
+                [
+                  ["all", "Todo", null],
+                  ["records", "Discos", counts.records],
+                  ["lists", "Listas", counts.lists],
+                  ["people", "Gente", counts.people],
+                ] as const
+              ).map(([value, label, n]) => {
+                const active = scope === value;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => setScope(value)}
+                    aria-pressed={active}
+                    className={`pressable text-caption uppercase tracking-label transition-colors ${
+                      active ? "text-paper" : "text-content-faint hover:text-content-secondary"
+                    }`}
+                  >
+                    {label}
+                    {n !== null && (
+                      <span className={`ml-1.5 ${active ? "text-content-muted" : "text-content-faint/70"}`}>
+                        {n}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
