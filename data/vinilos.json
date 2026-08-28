@@ -3009,5 +3009,583 @@
         "duration": ""
       }
     ]
+  },
+  {
+    "id": "jose-enrique-girona-malquerida-tu-bien-lo-sabes-11361418",
+    "title": "Malquerida / Tu Bien Lo Sabes",
+    "artist": "Jose Enrique Girona",
+    "year": 0,
+    "genre": "Latin",
+    "label": "Aldia Records",
+    "country": "",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 11361418,
+    "cover": "/covers/jose-enrique-girona-malquerida-tu-bien-lo-sabes-11361418.jpg",
+    "previewUrl": null,
+    "tracklist": [
+      {
+        "position": "A",
+        "title": "Malquerida",
+        "duration": ""
+      },
+      {
+        "position": "B",
+        "title": "Tu Bien Lo Sabes",
+        "duration": ""
+      }
+    ]
+  },
+  {
+    "id": "tre-funk-iii-planeetta-funk-9219041",
+    "title": "Planeetta Funk",
+    "artist": "Tre-Funk III",
+    "year": 2016,
+    "genre": "Hip Hop",
+    "label": "Monsp Records",
+    "country": "Finland",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 9219041,
+    "cover": "/covers/tre-funk-iii-planeetta-funk-9219041.jpg",
+    "previewUrl": "/previews/tre-funk-iii-planeetta-funk-9219041.mp3",
+    "tracklist": [
+      {
+        "position": "A1",
+        "title": "Prologi: Kohti Uutta Siirtokuntaa",
+        "duration": ""
+      },
+      {
+        "position": "A2",
+        "title": "Rauhan Merkeissä",
+        "duration": ""
+      },
+      {
+        "position": "A3",
+        "title": "Ydinmehu",
+        "duration": ""
+      },
+      {
+        "position": "A4",
+        "title": "Tuun Oleen Ihan Ok",
+        "duration": ""
+      },
+      {
+        "position": "A5",
+        "title": "Rappiryönä",
+        "duration": ""
+      },
+      {
+        "position": "B1",
+        "title": "Näkemiin Vaan Muru",
+        "duration": ""
+      },
+      {
+        "position": "B2",
+        "title": "Tampellan Esplanadi (Skit)",
+        "duration": ""
+      },
+      {
+        "position": "B3",
+        "title": "Mee Ny Meneen",
+        "duration": ""
+      },
+      {
+        "position": "B4",
+        "title": "Monoliitti",
+        "duration": ""
+      },
+      {
+        "position": "B5",
+        "title": "Planeetta Funk",
+        "duration": ""
+      }
+    ]
+  },
+  {
+    "id": "tre-allegri-ragazzi-morti-inumani-8282966",
+    "title": "Inumani",
+    "artist": "Tre Allegri Ragazzi Morti",
+    "year": 2016,
+    "genre": "Rock",
+    "label": "La Tempesta Dischi",
+    "country": "Italy",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 8282966,
+    "cover": "/covers/tre-allegri-ragazzi-morti-inumani-8282966.jpg",
+    "previewUrl": "/previews/tre-allegri-ragazzi-morti-inumani-8282966.mp3",
+    "tracklist": [
+      {
+        "position": "A1",
+        "title": "Persi Nel Telefono",
+        "duration": ""
+      },
+      {
+        "position": "A2",
+        "title": "In Questa Grande Città (La Prima Cumbia)",
+        "duration": ""
+      },
+      {
+        "position": "A3",
+        "title": "E Invece  Niente",
+        "duration": ""
+      },
+      {
+        "position": "A4",
+        "title": "Ruggero",
+        "duration": ""
+      },
+      {
+        "position": "A5",
+        "title": "La Più Forte",
+        "duration": ""
+      },
+      {
+        "position": "A6",
+        "title": "Ad Un Passo Dalla Luna",
+        "duration": ""
+      },
+      {
+        "position": "B1",
+        "title": "C'Era Una Volta Ed Era Bella",
+        "duration": ""
+      },
+      {
+        "position": "B2",
+        "title": "I Miei Occhi Brillano",
+        "duration": ""
+      },
+      {
+        "position": "B3",
+        "title": "Libera",
+        "duration": ""
+      },
+      {
+        "position": "B4",
+        "title": "L'Attacco",
+        "duration": ""
+      },
+      {
+        "position": "B5",
+        "title": "Disponibile",
+        "duration": ""
+      }
+    ]
+  },
+  {
+    "id": "tre-allegri-ragazzi-morti-sindacato-dei-sogni-13110737",
+    "title": "Sindacato Dei Sogni",
+    "artist": "Tre Allegri Ragazzi Morti",
+    "year": 2019,
+    "genre": "Rock",
+    "label": "La Tempesta Dischi",
+    "country": "Italy",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 13110737,
+    "cover": "/covers/tre-allegri-ragazzi-morti-sindacato-dei-sogni-13110737.jpg",
+    "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/6e/b5/7c/6eb57c11-7fb1-daac-a3ae-99e7f933c98a/mzaf_2805720359792034253.plus.aac.p.m4a",
+    "tracklist": [
+      {
+        "position": "A1",
+        "title": "Caramella",
+        "duration": ""
+      },
+      {
+        "position": "A2",
+        "title": "Calamita",
+        "duration": ""
+      },
+      {
+        "position": "A3",
+        "title": "C’Era Un Ragazzo Che Come Me Non Assomigliava A Nessuno",
+        "duration": ""
+      },
+      {
+        "position": "A4",
+        "title": "Aaa Cercasi",
+        "duration": ""
+      },
+      {
+        "position": "A5",
+        "title": "Accovacciata Gigante ",
+        "duration": ""
+      },
+      {
+        "position": "B1",
+        "title": "Bengala",
+        "duration": ""
+      },
+      {
+        "position": "B2",
+        "title": "Mi Capirai (Solo Da Morto)",
+        "duration": ""
+      },
+      {
+        "position": "B3",
+        "title": " Difendere I Mostri Dalle Persone ",
+        "duration": ""
+      },
+      {
+        "position": "B4",
+        "title": "Non Ci Provare",
+        "duration": ""
+      },
+      {
+        "position": "B5",
+        "title": "Una Ceramica Italiana Persa In California ",
+        "duration": ""
+      }
+    ]
+  },
+  {
+    "id": "tre-burt-traffic-fiction-28377268",
+    "title": "Traffic Fiction",
+    "artist": "Tré Burt",
+    "year": 2023,
+    "genre": "Folk, World, & Country",
+    "label": "Oh Boy Records",
+    "country": "US",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 28377268,
+    "cover": "/covers/tre-burt-traffic-fiction-28377268.jpg",
+    "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/38/62/14/38621424-c13a-a943-307c-f5ce68d3e6e1/mzaf_13096355130326530950.plus.aac.p.m4a",
+    "tracklist": [
+      {
+        "position": "A1",
+        "title": "Play Stevie Wonder",
+        "duration": "0:11"
+      },
+      {
+        "position": "A2",
+        "title": "Traffic Fiction",
+        "duration": "3:31"
+      },
+      {
+        "position": "A3",
+        "title": "Kids In Tha Yard",
+        "duration": "3:28"
+      },
+      {
+        "position": "A4",
+        "title": "Piece Of Me",
+        "duration": "3:38"
+      },
+      {
+        "position": "A5",
+        "title": "Win My Heart",
+        "duration": "4:00"
+      },
+      {
+        "position": "A6",
+        "title": "I'm Aight Pops, Just Tired",
+        "duration": "0:24"
+      },
+      {
+        "position": "A7",
+        "title": "All Things Right",
+        "duration": "3:32"
+      },
+      {
+        "position": "B1",
+        "title": "To Be A River",
+        "duration": "3:32"
+      },
+      {
+        "position": "B2",
+        "title": "Told Ya Then",
+        "duration": "3:28"
+      },
+      {
+        "position": "B3",
+        "title": "Wings For A Butterfly",
+        "duration": "3:47"
+      },
+      {
+        "position": "B4",
+        "title": "Santiago",
+        "duration": "3:26"
+      },
+      {
+        "position": "B5",
+        "title": "2 For Tha Show",
+        "duration": "3:55"
+      },
+      {
+        "position": "B6",
+        "title": "Yo Face",
+        "duration": "3:16"
+      },
+      {
+        "position": "B7",
+        "title": "BNB Maintenance Inc.",
+        "duration": "0:33"
+      }
+    ]
+  },
+  {
+    "id": "tre-allegri-ragazzi-morti-garage-dub-32262330",
+    "title": "Garage Dub",
+    "artist": "Tre Allegri Ragazzi Morti",
+    "year": 2024,
+    "genre": "Rock",
+    "label": "La Tempesta Dischi",
+    "country": "Italy",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 32262330,
+    "cover": "/covers/tre-allegri-ragazzi-morti-garage-dub-32262330.jpg",
+    "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/34/7e/e7/347ee78e-445e-d26d-85b6-6d47b883afa7/mzaf_13542500037668387.plus.aac.p.m4a",
+    "tracklist": [
+      {
+        "position": "A1",
+        "title": "Ho’Oponopono Dub",
+        "duration": ""
+      },
+      {
+        "position": "A2",
+        "title": "La Sola Dubbata Realtà",
+        "duration": ""
+      },
+      {
+        "position": "A3",
+        "title": "Mi Piace Quello Che È Dub",
+        "duration": ""
+      },
+      {
+        "position": "A4",
+        "title": "Jessica Dub",
+        "duration": ""
+      },
+      {
+        "position": "A5",
+        "title": "Fino A Quando Dub",
+        "duration": ""
+      },
+      {
+        "position": "A6",
+        "title": "Dub Rendez-Vous",
+        "duration": ""
+      },
+      {
+        "position": "B1",
+        "title": "Greta La Bambina Dub",
+        "duration": ""
+      },
+      {
+        "position": "B2",
+        "title": "L’Oscena Dub",
+        "duration": ""
+      },
+      {
+        "position": "B3",
+        "title": "Che Cosa Hai Visto Dub?",
+        "duration": ""
+      },
+      {
+        "position": "B4",
+        "title": "La Misura Del Dub",
+        "duration": ""
+      },
+      {
+        "position": "B5",
+        "title": "Crocchette Dub",
+        "duration": ""
+      },
+      {
+        "position": "B6",
+        "title": "La Nuova Canzone Per Me",
+        "duration": ""
+      }
+    ]
+  },
+  {
+    "id": "tre-sma-kinesere-ok-kompis-13113614",
+    "title": "Ok! Kompis",
+    "artist": "Tre Små Kinesere",
+    "year": 2017,
+    "genre": "Pop",
+    "label": "Fono Fino",
+    "country": "Norway",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 13113614,
+    "cover": "/covers/tre-sma-kinesere-ok-kompis-13113614.jpg",
+    "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/eb/35/04/eb3504e1-d12e-9dc7-d8ce-91dba3faaae2/mzaf_8900158040210299714.plus.aac.p.m4a",
+    "tracklist": [
+      {
+        "position": "A1",
+        "title": "Det Har Vi Aldri Glemt",
+        "duration": "3:01"
+      },
+      {
+        "position": "A2",
+        "title": "Vinn Eller Forsvinn",
+        "duration": "2:58"
+      },
+      {
+        "position": "A3",
+        "title": "Tilgi Dæ",
+        "duration": "2:39"
+      },
+      {
+        "position": "A4",
+        "title": "Blåklokke",
+        "duration": "2:45"
+      },
+      {
+        "position": "A5",
+        "title": "Tenk På Det",
+        "duration": "3:11"
+      },
+      {
+        "position": "A6",
+        "title": "Voksenvenn",
+        "duration": "2:48"
+      },
+      {
+        "position": "B1",
+        "title": "I 75",
+        "duration": "3:05"
+      },
+      {
+        "position": "B2",
+        "title": "Atmosfære",
+        "duration": "3:05"
+      },
+      {
+        "position": "B3",
+        "title": "Månestråle",
+        "duration": "3:02"
+      },
+      {
+        "position": "B4",
+        "title": "Klar For En Prat",
+        "duration": "4:08"
+      },
+      {
+        "position": "B6",
+        "title": "No E Det Du Som Rule",
+        "duration": "3:03"
+      }
+    ]
+  },
+  {
+    "id": "tre-allegri-ragazzi-morti-garage-pordenone-30421346",
+    "title": "Garage Pordenone",
+    "artist": "Tre Allegri Ragazzi Morti",
+    "year": 2024,
+    "genre": "Rock",
+    "label": "La Tempesta Dischi",
+    "country": "Italy",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 30421346,
+    "cover": "/covers/tre-allegri-ragazzi-morti-garage-pordenone-30421346.jpg",
+    "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/20/66/e0/2066e0dc-3716-4935-5c5a-05ce4656e913/mzaf_7757810179834495682.plus.aac.p.m4a",
+    "tracklist": [
+      {
+        "position": "A1",
+        "title": "Ho'oponopono",
+        "duration": "3:00"
+      },
+      {
+        "position": "A2",
+        "title": "La Sola Concreta Realtà",
+        "duration": "3:04"
+      },
+      {
+        "position": "A3",
+        "title": "Mi Piace Quello Che È Vero",
+        "duration": "3:25"
+      },
+      {
+        "position": "A4",
+        "title": "Jessica Dislessica",
+        "duration": "3:18"
+      },
+      {
+        "position": "A5",
+        "title": "Fino A Quando Dura",
+        "duration": "2:22"
+      },
+      {
+        "position": "A6",
+        "title": "Greta La Bambina",
+        "duration": "3:19"
+      },
+      {
+        "position": "B1",
+        "title": "Robot Rendez-Vous",
+        "duration": "3:54"
+      },
+      {
+        "position": "B2",
+        "title": "L'Oscena",
+        "duration": "1:22"
+      },
+      {
+        "position": "B3",
+        "title": "Che Cosa Hai Visto Tu?",
+        "duration": "2:32"
+      },
+      {
+        "position": "B4",
+        "title": "La Misura",
+        "duration": "2:33"
+      },
+      {
+        "position": "B5",
+        "title": "Crocchette Buone",
+        "duration": "3:18"
+      },
+      {
+        "position": "B6",
+        "title": "Torpignattara",
+        "duration": "3:37"
+      }
+    ]
   }
 ]

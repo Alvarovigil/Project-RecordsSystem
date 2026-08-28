@@ -433,8 +433,30 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
    * the pile to have depth in it.
    */
   const fov = vertical ? 40 : 28;
-  /** how far above the plane of the pile the camera sits */
-  const CENITAL = 0.82; // ~47°
+  /**
+   * The wheel.
+   *
+   * Every sleeve is glued by its bottom edge to the rim of a wheel whose axle
+   * runs left to right behind the screen, and sticks out from it like the
+   * paddle of a water wheel. The one at the top of the wheel stands up facing
+   * you — that is the record you are on. Turning the wheel tips it over toward
+   * you while the next one rises behind it.
+   *
+   * This is why it is not the pile it was a moment ago: on a wheel a sleeve's
+   * angle and its position are not two things to keep in step, they are one
+   * number. There is nothing to get out of sync because there is nothing to
+   * sync.
+   *
+   * The radius is large on purpose. A small wheel is a carousel: the sleeves
+   * splay out like a fan and you are looking at the mechanism. A large one is
+   * nearly a straight line with a curve in it, which is what a stack of
+   * records leaning against each other actually looks like.
+   */
+  const WHEEL_R = 9;
+  /** distance along the rim from one sleeve to the next, in world units */
+  const WHEEL_STEP = 1.5;
+  /** how far above the axle the camera sits, in radians */
+  const CENITAL = 0.18;
   // horizontally the strip sits below the eye line so the covers read against
   // the empty top half; looking down at a pile there is no "below" to use
   const stripY = vertical ? 0 : -1.1;
@@ -693,6 +715,8 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
           <Strip
             ambient={ambient}
             vertical={vertical}
+            wheelR={WHEEL_R}
+            wheelStep={WHEEL_STEP}
             drift={drift}
             vinilos={vinilos}
             targetRef={target}
@@ -732,6 +756,8 @@ export default memo(VinylShelf3D);
 function Strip({
   ambient,
   vertical,
+  wheelR,
+  wheelStep,
   drift,
   vinilos,
   targetRef,
@@ -759,6 +785,8 @@ function Strip({
 }: {
   ambient: boolean;
   vertical: boolean;
+  wheelR: number;
+  wheelStep: number;
   drift: number;
   vinilos: Vinyl[];
   targetRef: React.MutableRefObject<number>;
@@ -916,6 +944,8 @@ function Strip({
             key={`${v.id}-${c}`}
             vinyl={v}
             vertical={vertical}
+            wheelR={wheelR}
+            wheelStep={wheelStep}
             baseIndex={i + c * N}
             modulus={modulus}
             currentRef={currentRef}
@@ -946,6 +976,8 @@ function Strip({
 function Sleeve({
   vinyl,
   vertical,
+  wheelR,
+  wheelStep,
   baseIndex,
   modulus,
   currentRef,
@@ -969,6 +1001,8 @@ function Sleeve({
 }: {
   vinyl: Vinyl;
   vertical: boolean;
+  wheelR: number;
+  wheelStep: number;
   baseIndex: number;
   modulus: number;
   currentRef: React.MutableRefObject<number>;
@@ -1082,6 +1116,8 @@ function Sleeve({
   );
 
   const meshGroupRef = useRef<THREE.Group>(null);
+  /** where this sleeve is on the wheel, kept for the visibility test below */
+  const phiRef = useRef(0);
   const hoverRef = useRef(0); // 0..1 smooth hover progress
   // reveal 0..1 — driven once the cover texture is ready, so a sleeve is never
   // shown as an empty box waiting for its image
@@ -1198,11 +1234,41 @@ function Sleeve({
     // the reveal also lifts the sleeve the last few millimetres into the strip
     const lift = movePhase * liftReadyness * 4.4 + hoverLiftValue - (1 - reveal) * 0.3;
     if (vertical) {
-      // the row runs down the screen, and "lifting" a record out of a pile is
-      // lifting it toward you rather than upward
-      meshGroupRef.current.position.x = 0;
-      meshGroupRef.current.position.y = -x;
-      meshGroupRef.current.position.z = lift;
+      /**
+       * One number: where this sleeve sits on the rim.
+       *
+       * φ = 0 is the top of the wheel, where the sleeve stands upright facing
+       * the camera. Positive φ has already tipped toward you; negative is
+       * still rising behind. Position and rotation both come from it, which is
+       * what makes the motion read as one object turning rather than as a list
+       * of things being animated in parallel.
+       */
+      const phi = (x / spacing) * (wheelStep / wheelR);
+      const sin = Math.sin(phi);
+      const cos = Math.cos(phi);
+      /**
+       * Glued flat to the rim, not sticking out of it.
+       *
+       * The first version had them radiating outward like the paddles of a
+       * water wheel, and a large wheel then throws them straight at the lens:
+       * near the top the rim runs almost parallel to the line of sight, so the
+       * sleeves travelled toward the camera instead of across the screen.
+       *
+       * Lying flat on the rim — the bottom edge touching it, the sleeve
+       * following the curve upward like a roof tile — the one at the front
+       * faces you square on, and its neighbours lean progressively away as the
+       * surface curves out from under them. That is the shape a stack of
+       * records leaning against each other has, and it is what the wheel is
+       * for.
+       */
+      const r = wheelR + lift * 0.12;
+      meshGroupRef.current.position.set(
+        0,
+        r * sin + (SLEEVE_H / 2) * cos - SLEEVE_H / 2,
+        r * cos - (SLEEVE_H / 2) * sin - wheelR,
+      );
+      meshGroupRef.current.rotation.set(-phi, 0, 0);
+      phiRef.current = phi;
     } else {
       meshGroupRef.current.position.x = x;
       meshGroupRef.current.position.y = lift;
@@ -1215,7 +1281,11 @@ function Sleeve({
     const opacityFactor = open > 0.05
       ? (centerWeight > 0.5 ? 1 : 1 - open * 0.95)
       : 1;
-    const visible = Math.abs(x) < visibleX && opacityFactor > 0.02;
+    // On the wheel the cull is angular: past a right angle a sleeve is edge-on
+    // to the camera and then behind the axle, and there is nothing to draw.
+    const visible = vertical
+      ? Math.abs(phiRef.current) < 0.95 && opacityFactor > 0.02
+      : Math.abs(x) < visibleX && opacityFactor > 0.02;
     if (meshGroupRef.current.visible !== visible) {
       meshGroupRef.current.visible = visible;
     }
