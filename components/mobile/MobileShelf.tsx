@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import Segmented from "@/components/ui/Segmented";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import Button from "@/components/ui/Button";
 import ListEditSheet from "./ListEditSheet";
-import ListCard from "@/components/community/ListCard";
-import Crate from "@/components/ui/Crate";
+import EmptyState from "@/components/ui/EmptyState";
 import AccordionShelf from "./AccordionShelf";
 import Avatar from "@/components/ui/Avatar";
 import { coverFor } from "@/lib/cover";
@@ -81,7 +80,17 @@ export default function MobileShelf({
   myId: string;
   onRemoveFromList: (v: Vinyl) => void;
 }) {
-  const [view, setView] = useState<"albums" | "lists">("albums");
+  /**
+   * The two ways of looking at the same records — the phone's version of the
+   * desktop switch, and the same pair: the shelf, or all of it at once.
+   *
+   * It used to switch between albums and lists, which put a navigation control
+   * where a view control belongs: your lists are a place you go, and they are
+   * already one tap away under the button that names the list you are in.
+   * Two different jobs wearing the same clothes is how people end up pressing
+   * the wrong one.
+   */
+  const [view, setView] = useState<"shelf" | "grid">("shelf");
   const [switching, setSwitching] = useState(false);
   /**
    * Same order as the desktop panel: the two you always have, a rule, then the
@@ -118,8 +127,8 @@ export default function MobileShelf({
               value={view}
               onChange={setView}
               segments={[
-                { value: "albums", label: "Álbumes" },
-                { value: "lists", label: "Listas" },
+                { value: "shelf", label: "Estante" },
+                { value: "grid", label: "Cuadrícula" },
               ]}
               className="shadow-[0_8px_30px_rgba(0,0,0,0.45)]"
             />
@@ -143,7 +152,7 @@ export default function MobileShelf({
         </button>
       </header>
 
-      {view === "albums" ? (
+      {view === "shelf" ? (
         <AccordionShelf
           vinilos={vinilos}
           onOpen={onOpen}
@@ -154,15 +163,7 @@ export default function MobileShelf({
           isPlaying={isPlaying}
         />
       ) : (
-        <ListsView
-          collections={collections}
-          savedLists={savedLists}
-          vinilos={vinilos}
-          onActivate={(id) => {
-            onActivate(id);
-            setView("albums");
-          }}
-        />
+        <CoverGrid vinilos={vinilos} onOpen={onOpen} nowPlayingId={nowPlayingId} />
       )}
 
       {/* ---------------------------------------------------- list switcher */}
@@ -295,94 +296,73 @@ export default function MobileShelf({
   );
 }
 
-/** Your lists and the ones you kept, in one grid but never confusable. */
-function ListsView({
-  collections,
-  savedLists,
+/**
+ * Everything at once, two across.
+ *
+ * The shelf is for browsing — you go through it record by record and the
+ * pleasure is in the going. This is for finding: you already know what you are
+ * looking for and you want your eye to land on it. Two columns rather than
+ * three because a cover is a picture with words printed on it, and at a third
+ * of a phone's width nobody can read them.
+ */
+function CoverGrid({
   vinilos,
-  onActivate,
+  onOpen,
+  nowPlayingId,
 }: {
-  collections: Collection[];
-  savedLists: SavedList[];
   vinilos: Vinyl[];
-  onActivate: (id: string) => void;
+  onOpen: (v: Vinyl) => void;
+  nowPlayingId?: string;
 }) {
-  // newest first: vinylIds is insertion order, so the tail is what went in last
-  const coversOf = useCallback(
-    (ids: string[]) =>
-      [...ids]
-        .reverse()
-        .map((id) => vinilos.find((v) => v.id === id))
-        .filter((v): v is Vinyl => Boolean(v))
-        .slice(0, 3)
-        .map(coverFor),
-    [vinilos],
-  );
-
-  const mine = useMemo(() => collections.filter((c) => c.vinylIds.length > 0), [collections]);
+  if (vinilos.length === 0) {
+    return (
+      <div className="px-5 pb-chrome" style={{ paddingTop: "calc(var(--safe-top) + 130px)" }}>
+        <EmptyState
+          title="Esta lista está vacía"
+          body="Busca un disco por título, artista o código de barras y aparecerá aquí."
+          action={{ label: "Buscar discos", href: "/explorar?buscar=1" }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
-      className="scroll-y h-screen-d px-5"
+      data-scrollable
+      className="scroll-y h-screen-d px-4"
       style={{
         paddingTop: "calc(var(--safe-top) + 118px)",
         paddingBottom: "calc(var(--tabbar-h) + var(--player-h) + 24px)",
       }}
     >
-      <ul className="grid grid-cols-2 gap-x-6 gap-y-11">
-        {mine.map((c) => (
-          <li key={c.id}>
-            <button onClick={() => onActivate(c.id)} className="pressable block w-full text-left">
-              <Crate covers={coversOf(c.vinylIds)} />
-              <span className="mt-2.5 block truncate text-body font-medium text-paper">{c.name}</span>
-              <span className="mt-0.5 block text-sub text-content-muted">
-                {c.vinylIds.length} discos
+      <ul className="grid grid-cols-2 gap-x-4 gap-y-7">
+        {vinilos.map((v, i) => (
+          <li key={v.id}>
+            <button onClick={() => onOpen(v)} className="pressable block w-full text-left">
+              <span className="relative block">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={coverFor(v)}
+                  alt=""
+                  loading={i < 8 ? "eager" : "lazy"}
+                  className="aspect-square w-full rounded-[3px] object-cover"
+                />
+                {v.id === nowPlayingId && (
+                  <span
+                    aria-label="Sonando"
+                    className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent"
+                  />
+                )}
               </span>
+              <span className="mt-2 block truncate text-sub font-medium text-paper">{v.title}</span>
+              <span className="block truncate text-caption text-content-muted">{v.artist}</span>
             </button>
           </li>
         ))}
       </ul>
-
-      {savedLists.length > 0 && (
-        <section className="mt-9">
-          <h2 className="border-b border-line pb-2 text-caption uppercase tracking-label text-content-muted">
-            Guardadas de otra gente
-          </h2>
-          <ul className="mt-4 grid grid-cols-2 gap-x-6 gap-y-11">
-            {savedLists.map((l) => (
-              <li key={l.id}>
-                <ListCard list={l} covers={[]} />
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }
-
-/**
- * One sleeve, and the gesture that pulls it out of the crate.
- *
- * Dragging the centred sleeve sideways takes it out of the list you are
- * looking at — the physical gesture the metaphor has been promising since the
- * first screen. It is the one iOS convention this app was missing, and here it
- * is not decoration: pulling a record out of a crate is literally the action.
- *
- * Three things keep it from firing by accident, which is the usual failure of
- * swipe-to-delete:
- *
- *  - **Only the active sleeve drags.** The others are edge-on and 55% opaque;
- *    a gesture on something you can barely see is a gesture you did not mean.
- *  - **`dragDirectionLock`**, so a diagonal thumb travelling down the stack
- *    scrolls instead of deleting.
- *  - **Distance AND intent.** 45% of the width, or a genuine flick. Below that
- *    it springs back, and the label fading in on the way tells you what is
- *    about to happen while there is still time to stop.
- *
- * Nothing is lost either way: removal goes through the same undo as every
- * other removal in the app.
- */
 
 function RoundButton({
   label,
