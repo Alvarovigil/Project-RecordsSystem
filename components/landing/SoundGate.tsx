@@ -64,13 +64,24 @@ export default function SoundGate() {
    * to read what you are hearing, short enough that the corner goes back to
    * being a meter and two buttons.
    */
-  const [open, setOpen] = useState(false);
+  const [announced, setAnnounced] = useState(false);
   useEffect(() => {
     if (!current) return;
-    setOpen(true);
-    const t = setTimeout(() => setOpen(false), 3000);
+    setAnnounced(true);
+    const t = setTimeout(() => setAnnounced(false), 3000);
     return () => clearTimeout(t);
   }, [current]);
+
+  /**
+   * And it comes back when you go looking for it.
+   *
+   * Folding the name away only works if there is a way to ask for it again —
+   * otherwise the answer to "what is this song" is "wait for the next one".
+   * Pointing at the control is that ask, and it costs nothing: the same
+   * element, the same transition, opened by a second reason.
+   */
+  const [peeking, setPeeking] = useState(false);
+  const open = announced || peeking;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const needleRef = useRef<HTMLAudioElement | null>(null);
@@ -308,7 +319,10 @@ export default function SoundGate() {
           two corner labels on a 390px row printed straight through each other.
           On a wider screen they have their own corners back. */}
       {entered && (
-        <div className="fixed bottom-[52px] right-5 z-[70] flex max-w-[calc(100vw-2.5rem)] items-center gap-2 text-[11px] uppercase tracking-[0.05em] text-paper/80 sm:bottom-5 sm:text-[13px]">
+        <div
+          onMouseEnter={() => setPeeking(true)}
+          onMouseLeave={() => setPeeking(false)}
+          className="fixed bottom-[52px] right-5 z-[70] flex max-w-[calc(100vw-2.5rem)] items-center gap-2 text-[11px] uppercase tracking-[0.05em] text-paper/80 sm:bottom-5 sm:text-[13px]">
           {/* The brackets were a frame around three bars that already read as a
               meter; two more characters, and they held the label at arm's
               length from the thing it is labelling. */}

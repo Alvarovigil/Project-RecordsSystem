@@ -65,10 +65,23 @@ export default function Landing() {
             link are both fixed to the bottom, and the index used to run
             straight underneath them. */}
         <div className="mt-auto px-5 pb-28 text-center sm:px-8 sm:pb-7">
-          <p className="mono text-[10px] uppercase tracking-[0.3em] text-paper/50">
-            Empieza por aquí
-          </p>
-          <ul className="mt-6 flex flex-col items-center leading-[0.92]">
+          {/**
+           * A door, not a caption.
+           *
+           * "Empieza por aquí" was a label pointing at four words that scroll
+           * the page — an instruction about navigation on a screen whose job
+           * is to get somebody in. This is the one place the landing asks for
+           * anything, so it asks: a button, and the word that answers the
+           * question everybody has about a thing like this before they answer
+           * anything else.
+           */}
+          <Link
+            href="/coleccion"
+            className="pressable inline-flex h-11 items-center rounded-full bg-paper px-6 text-[13px] font-medium uppercase tracking-[0.08em] text-ink transition hover:bg-paper/90"
+          >
+            Empezar gratis
+          </Link>
+          <ul className="mt-7 flex flex-col items-center leading-[0.92]">
             {INDEX.map((c) => (
               <li key={c.id}>
                 <a
