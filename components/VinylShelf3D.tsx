@@ -116,6 +116,16 @@ type Props = {
    * same cardboard, same single number driving the whole thing.
    */
   vertical?: boolean;
+  /**
+   * Live overrides for the light rig, for tuning it on the device it is for.
+   *
+   * Lighting a scene by editing numbers, rebuilding and looking again is how
+   * you end up with a rack that is right on a laptop and burnt out on a phone
+   * — which is exactly what happened. With this the values can be dragged
+   * where they are actually seen. It is passed only by the tuning panel, and
+   * the panel only exists behind a query parameter.
+   */
+  rig?: Partial<LightRig>;
   /** records per second of drift in ambient mode */
   drift?: number;
   /**
@@ -128,6 +138,23 @@ type Props = {
    * scenery. A plain prop crosses that boundary.
    */
   handleRef?: { current: VinylShelfHandle | null };
+};
+
+/** Everything about the light that is worth arguing over. */
+export type LightRig = {
+  ambient: number;
+  keyX: number;
+  keyY: number;
+  keyZ: number;
+  keyIntensity: number;
+  fillX: number;
+  fillY: number;
+  fillZ: number;
+  fillIntensity: number;
+  /** the whole image, up or down: the last stop before the highlights clip */
+  exposure: number;
+  /** matte sleeve or gallery glass */
+  coverRoughness: number;
 };
 
 export type VinylShelfHandle = {
@@ -372,6 +399,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     onCoverHalfWidth,
     ambient = false,
     vertical = false,
+    rig,
     drift = 0.09,
     handleRef,
   },
@@ -400,7 +428,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
    * the stack — the part closest to you — goes black. So in vertical they
    * climb with the camera and look down with it.
    */
-  const lights = vertical
+  const base = vertical
     ? {
         /**
          * Lit like a room, not like a photo shoot.
@@ -434,6 +462,18 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     light2Z: 14,
     light2Intensity: 4,
       };
+
+  const lights = {
+    ambient: rig?.ambient ?? base.ambient,
+    light1X: rig?.keyX ?? base.light1X,
+    light1Y: rig?.keyY ?? base.light1Y,
+    light1Z: rig?.keyZ ?? base.light1Z,
+    light1Intensity: rig?.keyIntensity ?? base.light1Intensity,
+    light2X: rig?.fillX ?? base.light2X,
+    light2Y: rig?.fillY ?? base.light2Y,
+    light2Z: rig?.fillZ ?? base.light2Z,
+    light2Intensity: rig?.fillIntensity ?? base.light2Intensity,
+  };
   /**
    * Looking down at a pile needs a wider lens than looking along a rack.
    *
@@ -491,7 +531,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   // Flat to the camera, the clearcoat highlight lands square in the middle of
   // the artwork; angled away on the rack it never does. So the pile gets a
   // duller finish — matte sleeve rather than gallery glass.
-  const coverRoughness = vertical ? 0.62 : 0.35;
+  const coverRoughness = rig?.coverRoughness ?? (vertical ? 0.62 : 0.35);
   const coverMetalness = vertical ? 0 : 0.05;
   const cardboardRoughness = 0.9;
   // A real LP sleeve is about 5mm across a 315mm face — roughly 1 in 63. This
@@ -714,7 +754,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
         dpr={ambient ? 1 : [1, 1.5]}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: vertical ? 0.98 : 1.2,
+          toneMappingExposure: rig?.exposure ?? (vertical ? 0.98 : 1.2),
           powerPreference: "high-performance",
           antialias: true,
         }}
@@ -729,6 +769,9 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
             phone the same way it fills a desktop. */}
         <PerspectiveCamera makeDefault position={[camX, camY, zoom]} fov={fov} />
         <color attach="background" args={["#0a0a0a"]} />
+        {/* the gl prop only lands when the context is created, so exposure has
+            to be pushed in again whenever it changes */}
+        <Exposure value={rig?.exposure ?? (vertical ? 0.98 : 1.2)} />
         <FogRig openProgressRef={openProgress} near={fogNear} far={fogFar} />
         <ambientLight intensity={lights.ambient} />
         <AnimatedLight
@@ -1413,6 +1456,14 @@ function Sleeve({
  * states based on openProgress, eased the same as the rest of the open
  * animation.
  */
+function Exposure({ value }: { value: number }) {
+  const { gl } = useThree();
+  useEffect(() => {
+    gl.toneMappingExposure = value;
+  }, [gl, value]);
+  return null;
+}
+
 function AnimatedLight({
   openProgressRef,
   fromPos,

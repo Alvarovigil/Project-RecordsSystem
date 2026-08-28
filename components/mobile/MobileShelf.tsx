@@ -22,6 +22,7 @@ import Avatar from "@/components/ui/Avatar";
 import { coverFor } from "@/lib/cover";
 import { useImagesReady } from "@/hooks/useImagesReady";
 import { listTitleFor } from "@/lib/list-title";
+import LightLab, { DEFAULT_RIG, useLightLab } from "./LightLab";
 import { useRepository } from "@/hooks/useRepository";
 import type { Collection } from "@/lib/collections";
 import type { ListVisibility, SavedList } from "@/lib/data/types";
@@ -142,6 +143,10 @@ export default function MobileShelf({
    */
   const [listMenu, setListMenu] = useState<SavedList | null>(null);
 
+  // the lighting bench, and only when it has been asked for by hand
+  const lab = useLightLab();
+  const [rig, setRig] = useState(DEFAULT_RIG);
+
   // the covers down the list sheet: one fade for the menu, not one per row
   const listCovers = ordered.map(
     (c) =>
@@ -222,7 +227,7 @@ export default function MobileShelf({
 
       {view === "shelf" ? (
         <div className="fixed inset-0">
-          <VinylShelf3D vertical vinilos={vinilos} onOpen={onOpen} />
+          <VinylShelf3D vertical rig={lab ? rig : undefined} vinilos={vinilos} onOpen={onOpen} />
         </div>
       ) : (
         <CoverGrid vinilos={vinilos} onOpen={onOpen} nowPlayingId={nowPlayingId} />
@@ -447,6 +452,8 @@ export default function MobileShelf({
           </div>
         )}
       </Sheet>
+
+      {lab && <LightLab rig={rig} onChange={setRig} />}
 
       <ListEditSheet
         open={Boolean(editing)}
