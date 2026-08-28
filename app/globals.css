@@ -562,3 +562,39 @@ body[data-sheet-open="1"] {
     transition: none;
   }
 }
+
+/* ---------------------------------------------------------------- scrims */
+/**
+ * The top of the shelf, fading out.
+ *
+ * A two-stop gradient — black to transparent — is what everybody writes and it
+ * always shows a band. The browser interpolates alpha linearly, the eye does
+ * not, and the middle of a linear fade reads as an edge sitting across the
+ * screen. The fix is to ease it: sixteen stops following a sine curve, dense
+ * where the change is fastest, so there is nothing anywhere for the eye to
+ * catch on.
+ *
+ * The colour is the page's own ground, not black, so it disappears into the
+ * background instead of sitting slightly darker than it.
+ */
+.scrim-top {
+  background-image: linear-gradient(
+    to bottom,
+    rgb(var(--ink-rgb) / 1) 0%,
+    rgb(var(--ink-rgb) / 0.987) 8.1%,
+    rgb(var(--ink-rgb) / 0.951) 15.5%,
+    rgb(var(--ink-rgb) / 0.896) 22.5%,
+    rgb(var(--ink-rgb) / 0.825) 29%,
+    rgb(var(--ink-rgb) / 0.741) 35.3%,
+    rgb(var(--ink-rgb) / 0.648) 41.2%,
+    rgb(var(--ink-rgb) / 0.55) 47.1%,
+    rgb(var(--ink-rgb) / 0.45) 52.9%,
+    rgb(var(--ink-rgb) / 0.352) 58.8%,
+    rgb(var(--ink-rgb) / 0.259) 64.7%,
+    rgb(var(--ink-rgb) / 0.175) 71%,
+    rgb(var(--ink-rgb) / 0.104) 77.5%,
+    rgb(var(--ink-rgb) / 0.049) 84.5%,
+    rgb(var(--ink-rgb) / 0.013) 91.9%,
+    rgb(var(--ink-rgb) / 0) 100%
+  );
+}

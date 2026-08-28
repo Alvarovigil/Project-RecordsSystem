@@ -228,6 +228,14 @@ export default function MobileShelf({
       {view === "shelf" ? (
         <div className="fixed inset-0">
           <VinylShelf3D vertical rig={lab ? rig : undefined} vinilos={vinilos} onOpen={onOpen} />
+          {/* The records go into the dark rather than off an edge. It also
+              gives the controls up there something to sit on: white type over
+              a bright sleeve is unreadable exactly when a bright sleeve
+              happens to pass behind it. */}
+          <div
+            aria-hidden
+            className="scrim-top pointer-events-none absolute inset-x-0 top-0 h-[36dvh]"
+          />
         </div>
       ) : (
         <CoverGrid vinilos={vinilos} onOpen={onOpen} nowPlayingId={nowPlayingId} />
