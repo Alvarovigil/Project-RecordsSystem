@@ -138,18 +138,27 @@ export default function TopNav({
           <button
             onClick={search}
             style={touch ? { paddingBlock: 12, marginBlock: -12 } : undefined}
-            className="group flex items-center gap-2 text-[13px] text-paper/40 transition hover:text-paper"
-            aria-label="Buscar"
+            className="group flex items-center gap-2 text-[15px] font-medium leading-none text-paper/40 transition-colors duration-150 hover:text-paper/75"
           >
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
-              <circle cx="6" cy="6" r="4.2" stroke="currentColor" strokeWidth="1.2" />
-              <path d="M9.2 9.2 L12.5 12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-            </svg>
-            <span className="hidden sm:inline">Buscar</span>
-            {/* the shortcut is a promise, and it is only made where there is a
-                keyboard to keep it with */}
+            {/**
+             * No magnifying glass.
+             *
+             * This bar is set in words at reading size — Colección, Actividad,
+             * Explorar — and it has no icons in it anywhere else. A glyph next
+             * to the word "Buscar" was the same thing said twice, in two
+             * different languages, and the one that broke the row's rhythm was
+             * the picture.
+             *
+             * What is left is the word, at the same size and weight as the
+             * places, plus the key that opens it. The slash carries the whole
+             * job the icon was doing badly: it says this is a control rather
+             * than a destination, and it teaches the shortcut by being it.
+             * Where there is no keyboard it disappears, and the word alone is
+             * enough — a finger has nowhere else to go.
+             */}
+            Buscar
             {!touch && (
-              <kbd className="mono inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[3px] border border-line-strong px-1 text-caption normal-case tracking-normal text-content-muted transition group-hover:border-line-focus group-hover:text-paper">
+              <kbd className="mono inline-flex h-[19px] min-w-[19px] items-center justify-center rounded-[4px] border border-line px-1 text-[11px] font-normal normal-case leading-none tracking-normal text-content-faint transition-colors duration-150 group-hover:border-line-strong group-hover:text-content-secondary">
                 /
               </kbd>
             )}
