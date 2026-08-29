@@ -343,7 +343,7 @@ export default function ExploreView() {
             </Section>
           )}
 
-          <Section title="Listas de la comunidad">
+          <Section title="Colecciones destacadas">
             {loading && lists.length === 0 ? (
               <CoverGridSkeleton count={8} />
             ) : lists.length === 0 ? (
