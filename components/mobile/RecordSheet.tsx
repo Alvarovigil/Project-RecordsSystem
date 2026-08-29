@@ -8,6 +8,7 @@ import { useDevice } from "@/hooks/useDevice";
 import Avatar from "@/components/ui/Avatar";
 import Confirm from "@/components/ui/Confirm";
 import RecordSpecsCard from "@/components/RecordSpecsCard";
+import Card from "@/components/ui/Card";
 import ShareSheet from "@/components/ShareSheet";
 import { SITE_URL } from "@/lib/site";
 import { useToast } from "@/components/ui/Toast";
@@ -71,6 +72,29 @@ function Panel({
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+/** A round control that is only an icon: 44px of tap area, no label. */
+function IconButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className="pressable flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-fill text-paper transition-colors hover:bg-fill-strong"
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+        {children}
+      </svg>
+    </button>
   );
 }
 
@@ -200,12 +224,16 @@ export default function RecordSheet({
        * reading a tracklist.
        */}
       <Panel open={Boolean(vinyl)} onClose={onClose}>
-        <div className="sticky top-0 z-30 bg-surface-raised">
+        {/* No background of its own: the artwork's colour bleeds up behind
+            the back button, and a solid strip across the top cut it in a
+            straight line. The button carries its own dark blur instead, which
+            is what keeps it legible over whatever is passing underneath. */}
+        <div className="sticky top-0 z-30">
           <div className="flex items-center justify-between px-2 pb-1 pt-1.5 sm:hidden">
             <button
               onClick={onClose}
               aria-label="Cerrar"
-              className="pressable flex h-11 w-11 items-center justify-center rounded-full text-content-muted transition-colors hover:text-paper"
+              className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-ink/55 text-paper backdrop-blur-xl"
             >
               <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
                 <path
@@ -266,13 +294,41 @@ export default function RecordSheet({
           </div>
         </div>
 
-        <div className="px-5 pb-8">
-          <div className="mx-auto w-full max-w-[420px]">
+        {/**
+         * The screen, as a stack of cards.
+         *
+         * It used to be one long column of hairline-separated sections: facts
+         * over a rule, tracklist under a rule, everything the same weight and
+         * nothing telling you where one subject ended. That reads as a
+         * document. A record is not a document — it is an object you were
+         * looking at — so the artwork gets the top of the screen with its own
+         * colour bleeding behind it, and everything else lives in cards you
+         * can skim past.
+         */}
+        <div className="relative pb-10">
+          {/* The cover's own colour, thrown behind the top of the screen and
+              faded out. It costs nothing — the image is already downloaded —
+              and it is what stops a black page with a square in the middle
+              from looking like a file browser. */}
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-16 h-[520px] overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={coverFor(vinyl)}
+              alt=""
+              className="h-full w-full scale-150 object-cover opacity-30 blur-3xl"
+            />
+            {/* Faded to nothing well before the edge of the box: a wash still
+                5% visible where it stops draws a horizontal line across the
+                screen, which is the one thing it must not do. */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-surface-raised/70 to-surface-raised" />
+          </div>
+
+          <div className="relative mx-auto w-full max-w-[440px] px-5">
             {/* The record, half out of its sleeve — the same object the shelf
                 is made of rather than a thumbnail of it. The disc is a couple
                 of gradients, not an image: at this size nobody is reading a
                 label, and a real one would be another download. */}
-            <div className="relative mx-auto mt-2 w-[80%]">
+            <div className="relative mx-auto mt-3 w-[76%]">
               <span
                 aria-hidden
                 className="absolute right-[-15%] top-[5%] aspect-square w-[94%] rounded-full"
@@ -301,36 +357,34 @@ export default function RecordSheet({
             <div ref={sentinel} aria-hidden />
 
             <h2 className="mt-7 text-title font-medium leading-tight text-paper">{vinyl.title}</h2>
-            <p className="mt-1 text-body text-content-secondary">{vinyl.artist}</p>
+            <p className="mt-1.5 text-body text-content-secondary">{vinyl.artist}</p>
 
-            {/* The facts, as a sheet of paper rather than a run-on line. Year,
-                pressing, label and country are what someone compares between
-                two copies of the same record, and a middle dot between them
-                makes four different things look like one sentence. */}
-            <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-y border-line py-4">
-              {(
-                [
-                  ["Año", vinyl.year ? String(vinyl.year) : null],
-                  ["Género", vinyl.genre],
-                  ["Sello", vinyl.label],
-                  ["País", vinyl.country],
-                ] as const
-              )
-                .filter(([, v]) => Boolean(v))
-                .map(([k, v]) => (
-                  <div key={k} className="min-w-0">
-                    <dt className="text-caption uppercase tracking-label text-content-faint">{k}</dt>
-                    <dd className="mt-0.5 truncate text-sub text-content-secondary">{v}</dd>
-                  </div>
+            {/* Year, genre and label as chips under the name rather than as a
+                four-cell table. They are how you place a record at a glance —
+                a caption, not data — and the table that held them made four
+                different kinds of fact look like one form to fill in. The full
+                set is one press away in the technical sheet. */}
+            <ul className="mt-4 flex flex-wrap gap-1.5">
+              {[vinyl.year ? String(vinyl.year) : null, vinyl.genre, vinyl.label, vinyl.country]
+                .filter(Boolean)
+                .map((f) => (
+                  <li
+                    key={f as string}
+                    className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary"
+                  >
+                    {f}
+                  </li>
                 ))}
-            </dl>
+            </ul>
 
-            {/* the two things you came for, side by side and thumb-sized */}
-            <div className="mt-6 flex gap-2.5">
+            {/* The two things you came for, plus the way out. Listening is the
+                only filled button on the screen: one thing is the obvious
+                thing to do here, and it should look like it. */}
+            <div className="mt-6 flex items-center gap-2.5">
               <button
                 onClick={() => onTogglePlay(vinyl)}
                 disabled={!vinyl.previewUrl}
-                className="pressable flex h-12 flex-1 items-center justify-center gap-2 rounded-control bg-paper text-body font-medium text-ink disabled:opacity-35"
+                className="pressable flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-paper text-body font-medium text-ink disabled:opacity-35"
               >
                 {playing ? (
                   <>
@@ -349,124 +403,153 @@ export default function RecordSheet({
                   </>
                 )}
               </button>
-              <button
-                onClick={() => setPicking(true)}
-                className="pressable flex h-12 items-center justify-center gap-2 rounded-control border border-line-strong px-5 text-body font-medium text-paper"
-              >
-                Guardar
-              </button>
-              {/* Sharing is an icon, not a word: it is wanted often enough to
-                  be one press away and rarely enough that it should not take
-                  a third of the row from the two things you came for. */}
-              <button
-                onClick={() => setSharing(true)}
-                aria-label="Compartir"
-                className="pressable flex h-12 w-12 shrink-0 items-center justify-center rounded-control border border-line-strong text-paper"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-                  <path d="M8 10.5V2.6 M5 5.4 L8 2.4 L11 5.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  <path d="M3.2 9.4v3.2a1 1 0 0 0 1 1h7.6a1 1 0 0 0 1-1V9.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
-              </button>
+              <IconButton label="Guardar en una lista" onClick={() => setPicking(true)}>
+                <path
+                  d="M4.5 2.5h7a.5.5 0 0 1 .5.5v10.2L8 10.8l-4 2.4V3a.5.5 0 0 1 .5-.5Z"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinejoin="round"
+                />
+              </IconButton>
+              <IconButton label="Compartir" onClick={() => setSharing(true)}>
+                <path
+                  d="M8 10.5V2.6 M5 5.4 L8 2.4 L11 5.4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M3.2 9.4v3.2a1 1 0 0 0 1 1h7.6a1 1 0 0 0 1-1V9.4"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </IconButton>
             </div>
 
-            {/* where it already lives, so "guardar" never means "otra vez" */}
-            {inLists.length > 0 && (
-              <p className="mt-3.5 text-sub text-content-muted">
-                También en {inLists.map((c) => c.name).join(", ")}.
-              </p>
-            )}
-
-            {/* Folded away under the actions and above the tracklist, which is
-                where the question belongs in time: you decide to listen, you
-                decide to keep it, and only then — still holding the sleeve —
-                do you wonder which pressing this is. */}
-            <RecordSpecsCard discogsId={vinyl.discogsId} />
-
-            {/* By side, because that is how the object works: you do not play
-                a record from track 1 to track 12, you play a side and then get
-                up and turn it over. A flat list under a heading that says
-                "Cara A / Cara B" was naming the thing without doing it. */}
-            {sides.length > 0 && (
-              <section className="mt-9">
-                {sides.map(([side, tracks]) => (
-                  <div key={side} className="mt-6 first:mt-0">
-                    <h3 className="flex items-baseline gap-2 text-caption uppercase tracking-label text-content-muted">
-                      {side === "?" ? "Canciones" : `Cara ${side}`}
-                      <span className="text-content-faint">{tracks.length}</span>
-                    </h3>
-                    <ol className="mt-2.5 divide-y divide-line">
-                      {tracks.map((t, i) => (
-                        <li key={i} className="flex items-baseline gap-3 py-2.5">
-                          <span className="mono w-5 shrink-0 text-caption text-content-faint">
-                            {t.position?.replace(/^[A-Z]/, "") || i + 1}
-                          </span>
-                          <span className="min-w-0 flex-1 truncate text-sub text-content-secondary">
-                            {t.title}
-                          </span>
-                          {t.duration && (
-                            <span className="mono shrink-0 text-caption text-content-faint">
-                              {t.duration}
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                ))}
-              </section>
-            )}
-
-            {/* the bridge: this record is the door into other people's shelves */}
-            {elsewhere.length > 0 && (
-              <section className="mt-9">
-                <h3 className="text-caption uppercase tracking-label text-content-muted">
-                  Quién más lo tiene
-                </h3>
-                <ul className="mt-3 divide-y divide-line">
-                  {elsewhere.slice(0, 5).map((l) => (
-                    <li key={l.id}>
-                      <Link
-                        href={`/u/${l.owner.username}/${l.slug}`}
-                        className="pressable flex items-center gap-3 py-3"
+            <div className="mt-7 space-y-2.5">
+              {/* Where it already lives, so "guardar" never means "otra vez".
+                  Its own card and its own line, because it is the answer to a
+                  question the button above is about to ask. */}
+              {inLists.length > 0 && (
+                <Card title="Ya está en">
+                  <ul className="flex flex-wrap gap-1.5">
+                    {inLists.map((c) => (
+                      <li
+                        key={c.id}
+                        className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary"
                       >
-                        <Avatar
-                          name={l.owner.displayName}
-                          handle={l.owner.username}
-                          src={l.owner.avatarUrl}
-                          size="sm"
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sub text-paper">{l.title}</span>
-                          <span className="block truncate text-caption text-content-muted">
-                            {l.owner.displayName} · {l.itemCount} discos
-                          </span>
-                        </span>
-                        <span aria-hidden className="text-content-faint">
-                          →
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
+                        {c.name}
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              )}
 
-            {canEdit && (
-            <section className="mt-9 border-t border-line pt-2">
-              <SheetRow
-                label="Quitar de esta lista"
-                onClick={() => {
-                  // the shelf's handler confirms this one, with its undo
-                  onRemoveFromActive(vinyl);
-                  onClose();
-                }}
-              />
-              <SheetRow label="Borrar de mi colección" danger onClick={() => setDeleting(true)} />
-            </section>
-            )}
+              {/* By side, because that is how the object works: you do not play
+                  a record from track 1 to track 12, you play a side and then
+                  get up and turn it over. */}
+              {sides.length > 0 && (
+                <Card title="Canciones" padded={false}>
+                  {sides.map(([side, tracks], si) => (
+                    <div key={side} className={si > 0 ? "mt-5" : ""}>
+                      {side !== "?" && (
+                        <h4 className="flex items-baseline gap-2 px-5 text-caption uppercase tracking-label text-content-faint">
+                          Cara {side}
+                          <span>{tracks.length}</span>
+                        </h4>
+                      )}
+                      <ol className={side !== "?" ? "mt-1.5" : ""}>
+                        {tracks.map((t, i) => (
+                          <li
+                            key={i}
+                            className="flex items-baseline gap-3 px-5 py-2.5 text-sub"
+                          >
+                            <span className="mono w-5 shrink-0 text-caption text-content-faint">
+                              {t.position?.replace(/^[A-Z]/, "") || i + 1}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-paper">{t.title}</span>
+                            {t.duration && (
+                              <span className="mono shrink-0 text-caption text-content-faint">
+                                {t.duration}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  ))}
+                </Card>
+              )}
+
+              {/* Folded away under the songs, which is where the question
+                  belongs in time: you decide to listen, you decide to keep it,
+                  and only then — still holding the sleeve — do you wonder
+                  which pressing this is. */}
+              <RecordSpecsCard discogsId={vinyl.discogsId} />
+
+              {/* the bridge: this record is the door into other people's shelves */}
+              {elsewhere.length > 0 && (
+                <Card title="Quién más lo tiene" padded={false}>
+                  <ul>
+                    {elsewhere.slice(0, 5).map((l) => (
+                      <li key={l.id}>
+                        <Link
+                          href={`/u/${l.owner.username}/${l.slug}`}
+                          className="pressable flex items-center gap-3 px-5 py-2.5"
+                        >
+                          <Avatar
+                            name={l.owner.displayName}
+                            handle={l.owner.username}
+                            src={l.owner.avatarUrl}
+                            size="sm"
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sub text-paper">{l.title}</span>
+                            <span className="block truncate text-caption text-content-muted">
+                              {l.owner.displayName} · {l.itemCount} discos
+                            </span>
+                          </span>
+                          <span aria-hidden className="text-content-faint">
+                            →
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </Card>
+              )}
+
+              {/* The two ways of removing something, worded apart on purpose:
+                  "Quitar de esta lista" is reversible bookkeeping, "Borrar de
+                  mi colección" is not. A single "Eliminar" meaning either one
+                  is how people lose records. Last on the screen, in the quiet
+                  type, because nobody opens a record in order to delete it. */}
+              {canEdit && (
+                <Card padded={false}>
+                  <button
+                    onClick={() => {
+                      // the shelf's handler confirms this one, with its undo
+                      onRemoveFromActive(vinyl);
+                      onClose();
+                    }}
+                    className="pressable w-full px-5 py-2.5 text-left text-sub text-content-secondary"
+                  >
+                    Quitar de esta lista
+                  </button>
+                  <button
+                    onClick={() => setDeleting(true)}
+                    className="pressable w-full px-5 py-2.5 text-left text-sub text-[#ff6b57]"
+                  >
+                    Borrar de mi colección
+                  </button>
+                </Card>
+              )}
+            </div>
           </div>
         </div>
+
       </Panel>
 
       {/* Sharing: its own sheet on top, so the record is still there behind

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Card from "@/components/ui/Card";
 import type { RecordSpecs } from "@/lib/types";
 
 /**
@@ -49,11 +50,14 @@ export default function RecordSpecsCard({
   if (!discogsId) return null;
 
   return (
-    <section className="mt-7">
+    <section>
+      {/* The trigger is a card too, not a rule between cards. On a screen
+          built out of one repeated shape, the row that opts out of it is the
+          one that looks broken. */}
       <button
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className="pressable flex w-full items-center justify-between gap-3 border-y border-line py-3.5 text-left"
+        className="pressable flex w-full items-center justify-between gap-3 rounded-[14px] bg-fill-subtle px-5 py-4 text-left"
       >
         <span className="text-body text-paper">Ficha técnica</span>
         <span className="flex items-center gap-2">
@@ -93,7 +97,7 @@ export default function RecordSpecsCard({
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"
           >
-            <div className="mt-3">
+            <div className="mt-2.5">
               <RecordSpecsContent discogsId={discogsId} open={open} />
             </div>
           </motion.div>
@@ -196,19 +200,16 @@ export function RecordSpecsContent({
  * one question, so the eye can skip three of them and land on the one it came
  * for. A single bordered box with everything inside would be the table again
  * wearing a different frame.
+ *
+ * The box itself is the app's card, not a local one — this sheet sits inside a
+ * screen made of the same cards, and a block here that disagreed with the
+ * tracklist card by two pixels would be the tell.
  */
-function Block({
-  title,
-  children,
-}: {
-  title?: string;
-  children: React.ReactNode;
-}) {
+function Block({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
-    <section className="mb-2.5 rounded-[3px] bg-fill-subtle p-5 last:mb-0">
-      {title && <h3 className="text-body font-medium text-paper">{title}</h3>}
-      <div className={title ? "mt-4" : ""}>{children}</div>
-    </section>
+    <div className="mb-2.5 last:mb-0">
+      <Card title={title}>{children}</Card>
+    </div>
   );
 }
 
