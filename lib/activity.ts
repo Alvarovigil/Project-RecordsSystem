@@ -74,6 +74,10 @@ function groupKey(e: ActivityEvent): string {
     // yours: aggregate the ACTORS around the object
     case "list-saved":
       return e.mine ? `saved:mine:${e.list?.id}` : `saved:${e.actor.id}`;
+    // los me gusta sólo llegan de listas tuyas, y se cuentan por lista: la
+    // noticia es "a seis personas les ha gustado ésta", nunca seis líneas
+    case "list-liked":
+      return `liked:mine:${e.list?.id}`;
     case "followed":
       return e.mine ? "followed:me" : `followed:${e.actor.id}`;
     // theirs: aggregate the OBJECTS around the actor

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import { useToast, ToastIcon } from "@/components/ui/Toast";
-import { useRepository } from "@/hooks/useRepository";
+import { useSaves } from "@/hooks/useListFlags";
 
 /**
  * Keeping a list somebody else made.
@@ -34,29 +34,20 @@ export default function SaveListButton({
   ownerHandle: string;
   size?: "sm" | "md";
 }) {
-  const repo = useRepository();
   const router = useRouter();
   const toast = useToast();
-  const [saved, setSaved] = useState<boolean | null>(null);
+  // el mismo estado que lee el contador de guardadas que hay al lado, y que
+  // cualquier otra copia de esta lista en pantalla: dos respuestas distintas a
+  // "¿la tengo guardada?" en la misma vista es un fallo que se ve
+  const saves = useSaves();
+  const saved = saves.ready ? saves.has(listId) : null;
   const [menu, setMenu] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    repo
-      .savedLists()
-      .then((all) => alive && setSaved(all.some((l) => l.id === listId)))
-      .catch(() => alive && setSaved(false));
-    return () => {
-      alive = false;
-    };
-  }, [repo, listId]);
 
   const toggle = async () => {
     const next = !saved;
-    setSaved(next);
     try {
+      await saves.toggle(listId, next);
       if (next) {
-        await repo.saveList(listId);
         // says where it went, because "guardada" alone leaves you wondering
         toast.show("Guardada en tu colección", {
           media: { icon: ToastIcon.list },
@@ -69,18 +60,15 @@ export default function SaveListButton({
           },
         });
       } else {
-        await repo.unsaveList(listId);
         toast.undo(
           "Ya no la guardas",
           () => {
-            setSaved(true);
-            void repo.saveList(listId);
+            void saves.toggle(listId, true);
           },
           { media: { icon: ToastIcon.list } },
         );
       }
     } catch (e) {
-      setSaved(!next);
       // says which of the two failed, and — where the backend gave a reason —
       // what it was. "No se pudo guardar" on an unsave is its own small lie.
       const why = e instanceof Error && e.message ? ` (${e.message})` : "";

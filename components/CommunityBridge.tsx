@@ -332,7 +332,8 @@ function ListView({
               {known.owner.displayName}
             </button>
             <span className="mono text-[10px] uppercase tracking-[0.16em] text-paper/30">
-              {known.itemCount} discos · {known.followers} siguen · {known.updatedAt}
+              {known.itemCount} discos · {known.saves} guardadas · {known.likes} ♥ ·{" "}
+              {known.updatedAt}
             </span>
           </div>
           <Link
@@ -476,7 +477,7 @@ function ListRow({
         <span className="block truncate text-[14px] text-paper">{list.title}</span>
         <span className="mono mt-1 block truncate text-[10px] uppercase tracking-[0.16em] text-paper/35">
           {!hideOwner ? `${list.owner.displayName} · ` : ""}
-          {list.itemCount} discos · {list.followers} siguen
+          {list.itemCount} discos · {list.saves} guardadas · {list.likes} ♥
         </span>
       </span>
       <span className="text-paper/25">→</span>

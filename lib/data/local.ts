@@ -47,7 +47,10 @@ import {
   collaboratorsOf as readCollaborators,
   getAddedBy,
   hasSeededNotifications,
+  isLiked,
   isSaved,
+  loadLiked,
+  setLiked,
   listsIveJoined,
   loadNotifications,
   loadProfileOverrides,
@@ -170,6 +173,8 @@ function toList(
     position: index,
     itemCount: ids.length,
     updatedAt: new Date(0).toISOString(),
+    saves: 0,
+    likes: 0,
   };
 }
 
@@ -177,7 +182,15 @@ const communityUsers = allUsers;
 
 /** One shape for every community list the placeholder layer hands out. */
 function toCommunityList(
-  l: { id: string; title: string; description: string; vinylIds: string[]; followers: number; updated: string },
+  l: {
+    id: string;
+    title: string;
+    description: string;
+    vinylIds: string[];
+    saves: number;
+    likes: number;
+    updated: string;
+  },
   ownerId: string,
 ): ListWithRecord {
   const owner = getUser(ownerId);
@@ -193,7 +206,10 @@ function toCommunityList(
     position: 0,
     itemCount: l.vinylIds.length,
     updatedAt: l.updated,
-    followers: l.followers,
+    // lo que la gente de mentira ya había hecho, más lo tuyo: si guardas o
+    // das me gusta a una lista, el número que ves tiene que moverse
+    saves: l.saves + (isSaved(l.id) ? 1 : 0),
+    likes: l.likes + (isLiked(l.id) ? 1 : 0),
     vinylIds: l.vinylIds,
     owner: {
       id: ownerId,
@@ -216,7 +232,6 @@ function ownLists(releases: Vinyl[]): ListWithRecord[] {
       return {
         ...base,
         description: DEMO_LISTS.find((d) => d.id === c.id)?.description ?? base.description,
-        followers: 0,
         vinylIds: ids,
         owner: {
           id: LOCAL_PROFILE.id,
@@ -514,6 +529,27 @@ export function createLocalRepository(): LibraryRepository {
             mine: true,
           }),
         );
+
+        // y los me gusta, que son más y de gente que no llegó a guardarla:
+        // esa proporción es justo lo que hay que ver al diseñar la línea
+        communityUsers()
+          .slice(0, 6)
+          .forEach((u, i) =>
+            out.push({
+              id: `liked:${ownFirst.id}:${u.id}`,
+              kind: "list-liked",
+              at: hoursAgo(1 + i * 0.5),
+              actor: { id: u.id, username: u.handle, displayName: u.name, avatarUrl: null },
+              list: {
+                id: ownFirst.id,
+                title: ownFirst.title,
+                slug: ownFirst.slug,
+                ownerId: LOCAL_PROFILE.id,
+                ownerHandle: LOCAL_PROFILE.username,
+              },
+              mine: true,
+            }),
+          );
       }
 
       // and the gossip: who the people you follow have started following
@@ -540,7 +576,8 @@ export function createLocalRepository(): LibraryRepository {
       const ids = readReleases().map((v) => v.id);
       return communityUsers()
         .flatMap((u) => listsOfUser(u.id, ids).map((l) => toCommunityList(l, u.id)))
-        .sort((a, b) => b.followers - a.followers)
+        // el mismo criterio que en producción: guardar pesa más que gustar
+        .sort((a, b) => b.saves * 3 + b.likes - (a.saves * 3 + a.likes))
         .slice(0, 12);
     },
 
@@ -643,7 +680,7 @@ export function createLocalRepository(): LibraryRepository {
       return {
         records: records.size,
         lists: lists.length,
-        followers: lists.reduce((n, l) => n + l.followers, 0),
+        followers: lists.reduce((n, l) => n + l.saves, 0),
         following: 0,
       };
     },
@@ -678,6 +715,18 @@ export function createLocalRepository(): LibraryRepository {
       // your own — that distinction is drawn in the interface, not here
       void ids;
       return out.sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+    },
+
+    async likeList(listId) {
+      setLiked(listId, true);
+    },
+
+    async unlikeList(listId) {
+      setLiked(listId, false);
+    },
+
+    async likedLists() {
+      return loadLiked();
     },
 
     async saveList(listId) {
@@ -851,6 +900,18 @@ function seedNotificationsOnce() {
       at: hoursAgo(9),
       read: false,
       actor: { id: teo.id, username: teo.handle, displayName: teo.name, avatarUrl: null },
+    });
+  }
+  if (marta) {
+    seeded.push({
+      id: newId("n"),
+      kind: "liked-list",
+      at: hoursAgo(5),
+      read: false,
+      actor: { id: marta.id, username: marta.handle, displayName: marta.name, avatarUrl: null },
+      listId: "demo-noche",
+      listTitle: "El turno de noche",
+      listSlug: "el-turno-de-noche",
     });
   }
   if (ines) {

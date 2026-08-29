@@ -18,6 +18,7 @@ import type { Collaborator, Notification, ProfilePatch } from "./types";
 
 const KEYS = {
   saved: "vinilos.saved-lists.v1",
+  liked: "vinilos.liked-lists.v1",
   collab: "vinilos.collaborators.v1",
   addedBy: "vinilos.added-by.v1",
   notifs: "vinilos.notifications.v1",
@@ -58,6 +59,17 @@ export function setSaved(listId: string, saved: boolean) {
 }
 
 export const isSaved = (listId: string) => loadSaved().some((s) => s.listId === listId);
+
+// ------------------------------------------------------------- liked lists
+// Sólo los ids: un me gusta no tiene más estado que existir o no.
+export const loadLiked = (): string[] => read<string[]>(KEYS.liked, []);
+
+export function setLiked(listId: string, liked: boolean) {
+  const rest = loadLiked().filter((id) => id !== listId);
+  write(KEYS.liked, liked ? [listId, ...rest] : rest);
+}
+
+export const isLiked = (listId: string) => loadLiked().includes(listId);
 
 // ----------------------------------------------------------- collaborators
 type CollabMap = Record<string, Collaborator[]>;

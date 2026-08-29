@@ -32,6 +32,16 @@ export type List = {
   position: number;
   itemCount: number;
   updatedAt: string;
+  /**
+   * Las dos medidas de una lista, siempre juntas.
+   *
+   * `saves` es cuánta gente la tiene en su estantería y `likes` cuánta pasó
+   * por delante y le gustó. Separadas dicen cosas distintas — mucho like y
+   * poca guardada es una lista bonita que nadie usa — y juntas son con lo que
+   * se ordena lo que se enseña en Explorar.
+   */
+  saves: number;
+  likes: number;
 };
 
 export type Profile = {
@@ -45,7 +55,6 @@ export type Profile = {
 /** A list as seen from a record: the bridge into someone else's collection. */
 export type ListWithRecord = List & {
   owner: Pick<Profile, "id" | "username" | "displayName" | "avatarUrl">;
-  followers: number;
 };
 
 export type FriendWithRecord = {
@@ -67,7 +76,12 @@ export type ShallowProfile = Pick<Profile, "id" | "username" | "displayName" | "
  * `mine` means the OBJECT is yours: your list was saved, you were followed.
  * It is not "I did this" — your own actions never appear in your activity.
  */
-export type ActivityKind = "added" | "list-created" | "list-saved" | "followed";
+export type ActivityKind =
+  | "added"
+  | "list-created"
+  | "list-saved"
+  | "list-liked"
+  | "followed";
 
 export type ActivityEvent = {
   /** stable across refetches: kind + actor + object + timestamp */
@@ -134,7 +148,12 @@ export type Collaborator = {
  * river of activity is how invitations get missed. Anything with `actionable`
  * set is a fork in a flow and must not be dismissable without an answer.
  */
-export type NotificationKind = "follow" | "invite" | "added-to-list" | "saved-list";
+export type NotificationKind =
+  | "follow"
+  | "invite"
+  | "added-to-list"
+  | "saved-list"
+  | "liked-list";
 
 export type Notification = {
   id: string;
@@ -239,6 +258,17 @@ export interface LibraryRepository {
   savedLists(): Promise<SavedList[]>;
   saveList(listId: string): Promise<void>;
   unsaveList(listId: string): Promise<void>;
+  /**
+   * Me gusta: el gesto barato, al lado del caro.
+   *
+   * Guardar dice "esto me sirve"; un me gusta dice "esto está bien hecho", y
+   * es lo único que la mayoría de la gente va a dar. Sin él, una lista buena
+   * que nadie necesita en su estantería no tiene forma de destacar.
+   */
+  likeList(listId: string): Promise<void>;
+  unlikeList(listId: string): Promise<void>;
+  /** los ids de las listas a las que has dado me gusta */
+  likedLists(): Promise<string[]>;
   /**
    * Copy someone's list into one of your own.
    *

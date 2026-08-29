@@ -33,6 +33,8 @@ exactamente igual que hasta ahora: `lib/data/index.ts` elige el backend.
 | `0003_rls.sql` | Row Level Security. Todo niega por defecto; una lista privada no se filtra ni con un fallo en la interfaz. |
 | `0004_bridge.sql` | El puente: `lists_with_release`, `friends_with_release` y búsqueda de personas. |
 | `0005_catalogue_writes.sql` | Quién amplía el catálogo: con sesión puedes añadir un disco nuevo, nadie puede modificarlo después. |
+| `0012_list_metrics.sql` | Las dos medidas de una lista: `list_likes`, y los contadores `save_count` / `like_count` en `lists` con los que se ordena la comunidad. |
+| `0013_like_notifications.sql` | El aviso «le ha gustado tu lista» y el quinto verbo de `activity_for_me`. Lleva un `commit;` a propósito: un valor nuevo de enum no se puede usar en la misma transacción en la que se añade. |
 
 ## Decisiones que conviene no deshacer
 

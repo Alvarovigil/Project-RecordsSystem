@@ -418,6 +418,19 @@ html {
   -webkit-overflow-scrolling: touch;
 }
 
+/* A one-line sideways slider: no visible bar, no rubber-banding into the page
+   behind it. */
+.rail {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
 /* Full height that survives the browser's disappearing toolbar. 100vh on iOS
    is measured against the LARGEST viewport, so a 100vh element is always a
    toolbar taller than the screen. */

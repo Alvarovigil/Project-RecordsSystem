@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Segmented from "@/components/ui/Segmented";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
+import MarqueeText from "@/components/MarqueeText";
 import Button from "@/components/ui/Button";
 import ListEditSheet from "./ListEditSheet";
 import EmptyState from "@/components/ui/EmptyState";
@@ -189,23 +189,41 @@ export default function MobileShelf({
         style={{ paddingTop: "calc(var(--safe-top) + 10px)" }}
       >
         <div className="flex items-center gap-2">
-          <RoundButton label="Cambiar de lista" onClick={() => setSwitching(true)}>
-            <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden>
-              <path d="M2 3.5 H12 M2 7 H12 M2 10.5 H8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
+          {/* The two views of the same records. Only the one you are in is
+              drawn: a two-segment pill spends a whole slot showing you the
+              thing you already chose, and up here every pixel is cover art
+              you are covering up. Tap and it flips. */}
+          <RoundButton
+            label={view === "shelf" ? "Ver en cuadrícula" : "Ver el estante"}
+            onClick={() => setView(view === "shelf" ? "grid" : "shelf")}
+          >
+            {view === "shelf" ? <ShelfIcon /> : <GridIcon />}
           </RoundButton>
 
-          <div className="flex flex-1 justify-center">
-            <Segmented
-              size="sm"
-              value={view}
-              onChange={setView}
-              segments={[
-                { value: "shelf", label: "Estante", icon: <ShelfIcon /> },
-                { value: "grid", label: "Cuadrícula", icon: <GridIcon /> },
-              ]}
-              className="shadow-[0_8px_30px_rgba(0,0,0,0.45)]"
-            />
+          {/* Which list you are in — the centre of the header, because it is
+              the one thing up here that changes and the one you tap most. The
+              chevron is what says the name is a door and not a label. */}
+          <div className="flex min-w-0 flex-1 justify-center">
+            <button
+              onClick={() => setSwitching(true)}
+              aria-label={`Lista actual: ${activeName}. Cambiar de lista`}
+              className="pressable flex h-11 max-w-full items-center gap-1.5 rounded-full bg-ink/55 px-4 text-paper/85 backdrop-blur-md"
+            >
+              <MarqueeText className="min-w-0 text-sub font-medium">
+                {activeName}
+              </MarqueeText>
+              <span className="shrink-0 text-sub text-paper/40">{vinilos.length}</span>
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 12 12"
+                fill="none"
+                aria-hidden
+                className="shrink-0 text-paper/50"
+              >
+                <path d="M2.5 4.5 L6 8 L9.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
 
           <RoundButton label="Buscar" onClick={onSearch}>
@@ -215,15 +233,6 @@ export default function MobileShelf({
             </svg>
           </RoundButton>
         </div>
-
-        {/* which list you are in — under the controls, quiet, always there */}
-        <button
-          onClick={() => setSwitching(true)}
-          className="pressable mx-auto mt-2.5 flex max-w-full items-center gap-1.5 rounded-full bg-ink/55 px-3 py-1 backdrop-blur-md"
-        >
-          <span className="truncate text-caption font-medium text-paper/85">{activeName}</span>
-          <span className="shrink-0 text-caption text-paper/40">{vinilos.length}</span>
-        </button>
       </header>
 
       {view === "shelf" ? (

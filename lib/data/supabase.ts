@@ -75,6 +75,8 @@ type ListRow = {
   position: number;
   item_count: number;
   updated_at: string;
+  like_count?: number;
+  save_count?: number;
 };
 
 const toVinyl = (r: ReleaseRow): Vinyl => ({
@@ -117,6 +119,8 @@ const toList = (r: ListRow): List => ({
   position: r.position,
   itemCount: r.item_count,
   updatedAt: r.updated_at,
+  saves: Number(r.save_count ?? 0),
+  likes: Number(r.like_count ?? 0),
 });
 
 const toProfile = (p: any): Profile => ({
@@ -130,7 +134,6 @@ const toProfile = (p: any): Profile => ({
 /** A list row joined with its owner, as the community surfaces expect it. */
 const withOwner = (row: any): ListWithRecord => ({
   ...toList(row as ListRow),
-  followers: 0,
   owner: {
     id: row.owner_id,
     username: row.profiles.username,
@@ -366,7 +369,8 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         position: 0,
         itemCount: r.item_count,
         updatedAt: r.updated_at,
-        followers: Number(r.followers ?? 0),
+        saves: Number(r.saves ?? 0),
+        likes: Number(r.likes ?? 0),
         owner: {
           id: r.owner_id,
           username: r.owner_handle,
@@ -532,8 +536,13 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         .select("*, profiles!lists_owner_id_fkey!inner(username, display_name, avatar_url)")
         .eq("visibility", "public")
         .gt("item_count", 0)
+        // guardadas primero, me gusta para desempatar, y sólo entonces el
+        // tamaño. Ordenar por item_count enseñaba la lista más larga, que es
+        // casi siempre la de alguien que volcó su colección entera.
+        .order("save_count", { ascending: false })
+        .order("like_count", { ascending: false })
         .order("item_count", { ascending: false })
-        .limit(12);
+        .limit(24);
       return ((data ?? []) as any[]).map(withOwner);
     },
 
@@ -575,6 +584,30 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         .select("profiles!follows_following_id_fkey(id, username, display_name, bio, avatar_url)")
         .eq("follower_id", profileId);
       return ((data ?? []) as any[]).map((r) => toProfile(r.profiles));
+    },
+
+    async likeList(listId) {
+      const userId = await requireUser();
+      const { error } = await sb.from("list_likes").insert({ user_id: userId, list_id: listId });
+      // dar dos veces al corazón no es un error que merezca un aviso rojo
+      if (error && error.code !== "23505") throw new Error(error.message);
+    },
+
+    async unlikeList(listId) {
+      const userId = await requireUser();
+      const { error } = await sb
+        .from("list_likes")
+        .delete()
+        .eq("user_id", userId)
+        .eq("list_id", listId);
+      if (error) throw new Error(error.message);
+    },
+
+    async likedLists() {
+      const { data: auth } = await sb.auth.getUser();
+      if (!auth.user) return [];
+      const { data } = await sb.from("list_likes").select("list_id").eq("user_id", auth.user.id);
+      return ((data ?? []) as any[]).map((r) => r.list_id as string);
     },
 
     async follow(kind, id) {

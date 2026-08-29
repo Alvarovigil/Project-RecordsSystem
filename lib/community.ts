@@ -29,7 +29,10 @@ export type CommunityList = {
   ownerId: string;
   description: string;
   vinylIds: string[];
-  followers: number;
+  /** cuánta gente la tiene en su estantería */
+  saves: number;
+  /** cuánta gente pasó por delante y le gustó — siempre más que las guardadas */
+  likes: number;
   updated: string;
 };
 
@@ -182,7 +185,12 @@ export function listsWithRecord(vinylId: string, allVinylIds: string[]): Communi
       ownerId: owner.id,
       description: pick(r, LIST_NOTES),
       vinylIds: members,
-      followers: Math.floor(r() * 380),
+      saves: Math.floor(r() * 380),
+      // un me gusta cuesta un gesto y guardar cuesta sitio en tu estantería,
+      // así que el corazón siempre va por delante; los datos de mentira que
+      // no respetan esa proporción hacen diseñar la tarjeta contra un mundo
+      // que no existe
+      likes: Math.floor(r() * 380) * 3 + 12,
       updated: pick(r, ["hace 2 días", "hace una semana", "hace un mes", "ayer", "hace 3 días"]),
     };
     remember(list);
@@ -231,7 +239,12 @@ export function listsOfUser(userId: string, allVinylIds: string[]): CommunityLis
       ownerId: userId,
       description: pick(r, LIST_NOTES),
       vinylIds: members,
-      followers: Math.floor(r() * 380),
+      saves: Math.floor(r() * 380),
+      // un me gusta cuesta un gesto y guardar cuesta sitio en tu estantería,
+      // así que el corazón siempre va por delante; los datos de mentira que
+      // no respetan esa proporción hacen diseñar la tarjeta contra un mundo
+      // que no existe
+      likes: Math.floor(r() * 380) * 3 + 12,
       updated: pick(r, ["hace 2 días", "hace una semana", "hace un mes", "ayer"]),
     };
     remember(list);

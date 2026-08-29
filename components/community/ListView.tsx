@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import EmptyState, { CoverGridSkeleton } from "@/components/ui/EmptyState";
 import SaveListButton from "./SaveListButton";
 import FollowButton from "./FollowButton";
+import ListMetrics from "./ListMetrics";
 import CollaboratorsSheet, { CollaboratorFaces } from "./CollaboratorsSheet";
 import RecordSheet from "@/components/mobile/RecordSheet";
 import Crate from "@/components/ui/Crate";
@@ -171,6 +172,18 @@ export default function ListView({
           <span className="text-sub text-content-muted">
             {items?.length ?? list?.itemCount ?? 0} discos
           </span>
+          {/* Las dos medidas, en la misma línea que el autor y el tamaño:
+              aquí no son un adorno de la tarjeta, son parte de lo que es la
+              lista. El corazón es el único gesto que se puede dar sin
+              decidir nada — guardarla se decide en el botón de abajo. */}
+          {list && (
+            <ListMetrics
+              listId={list.id}
+              saves={list.saves}
+              likes={list.likes}
+              size="md"
+            />
+          )}
           {list && <CollaboratorFaces listId={list.id} onOpen={() => setSharing(true)} />}
         </div>
 

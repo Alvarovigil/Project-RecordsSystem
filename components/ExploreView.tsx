@@ -360,9 +360,16 @@ export default function ExploreView() {
                 }}
               />
             ) : (
-              <ul className="grid grid-cols-2 gap-x-9 gap-y-14 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8">
-                {lists.slice(0, 8).map((l) => (
-                  <li key={l.id}>
+              /* one line, sliding sideways: the community is something you
+                 skim past, not a wall you have to get through before the rest
+                 of the page starts. It bleeds to both edges so the last card
+                 is cut off — the only honest way to say "there is more". */
+              <ul className="rail -mx-5 flex snap-x snap-mandatory gap-9 px-5 pb-2 sm:-mx-8 sm:px-8">
+                {lists.slice(0, 12).map((l) => (
+                  <li
+                    key={l.id}
+                    className="w-[44vw] shrink-0 snap-start sm:w-[200px]"
+                  >
                     <ListCard list={l} covers={coversOf(l)} />
                   </li>
                 ))}

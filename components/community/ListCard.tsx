@@ -4,6 +4,7 @@ import Link from "next/link";
 import Crate from "@/components/ui/Crate";
 import type { ListWithRecord } from "@/lib/data/types";
 import { listTitleFor } from "@/lib/list-title";
+import ListMetrics from "./ListMetrics";
 
 /**
  * Someone's list, as an object you can recognise across the app.
@@ -25,7 +26,8 @@ export default function ListCard({
 }: {
   list: Pick<ListWithRecord, "id" | "title" | "description" | "itemCount" | "slug" | "kind"> & {
     owner?: ListWithRecord["owner"];
-    followers?: number;
+    saves?: number;
+    likes?: number;
   };
   /** newest first; the crate shows three */
   covers?: string[];
@@ -35,36 +37,47 @@ export default function ListCard({
   const to = href ?? (list.owner ? `/u/${list.owner.username}/${list.slug}` : `/coleccion`);
 
   return (
-    <Link
-      href={to}
-      className="pressable group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-line-focus"
-    >
-      {/* A crate with the last three records in it, rather than a grid of four
-          thumbnails. The grid told you a list had images in it; this tells you
-          it is a stack of records, which is what it is. */}
-      <Crate covers={covers} />
+    <div className="group">
+      <Link
+        href={to}
+        className="pressable block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-line-focus"
+      >
+        {/* A crate with the last three records in it, rather than a grid of four
+            thumbnails. The grid told you a list had images in it; this tells you
+            it is a stack of records, which is what it is. */}
+        <Crate covers={covers} />
 
-      <span className="mt-2.5 block">
-        <span className="block truncate text-body font-medium text-paper">
-          {listTitleFor(list, mine)}
-        </span>
-        <span className="mt-1 flex items-center gap-1.5 text-sub text-content-muted">
-          {!mine && list.owner && (
-            <>
-              {/* the name alone. An avatar repeated down a grid of cards is
-                  fourteen copies of the same face saying the same thing, and
-                  it crowds out the line it sits on */}
-              <span className="truncate">{list.owner.displayName}</span>
-              <span aria-hidden className="text-content-faint">
-                ·
-              </span>
-            </>
-          )}
-          <span className="shrink-0 whitespace-nowrap">
-            {list.itemCount} {list.itemCount === 1 ? "disco" : "discos"}
+        <span className="mt-2.5 block">
+          <span className="block truncate text-body font-medium text-paper">
+            {listTitleFor(list, mine)}
+          </span>
+          <span className="mt-1 flex items-center gap-1.5 text-sub text-content-muted">
+            {!mine && list.owner && (
+              <>
+                {/* the name alone. An avatar repeated down a grid of cards is
+                    fourteen copies of the same face saying the same thing, and
+                    it crowds out the line it sits on */}
+                <span className="truncate">{list.owner.displayName}</span>
+                <span aria-hidden className="text-content-faint">
+                  ·
+                </span>
+              </>
+            )}
+            <span className="shrink-0 whitespace-nowrap">
+              {list.itemCount} {list.itemCount === 1 ? "disco" : "discos"}
+            </span>
           </span>
         </span>
-      </span>
-    </Link>
+      </Link>
+
+      {/* Las dos cifras van debajo de la firma, y fuera del enlace: un botón
+          dentro de un <a> no es HTML válido, y en el móvil el gesto se lo
+          queda la navegación la mitad de las veces. El corazón vive aquí
+          porque se puede querer una lista sin abrirla — si hay que entrar para
+          darlo, deja de medir a quien pasaba por delante. */}
+      <div className="mt-1.5">
+        <ListMetrics listId={list.id} saves={list.saves ?? 0} likes={list.likes ?? 0} />
+      </div>
+    </div>
   );
 }

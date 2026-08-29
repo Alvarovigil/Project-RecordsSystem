@@ -287,6 +287,16 @@ function Sentence({
         </>
       );
 
+    case "list-liked":
+      // sólo llegan de listas tuyas, así que la noticia son las personas: se
+      // cuentan ellas, no la lista, que ya sabes cuál es
+      return (
+        <>
+          <span className="font-medium text-paper">{namesOf(g.actors)}</span>{" "}
+          {g.actors.length === 1 ? "le ha gustado" : "les ha gustado"} tu lista {list}
+        </>
+      );
+
     case "followed":
       return g.mine ? (
         <>

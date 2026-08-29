@@ -182,7 +182,11 @@ export default function ListHoverCard({
         )}
         <p className="mt-1.5 text-sub text-content-muted">
           {count} {count === 1 ? "disco" : "discos"}
-          {list.followers > 0 && ` · ${list.followers} la siguen`}
+          {/* las dos medidas también aquí: la tarjeta flotante es donde se
+              decide si merece la pena abrir la lista, y ese es exactamente el
+              momento en que saber cuánta gente se la quedó sirve de algo */}
+          {list.saves > 0 && ` · ${list.saves} guardadas`}
+          {list.likes > 0 && ` · ${list.likes} me gusta`}
         </p>
       </div>
 
