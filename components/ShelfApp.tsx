@@ -722,27 +722,14 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
               style={{
                 top: "calc(50% + var(--cover-half, 21vw) - 54px)",
               }}
-              className="pressable absolute left-1/2 z-50 flex h-10 -translate-x-1/2 items-center gap-2 rounded-full bg-ink/60 px-4 text-[13px] text-paper backdrop-blur-xl"
+              /* Lighter than the panel behind it and mostly blur: over
+                 artwork this reads as glass over the sleeve rather than as a
+                 black tablet sitting on it. No chevron — the label already
+                 says which of the two states it is in, and an arrow that
+                 flips is a second way of saying the same thing. */
+              className="pressable absolute left-1/2 z-50 flex h-10 -translate-x-1/2 items-center rounded-full bg-paper/[0.14] px-5 text-[13px] text-paper backdrop-blur-xl transition-colors hover:bg-paper/20"
             >
               {specsOpen ? "Cerrar la ficha" : "Ficha técnica"}
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 12 12"
-                fill="none"
-                aria-hidden
-                className={`transition-transform duration-base ease-out ${
-                  specsOpen ? "rotate-180" : ""
-                }`}
-              >
-                <path
-                  d="M2.5 4.5 L6 8 L9.5 4.5"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
             </button>
           )}
 
