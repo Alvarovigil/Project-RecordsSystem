@@ -1,4 +1,4 @@
-import { SITE_URL } from "@/lib/site";
+import { SITE_NAME, SITE_TAGLINE, SITE_URL } from "@/lib/site";
 
 export const metadata = {
   title: "Rackr Club · QR",
@@ -11,39 +11,69 @@ export const metadata = {
 /**
  * The card you hold up.
  *
- * One screen, no scroll, nothing to press. It exists to be pointed at another
- * person's camera across a table, so every decision is about that moment: the
- * code is the biggest thing on it, it sits on white because a phone camera
- * reading a dark screen through glare needs all the contrast it can get, and
- * the address is printed underneath for the person who would rather type it
- * than hold their phone up.
+ * One screen, no scroll, nothing to press. It exists for a single moment —
+ * pointing your phone at somebody else's camera across a table — and every
+ * decision serves that.
  *
- * No install button, no explanation, no way in. Whoever scans it lands on
- * /instalar, which is the screen that does the explaining — this one only has
- * to be readable from a metre away in bad light.
+ * **The code is a sleeve.** Everything in this product that matters is a
+ * square you can hold: a cover, a crate, a card. So the QR is printed on one,
+ * leaning a few degrees the way a record leans when somebody props it up,
+ * with a hairline of cardboard along its edge. It is the same object language
+ * as the shelf, doing a job the shelf cannot do.
+ *
+ * **White, and big.** A camera reading a screen through glare needs every bit
+ * of contrast there is, and the quiet zone around a code is part of the code
+ * rather than padding around it — cropped, half the readers refuse it.
+ *
+ * **No 3D backdrop.** The landing can afford to load a renderer behind its
+ * copy; this cannot. It has to be on screen the instant it is asked for,
+ * because somebody is already holding their phone up. The atmosphere is two
+ * gradients and the grain the rest of the product uses.
  */
 export default function QrPage() {
   return (
-    <main className="flex h-screen-d w-full flex-col items-center justify-center overflow-hidden bg-ink px-6">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo.svg" alt="Rackr Club" className="h-[38px] w-auto sm:h-[46px]" />
+    <main className="relative flex h-screen-d w-full flex-col items-center justify-center overflow-hidden bg-ink px-6">
+      {/* the room: a pool of light behind the card, and the same grain that
+          sits over every other surface here */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-paper/[0.05] blur-[120px]"
+      />
+      <span aria-hidden className="grain absolute inset-0" />
 
-      <p className="mt-3 text-[11px] uppercase tracking-[0.22em] text-paper/45 sm:text-[12px]">
-        Escanea y lo tienes
-      </p>
-
-      {/* The quiet zone is part of the code, not padding around it: a QR with
-          its margin cropped is a QR that half the readers refuse. */}
-      <div className="mt-9 rounded-[20px] bg-paper p-5 shadow-[0_30px_80px_rgba(0,0,0,0.6)] sm:p-6">
+      <div className="appear relative flex flex-col items-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/qr-instalar.svg"
-          alt="Código QR que lleva a rackr.club/instalar"
-          className="h-[54vw] max-h-[300px] w-[54vw] max-w-[300px]"
+          src="/logo.svg"
+          alt={SITE_NAME}
+          className="h-[34px] w-auto mix-blend-difference sm:h-[42px]"
         />
+        <p className="mt-2.5 text-[10px] uppercase tracking-[0.24em] text-paper/45 sm:text-[11px]">
+          {SITE_TAGLINE}
+        </p>
+
+        {/* the sleeve */}
+        <div className="relative mt-10 -rotate-[2.5deg]">
+          <span
+            aria-hidden
+            className="absolute inset-x-[2px] top-full h-[4px] rounded-b-[2px] bg-paper/30"
+          />
+          <div className="rounded-[4px] bg-paper p-5 shadow-[0_40px_90px_rgba(0,0,0,0.75)] sm:p-6">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/qr-instalar.svg"
+              alt="Código QR que lleva a rackr.club/instalar"
+              className="h-[56vw] max-h-[300px] w-[56vw] max-w-[300px]"
+            />
+            <p className="mono mt-4 text-center text-[9px] uppercase tracking-[0.2em] text-ink/45">
+              Escanea y lo tienes
+            </p>
+          </div>
+        </div>
       </div>
 
-      <p className="mono mt-7 text-[12px] uppercase tracking-[0.14em] text-paper/40">
+      {/* the address, where a catalogue number would be */}
+      <p className="mono absolute inset-x-0 bottom-8 text-center text-[11px] uppercase tracking-[0.16em] text-paper/35">
         {SITE_URL.replace(/^https?:\/\//, "")}/instalar
       </p>
     </main>
