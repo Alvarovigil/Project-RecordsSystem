@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import type { VinylShelfHandle } from "@/components/VinylShelf3D";
 import MiniVinyl from "@/components/MiniVinyl";
 import VinylGrid from "@/components/VinylGrid";
 import SearchOverlay from "@/components/SearchOverlay";
 import CollectionsOverlay from "@/components/CollectionsOverlay";
-import RecordSpecsCard from "@/components/RecordSpecsCard";
+import { RecordSpecsContent } from "@/components/RecordSpecsCard";
 import VinylEditOverlay from "@/components/VinylEditOverlay";
 import CommunityBridge from "@/components/CommunityBridge";
 import MarqueeText from "@/components/MarqueeText";
@@ -696,37 +696,90 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             }}
             data-side="right"
             style={{ left: "calc(50% + var(--cover-half, 21vw) + 32px)" }}
-            /**
-             * Anchored at 42% while it is three facts, and top-to-bottom the
-             * moment it is the sheet — which is long by design and has to
-             * scroll somewhere. A block that keeps growing downward from the
-             * middle of the screen ends up underneath the player.
-             */
-            className={`pointer-events-none absolute right-6 z-10 text-left text-paper/80 ${
-              specsOpen
-                ? "scroll-y bottom-28 top-20 overflow-y-auto pr-1"
-                : "top-[42%] -translate-y-1/2"
-            }`}
+            className="pointer-events-none absolute right-6 top-[42%] z-10 -translate-y-1/2 text-left text-paper/80"
           >
-            {!specsOpen && (
-              <>
-                <Field label="Label" value={open.label} />
-                <Field label="Country" value={open.country} />
-                <Field label="Tracks" value={String(open.tracklist.length)} />
-              </>
-            )}
+            <Field label="Label" value={open.label} />
+            <Field label="Country" value={open.country} />
+            <Field label="Tracks" value={String(open.tracklist.length)} />
 
             {/* Everything in this column is pointer-transparent so the sleeve
                 behind it stays clickable — the one thing here you can press
                 has to say so itself. */}
-            <div className="pointer-events-auto mt-4 w-[min(30vw,380px)]">
-              <RecordSpecsCard
-                discogsId={open.discogsId}
-                open={specsOpen}
-                onOpenChange={setSpecsOpen}
-              />
-            </div>
+            {open.discogsId && (
+              <button
+                onClick={() => setSpecsOpen((v) => !v)}
+                aria-expanded={specsOpen}
+                className="pressable pointer-events-auto mt-5 flex items-center gap-2 border-t border-paper/15 pt-3 text-left text-[13px] text-paper/70 transition-colors hover:text-paper"
+              >
+                Ficha técnica
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  aria-hidden
+                  className={`transition-transform duration-base ease-out ${
+                    specsOpen ? "rotate-180" : ""
+                  }`}
+                >
+                  <path
+                    d="M2.5 4.5 L6 8 L9.5 4.5"
+                    stroke="currentColor"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            )}
           </motion.div>
+
+          {/**
+           * The sheet, over the sleeve rather than beside it.
+           *
+           * A column on the right worked and cost too much: it pushed the
+           * three facts out of the way and turned a screen whose whole subject
+           * is one big piece of artwork into a page with a sidebar. Here the
+           * artwork stays exactly where it is and goes soft behind the type,
+           * which is the same move the app makes everywhere else — what is
+           * behind a panel becomes colour rather than content.
+           *
+           * The box is measured from the sleeve itself. `--cover-half` is
+           * written every frame by the shelf, because how wide the centred
+           * sleeve lands depends on the field of view, the camera distance and
+           * the window — so this is the artwork's real rectangle, not a
+           * percentage that happens to look right on one screen.
+           */}
+          <AnimatePresence>
+            {specsOpen && open.discogsId && (
+              <motion.div
+                key={`specs-${open.id}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  left: "calc(50% - var(--cover-half, 21vw))",
+                  top: "calc(50% - var(--cover-half, 21vw))",
+                  width: "calc(var(--cover-half, 21vw) * 2)",
+                  height: "calc(var(--cover-half, 21vw) * 2)",
+                }}
+                className="absolute z-20 overflow-hidden bg-ink/55 backdrop-blur-xl"
+              >
+                <motion.div
+                  /* the cards come up from below: the sheet arrives from
+                     underneath the sleeve, the way a record slides out of one */
+                  initial={{ y: 28, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 16, opacity: 0 }}
+                  transition={{ duration: 0.34, ease: [0.16, 1, 0.3, 1], delay: 0.04 }}
+                  className="scroll-y h-full overflow-y-auto p-5"
+                >
+                  <RecordSpecsContent discogsId={open.discogsId} open />
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* edit icon over the cover — appears only once the open animation
               has finished, and on hover */}

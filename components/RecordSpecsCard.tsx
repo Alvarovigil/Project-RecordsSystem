@@ -42,52 +42,7 @@ export default function RecordSpecsCard({
   const open = controlledOpen ?? ownOpen;
   const setOpen = (v: boolean) => (onOpenChange ? onOpenChange(v) : setOwnOpen(v));
 
-  const [specs, setSpecs] = useState<RecordSpecs | null>(null);
-  const [state, setState] = useState<"idle" | "loading" | "error" | "limit">("idle");
 
-  /**
-   * Which record we have already asked about.
-   *
-   * A ref rather than the state above, because the state is what changes when
-   * the request starts — and an effect that both sets state and depends on it
-   * tears its own fetch down: React runs the cleanup as soon as the deps
-   * change, the `alive` flag flips, and the answer arrives to a handler that
-   * has been told to ignore it. The card sat on its skeleton forever with a
-   * perfectly good 200 in the network panel.
-   */
-  const asked = useRef<number | null>(null);
-
-  // a different record under the same card: forget what the last one said
-  useEffect(() => {
-    setSpecs(null);
-    setState("idle");
-    asked.current = null;
-  }, [discogsId]);
-
-  useEffect(() => {
-    if (!open || !discogsId || asked.current === discogsId) return;
-    asked.current = discogsId;
-    let alive = true;
-    setState("loading");
-    fetch(`/api/discogs/specs?id=${discogsId}`)
-      .then(async (r) => {
-        if (!alive) return;
-        if (r.status === 429) return setState("limit");
-        if (!r.ok) return setState("error");
-        const { specs: s } = await r.json();
-        setSpecs(s);
-        setState("idle");
-      })
-      .catch(() => {
-        if (!alive) return;
-        // let a failure be retried by closing and opening again
-        asked.current = null;
-        setState("error");
-      });
-    return () => {
-      alive = false;
-    };
-  }, [open, discogsId]);
 
   // Without a Discogs id there is no pressing to describe — the record was
   // typed in by hand. Nothing to open, so nothing to offer.
@@ -139,28 +94,98 @@ export default function RecordSpecsCard({
             className="overflow-hidden"
           >
             <div className="mt-3">
-              {state === "loading" && <Skeleton />}
-
-              {state === "limit" && (
-                <Block>
-                  <Note>
-                    Discogs ha cortado las consultas por un momento — el límite lo
-                    compartimos entre todos. Vuelve a abrirla en un minuto.
-                  </Note>
-                </Block>
-              )}
-              {state === "error" && (
-                <Block>
-                  <Note>No hemos podido traer la ficha de este disco.</Note>
-                </Block>
-              )}
-
-              {specs && <Specs specs={specs} />}
+              <RecordSpecsContent discogsId={discogsId} open={open} />
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </section>
+  );
+}
+
+
+/**
+ * The sheet itself, without the line that opens it.
+ *
+ * Split out because the two places this appears disagree about where the
+ * content goes: on a phone it belongs in the flow of the record screen, and on
+ * the shelf it belongs over the sleeve, in a scroller of its own. Only the
+ * trigger differs, so only the trigger is duplicated.
+ */
+export function RecordSpecsContent({
+  discogsId,
+  open,
+}: {
+  discogsId: number | null;
+  open: boolean;
+}) {
+  const [specs, setSpecs] = useState<RecordSpecs | null>(null);
+  const [state, setState] = useState<"idle" | "loading" | "error" | "limit">("idle");
+
+  /**
+   * Which record we have already asked about.
+   *
+   * A ref rather than the state above, because the state is what changes when
+   * the request starts — and an effect that both sets state and depends on it
+   * tears its own fetch down: React runs the cleanup as soon as the deps
+   * change, the `alive` flag flips, and the answer arrives to a handler that
+   * has been told to ignore it. The card sat on its skeleton forever with a
+   * perfectly good 200 in the network panel.
+   */
+  const asked = useRef<number | null>(null);
+
+  // a different record under the same card: forget what the last one said
+  useEffect(() => {
+    setSpecs(null);
+    setState("idle");
+    asked.current = null;
+  }, [discogsId]);
+
+  useEffect(() => {
+    if (!open || !discogsId || asked.current === discogsId) return;
+    asked.current = discogsId;
+    let alive = true;
+    setState("loading");
+    fetch(`/api/discogs/specs?id=${discogsId}`)
+      .then(async (r) => {
+        if (!alive) return;
+        if (r.status === 429) return setState("limit");
+        if (!r.ok) return setState("error");
+        const { specs: s } = await r.json();
+        setSpecs(s);
+        setState("idle");
+      })
+      .catch(() => {
+        if (!alive) return;
+        // let a failure be retried by closing and opening again
+        asked.current = null;
+        setState("error");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [open, discogsId]);
+
+  return (
+    <>
+      {state === "loading" && <Skeleton />}
+
+      {state === "limit" && (
+        <Block>
+          <Note>
+            Discogs ha cortado las consultas por un momento — el límite lo compartimos
+            entre todos. Vuelve a abrirla en un minuto.
+          </Note>
+        </Block>
+      )}
+      {state === "error" && (
+        <Block>
+          <Note>No hemos podido traer la ficha de este disco.</Note>
+        </Block>
+      )}
+
+      {specs && <Specs specs={specs} />}
+    </>
   );
 }
 
