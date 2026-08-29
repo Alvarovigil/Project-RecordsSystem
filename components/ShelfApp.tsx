@@ -701,38 +701,50 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             <Field label="Label" value={open.label} />
             <Field label="Country" value={open.country} />
             <Field label="Tracks" value={String(open.tracklist.length)} />
-
-            {/* Everything in this column is pointer-transparent so the sleeve
-                behind it stays clickable — the one thing here you can press
-                has to say so itself. */}
-            {open.discogsId && (
-              <button
-                onClick={() => setSpecsOpen((v) => !v)}
-                aria-expanded={specsOpen}
-                className="pressable pointer-events-auto mt-5 flex items-center gap-2 border-t border-paper/15 pt-3 text-left text-[13px] text-paper/70 transition-colors hover:text-paper"
-              >
-                Ficha técnica
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  aria-hidden
-                  className={`transition-transform duration-base ease-out ${
-                    specsOpen ? "rotate-180" : ""
-                  }`}
-                >
-                  <path
-                    d="M2.5 4.5 L6 8 L9.5 4.5"
-                    stroke="currentColor"
-                    strokeWidth="1.4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-            )}
           </motion.div>
+
+          {/**
+           * The way in, on the sleeve itself.
+           *
+           * It lived in the right-hand column, which meant the control for the
+           * thing that happens *on the artwork* was eighteen inches away from
+           * it, in a stack of read-only facts. On the bottom edge of the
+           * sleeve it is where the eye already is, and it reads as what it is:
+           * a lid on the record in front of you.
+           *
+           * Positioned off the same `--cover-half` the sheet uses, so button
+           * and panel stay welded to the artwork at any window size.
+           */}
+          {open.discogsId && (
+            <button
+              onClick={() => setSpecsOpen((v) => !v)}
+              aria-expanded={specsOpen}
+              style={{
+                top: "calc(50% + var(--cover-half, 21vw) - 54px)",
+              }}
+              className="pressable absolute left-1/2 z-50 flex h-10 -translate-x-1/2 items-center gap-2 rounded-full bg-ink/60 px-4 text-[13px] text-paper backdrop-blur-xl"
+            >
+              {specsOpen ? "Cerrar la ficha" : "Ficha técnica"}
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 12 12"
+                fill="none"
+                aria-hidden
+                className={`transition-transform duration-base ease-out ${
+                  specsOpen ? "rotate-180" : ""
+                }`}
+              >
+                <path
+                  d="M2.5 4.5 L6 8 L9.5 4.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
 
           {/**
            * The sheet, over the sleeve rather than beside it.
@@ -764,7 +776,12 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                   width: "calc(var(--cover-half, 21vw) * 2)",
                   height: "calc(var(--cover-half, 21vw) * 2)",
                 }}
-                className="absolute z-20 overflow-hidden bg-ink/55 backdrop-blur-xl"
+                /* Above the edit overlay's hover sensor, which is a
+                   full-cover invisible div at z-20 and comes later in the
+                   DOM: the wheel was landing on that instead of on the sheet,
+                   so the panel would not scroll while looking perfectly
+                   scrollable. */
+                className="absolute z-40 overflow-hidden bg-ink/55 backdrop-blur-xl"
               >
                 <motion.div
                   /* the cards come up from below: the sheet arrives from
@@ -773,7 +790,14 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: 16, opacity: 0 }}
                   transition={{ duration: 0.34, ease: [0.16, 1, 0.3, 1], delay: 0.04 }}
-                  className="scroll-y h-full overflow-y-auto p-5"
+                  /* The shelf listens for the wheel on the window and turns
+                     it into rotation. `data-scrollable` is its existing way of
+                     saying "this one is a scroller, keep your hands off" —
+                     without it the sheet simply refused to move. */
+                  data-scrollable
+                  /* room at the end for the pill that floats over the bottom
+                     edge, so the last card is not permanently under it */
+                  className="scroll-y h-full overflow-y-auto p-5 pb-20"
                 >
                   <RecordSpecsContent discogsId={open.discogsId} open />
                 </motion.div>
