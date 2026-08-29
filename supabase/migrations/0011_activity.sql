@@ -148,8 +148,19 @@ comment on function public.activity_for_me is
   'Todo lo que se mueve alrededor de ti: añadidos, listas nuevas, listas '
   'guardadas y seguimientos. Agrupar es trabajo del cliente.';
 
--- El flujo viejo ya no lo llama nadie. Se queda por si un cliente antiguo
--- sigue en el aire, y se borrará cuando no queden.
-comment on function public.feed_for_me is
-  'OBSOLETA desde 0011: la sustituye activity_for_me, que cuenta cuatro verbos '
-  'en vez de uno.';
+-- El flujo viejo ya no lo llama nadie. Se marca como obsoleto si está: este
+-- proyecto se creó antes de que 0006 existiera, así que comentar la función a
+-- pelo tumbaba la migración entera por una nota al margen. Una migración no
+-- puede depender de que una versión anterior de sí misma se aplicara.
+do $$
+begin
+  if exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'feed_for_me'
+  ) then
+    comment on function public.feed_for_me is
+      'OBSOLETA desde 0011: la sustituye activity_for_me, que cuenta cuatro '
+      'verbos en vez de uno.';
+  end if;
+end $$;
