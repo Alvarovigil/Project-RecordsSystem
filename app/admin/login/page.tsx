@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
-import { adminConfigured, isAdminRequest } from "@/lib/admin/auth";
+import { adminConfigured, isAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminLogin({
+export default async function AdminLogin({
   searchParams,
 }: {
   searchParams: { error?: string };
 }) {
-  if (isAdminRequest()) redirect("/admin");
+  if (await isAdmin()) redirect("/admin");
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-ink px-6 text-paper">

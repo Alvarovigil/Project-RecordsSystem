@@ -50,6 +50,13 @@ export type Profile = {
   displayName: string;
   bio: string;
   avatarUrl: string | null;
+  /**
+   * Granted by hand from the admin panel, never by its owner.
+   *
+   * It says "this account is who it says it is", which matters exactly once:
+   * when somebody is deciding whether the list signed "Rackr Club" is ours.
+   */
+  verified?: boolean;
 };
 
 /** A list as seen from a record: the bridge into someone else's collection. */

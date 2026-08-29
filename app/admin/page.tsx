@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { isAdminRequest } from "@/lib/admin/auth";
+import { isAdmin } from "@/lib/admin/auth";
 import { getOverview, listUsers } from "@/lib/admin/queries";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ export default async function AdminHome({
 }: {
   searchParams: { q?: string };
 }) {
-  if (!isAdminRequest()) redirect("/admin/login");
+  if (!(await isAdmin())) redirect("/admin/login");
 
   const overview = await getOverview();
   const users = await listUsers(searchParams.q ?? "");

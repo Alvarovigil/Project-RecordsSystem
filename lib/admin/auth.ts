@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * Admin access: one shared password, checked on the server.
@@ -47,9 +48,49 @@ export function passwordMatches(candidate: string) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** True when the current request carries a valid admin session. */
+/** True when the current request carries a valid admin password session. */
 export function isAdminRequest() {
   return verifyToken(cookies().get(ADMIN_COOKIE)?.value);
+}
+
+/**
+ * The account that owns the panel.
+ *
+ * A handle rather than a uuid so it can be set without looking anything up,
+ * and read at request time rather than at module load — the same lesson the
+ * Discogs token taught in production, where a value captured once was captured
+ * as undefined and stayed that way.
+ */
+export function adminUsername() {
+  return (process.env.ADMIN_USERNAME ?? "rackrclub").toLowerCase();
+}
+
+/**
+ * Admin access, by session or by password.
+ *
+ * Being signed in as the project's own account is the requirement — asking
+ * that person for a second password protects nothing, because anyone holding
+ * that session can already do everything the panel does, one screen at a time.
+ * The password door stays for the case the session cannot cover: getting in
+ * when the account itself is locked out, or from a machine that is not signed
+ * in.
+ *
+ * The check is a server-side read of the session's own profile. It cannot be
+ * spoofed from the browser: the username comes from the database, keyed by the
+ * user id in a cookie Supabase signs, and a profile's username is unique.
+ */
+export async function isAdmin() {
+  if (isAdminRequest()) return true;
+  const sb = getSupabaseServerClient();
+  if (!sb) return false;
+  const { data: auth } = await sb.auth.getUser();
+  if (!auth.user) return false;
+  const { data } = await sb
+    .from("profiles")
+    .select("username")
+    .eq("id", auth.user.id)
+    .maybeSingle();
+  return String(data?.username ?? "").toLowerCase() === adminUsername();
 }
 
 export const COOKIE_OPTIONS = {

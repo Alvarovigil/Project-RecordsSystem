@@ -87,6 +87,17 @@ export default function AccountMenu() {
               here that ends your session. */}
           <MenuLink href={`/u/${profile?.username ?? ""}`}>Mi perfil</MenuLink>
           <MenuLink href="/ajustes">Ajustes</MenuLink>
+          {/**
+           * The panel, for the account that owns it.
+           *
+           * Only rendered for that handle — and the door itself is guarded on
+           * the server, so a link that somebody guesses leads to the same
+           * refusal as typing the address. Hiding a control is not security;
+           * this is only about not showing everybody a door they cannot open.
+           */}
+          {profile?.username?.toLowerCase() === "rackrclub" && (
+            <MenuLink href="/admin">Panel de administración</MenuLink>
+          )}
         </div>
       )}
     </div>

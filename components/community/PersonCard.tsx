@@ -4,6 +4,7 @@ import Link from "next/link";
 import Avatar from "@/components/ui/Avatar";
 import FollowButton from "./FollowButton";
 import { useImagesReady } from "@/hooks/useImagesReady";
+import Verified from "@/components/ui/Verified";
 import type { SuggestedProfile } from "@/lib/data/types";
 
 /** The sleeve that stands for a record nobody has chosen yet. */
@@ -109,8 +110,15 @@ export default function PersonCard({ profile }: { profile: SuggestedProfile }) {
               size="xs"
             />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sub font-medium text-paper">
-                {profile.displayName}
+              <span className="flex items-center gap-1">
+                <span className="truncate text-sub font-medium text-paper">
+                  {profile.displayName}
+                </span>
+                {profile.verified && (
+                  <span className="text-accent">
+                    <Verified size={12} />
+                  </span>
+                )}
               </span>
               <span className="block truncate text-caption text-content-muted">{reason}</span>
             </span>

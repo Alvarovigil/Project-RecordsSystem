@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { isAdminRequest } from "@/lib/admin/auth";
+import { isAdmin } from "@/lib/admin/auth";
 import { getAccount, getUserDetail } from "@/lib/admin/queries";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export default async function AdminUser({
   params: { id: string };
   searchParams: { done?: string; error?: string };
 }) {
-  if (!isAdminRequest()) redirect("/admin/login");
+  if (!(await isAdmin())) redirect("/admin/login");
 
   const [detail, account] = await Promise.all([
     getUserDetail(params.id),
@@ -63,6 +63,22 @@ export default async function AdminUser({
             >
               Ver perfil público
             </Link>
+
+            {/* Verification: a mark, not a permission. Nothing about the
+                account changes — it only says, next to the name, that this is
+                who it claims to be. Reversible in one press, because a badge
+                granted by mistake is a lie the product is telling. */}
+            <form action="/api/admin/actions" method="post">
+              <input
+                type="hidden"
+                name="action"
+                value={profile.verified ? "unverify-user" : "verify-user"}
+              />
+              <input type="hidden" name="userId" value={profile.id} />
+              <button className="border border-paper/20 px-4 py-2 text-[12px] text-paper/70 transition hover:border-paper/50 hover:text-paper">
+                {profile.verified ? "Quitar verificación" : "Verificar cuenta"}
+              </button>
+            </form>
 
             {/* Suspending comes first and looks ordinary, because it is the
                 action you almost always want: reversible, and it leaves the

@@ -129,6 +129,7 @@ const toProfile = (p: any): Profile => ({
   displayName: p.display_name,
   bio: p.bio ?? "",
   avatarUrl: p.avatar_url,
+  verified: Boolean(p.verified),
 });
 
 /** A list row joined with its owner, as the community surfaces expect it. */
@@ -161,7 +162,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       if (!auth.user) return null;
       const { data } = await sb
         .from("profiles")
-        .select("id, username, display_name, bio, avatar_url")
+        .select("id, username, display_name, bio, avatar_url, verified")
         .eq("id", auth.user.id)
         .single();
       return data
@@ -171,6 +172,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
             displayName: data.display_name,
             bio: data.bio,
             avatarUrl: data.avatar_url,
+            verified: Boolean(data.verified),
           }
         : null;
     },
@@ -416,7 +418,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       const isId = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(handleOrId);
       const { data } = await sb
         .from("profiles")
-        .select("id, username, display_name, bio, avatar_url")
+        .select("id, username, display_name, bio, avatar_url, verified")
         .eq(isId ? "id" : "username", handleOrId)
         .maybeSingle();
       return data
@@ -476,14 +478,10 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     // ---- discovery --------------------------------------------------------
     async searchProfiles(query) {
       if (!query.trim()) return [];
+      // search_profiles returns setof profiles, so the new column arrives on
+      // its own — one of the few places where "select *" earns its keep
       const { data } = await sb.rpc("search_profiles", { q: query.trim() });
-      return ((data ?? []) as any[]).map((p) => ({
-        id: p.id,
-        username: p.username,
-        displayName: p.display_name,
-        bio: p.bio ?? "",
-        avatarUrl: p.avatar_url,
-      }));
+      return ((data ?? []) as any[]).map(toProfile);
     },
 
     async searchLists(query) {
@@ -582,6 +580,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         followers: r.followers ?? 0,
         covers: (r.covers ?? []).filter(Boolean),
         chosen: Boolean(r.chosen),
+        verified: Boolean(r.verified),
       }));
     },
 
@@ -727,7 +726,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         .from("profiles")
         .update(row)
         .eq("id", userId)
-        .select("id, username, display_name, bio, avatar_url")
+        .select("id, username, display_name, bio, avatar_url, verified")
         .single();
       // the unique index on username is the real check; surface its refusal
       // instead of pretending the save worked

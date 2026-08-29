@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Avatar from "@/components/ui/Avatar";
 import FollowButton, { FollowsYouBadge } from "./FollowButton";
+import Verified from "@/components/ui/Verified";
 import type { Profile } from "@/lib/data/types";
 
 /**
@@ -23,7 +24,10 @@ export default function PersonRow({
   action = true,
   compact = false,
 }: {
-  profile: Pick<Profile, "id" | "username" | "displayName" | "avatarUrl"> & { bio?: string };
+  profile: Pick<Profile, "id" | "username" | "displayName" | "avatarUrl"> & {
+    bio?: string;
+    verified?: boolean;
+  };
   /** overrides the handle line — "añadió 4 discos", "vía Sonido de sótano" */
   subtitle?: React.ReactNode;
   action?: boolean;
@@ -51,8 +55,15 @@ export default function PersonRow({
               two lines and the name truncated to make space for it. It belongs
               on the second line anyway — it is a fact about the relationship,
               like the handle, not part of who they are. */}
-          <span className="block truncate text-body font-medium text-paper">
-            {profile.displayName}
+          <span className="flex items-center gap-1.5">
+            <span className="truncate text-body font-medium text-paper">
+              {profile.displayName}
+            </span>
+            {profile.verified && (
+              <span className="text-accent">
+                <Verified size={13} />
+              </span>
+            )}
           </span>
           <span className="mt-0.5 flex items-center gap-1.5 text-sub text-content-muted">
             <span className="truncate">{subtitle ?? `@${profile.username}`}</span>

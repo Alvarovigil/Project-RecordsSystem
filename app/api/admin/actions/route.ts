@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAdminRequest } from "@/lib/admin/auth";
+import { isAdmin } from "@/lib/admin/auth";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 
 /**
@@ -21,7 +21,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase/server";
  * be skipped.
  */
 export async function POST(req: NextRequest) {
-  if (!isAdminRequest()) {
+  if (!(await isAdmin())) {
     return NextResponse.redirect(new URL("/admin/login", req.nextUrl.origin), 303);
   }
   const sb = getSupabaseAdminClient();
@@ -45,6 +45,23 @@ export async function POST(req: NextRequest) {
     case "delete-list":
       await sb.from("lists").delete().eq("id", listId);
       break;
+    case "verify-user":
+    case "unverify-user": {
+      /**
+       * Granted and taken back by hand, from here and nowhere else.
+       *
+       * The column has no write policy at all, so this route — which enters
+       * with the service key — is the only thing in the system that can set
+       * it. An account cannot verify itself, which is the entire point of a
+       * verification.
+       */
+      await sb
+        .from("profiles")
+        .update({ verified: action === "verify-user" })
+        .eq("id", userId);
+      return back(`/admin/u/${userId}?done=${action === "verify-user" ? "verificado" : "sin-verificar"}`);
+    }
+
     case "suspend-user": {
       // a hundred years is Supabase's idiom for "until someone lifts it"
       await sb.auth.admin.updateUserById(userId, { ban_duration: "876000h" });

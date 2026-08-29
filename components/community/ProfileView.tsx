@@ -17,6 +17,7 @@ import { useRelationship } from "@/hooks/useRelationship";
 import type { ListWithRecord, Profile, ProfileStats, SavedList } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 import Loading from "@/components/ui/Loading";
+import Verified from "@/components/ui/Verified";
 
 /**
  * One profile screen, for you and for everyone else.
@@ -129,8 +130,13 @@ export default function ProfileView({
             size="lg"
           />
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-title font-medium text-paper sm:text-display">
-              {profile?.displayName ?? "…"}
+            <h1 className="flex items-center gap-2 text-title font-medium text-paper sm:text-display">
+              <span className="truncate">{profile?.displayName ?? "…"}</span>
+              {profile?.verified && (
+                <span className="shrink-0 text-accent">
+                  <Verified size={20} />
+                </span>
+              )}
             </h1>
             <p className="mono mt-0.5 truncate text-sub text-content-muted">
               @{profile?.username ?? ""}
