@@ -207,7 +207,7 @@ export default function MobileShelf({
             <button
               onClick={() => setSwitching(true)}
               aria-label={`Lista actual: ${activeName}. Cambiar de lista`}
-              className="pressable flex h-11 max-w-full items-center gap-1.5 rounded-full bg-ink/55 px-4 text-paper/85 backdrop-blur-md"
+              className="pressable flex h-12 max-w-full items-center gap-1.5 rounded-full bg-ink/72 px-4 text-paper/90 backdrop-blur-xl"
             >
               <MarqueeText className="min-w-0 text-sub font-medium">
                 {activeName}
@@ -598,7 +598,17 @@ function RoundButton({
     <button
       onClick={onClick}
       aria-label={label}
-      className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink/55 text-paper/85 backdrop-blur-md"
+      /**
+       * Darker glass, and taller.
+       *
+       * At 55% over a bright sleeve these read as light grey pucks: the tint
+       * was doing the blurring's job and neither was doing enough. 72% with a
+       * heavier blur puts the icon on something solid enough to be read
+       * against any cover that passes behind it — and 48px is the size a
+       * thumb aims at without looking, where 44 is the floor you are allowed
+       * to hit.
+       */
+      className="pressable flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink/72 text-paper/90 backdrop-blur-xl"
     >
       {children}
     </button>
