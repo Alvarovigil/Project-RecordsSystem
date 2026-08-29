@@ -8,6 +8,8 @@ import { useDevice } from "@/hooks/useDevice";
 import Avatar from "@/components/ui/Avatar";
 import Confirm from "@/components/ui/Confirm";
 import RecordSpecsCard from "@/components/RecordSpecsCard";
+import ShareSheet from "@/components/ShareSheet";
+import { SITE_URL } from "@/lib/site";
 import { useToast } from "@/components/ui/Toast";
 import { useRepository } from "@/hooks/useRepository";
 import { coverFor } from "@/lib/cover";
@@ -57,7 +59,12 @@ function Panel({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 16 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className="scroll-y fixed inset-0 z-[80] overflow-y-auto bg-surface-raised"
+          /* Below the app's dialog layer (70), not above it: this is a
+             screen, and everything opened from it — guardar, compartir, el
+             confirmar de borrar — is a sheet that has to land on top. At 80 it
+             covered them, so pressing Guardar on a phone appeared to do
+             nothing at all. */
+            className="scroll-y fixed inset-0 z-[60] overflow-y-auto bg-surface-raised"
           style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }}
         >
           {children}
@@ -120,6 +127,7 @@ export default function RecordSheet({
   const toast = useToast();
   const [elsewhere, setElsewhere] = useState<ListWithRecord[]>([]);
   const [picking, setPicking] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   /**
    * Whether the artwork has scrolled out of the way.
@@ -347,6 +355,19 @@ export default function RecordSheet({
               >
                 Guardar
               </button>
+              {/* Sharing is an icon, not a word: it is wanted often enough to
+                  be one press away and rarely enough that it should not take
+                  a third of the row from the two things you came for. */}
+              <button
+                onClick={() => setSharing(true)}
+                aria-label="Compartir"
+                className="pressable flex h-12 w-12 shrink-0 items-center justify-center rounded-control border border-line-strong text-paper"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+                  <path d="M8 10.5V2.6 M5 5.4 L8 2.4 L11 5.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M3.2 9.4v3.2a1 1 0 0 0 1 1h7.6a1 1 0 0 0 1-1V9.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
             </div>
 
             {/* where it already lives, so "guardar" never means "otra vez" */}
@@ -447,6 +468,19 @@ export default function RecordSheet({
           </div>
         </div>
       </Panel>
+
+      {/* Sharing: its own sheet on top, so the record is still there behind
+          it when the share is cancelled — which it often is. */}
+      <ShareSheet
+        open={sharing}
+        onClose={() => setSharing(false)}
+        image={`/api/share/record?slug=${encodeURIComponent(vinyl.id)}`}
+        /* There is no page for a single record yet, so the link is the app
+           itself — which is what somebody who liked the card wants anyway. */
+        link={SITE_URL}
+        title={`${vinyl.title} — ${vinyl.artist}`}
+        filename={`${vinyl.id}.png`}
+      />
 
       {/* saving into a list: its own sheet, so the record stays behind it */}
       <Sheet open={picking} onClose={() => setPicking(false)} title="Guardar en" size="auto" width={380}>

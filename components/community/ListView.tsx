@@ -15,6 +15,8 @@ import Crate from "@/components/ui/Crate";
 import { coverFor } from "@/lib/cover";
 import { useLibrary } from "@/hooks/useLibrary";
 import { usePlaybackContext } from "@/lib/playback-context";
+import ShareSheet from "@/components/ShareSheet";
+import { SITE_URL } from "@/lib/site";
 import { useRepository } from "@/hooks/useRepository";
 import { useRelationship } from "@/hooks/useRelationship";
 import { useBackTo } from "@/hooks/useBackTo";
@@ -58,6 +60,8 @@ export default function ListView({
   const [items, setItems] = useState<Vinyl[] | null>(null);
   const [attribution, setAttribution] = useState<Record<string, string>>({});
   const [sharing, setSharing] = useState(false);
+  /** the 9:16 card, which is a different thing from inviting a collaborator */
+  const [shareCard, setShareCard] = useState(false);
   /** the record whose sheet is open, wherever you found it */
   const [open, setOpen] = useState<Vinyl | null>(null);
   const lib = useLibrary();
@@ -100,18 +104,16 @@ export default function ListView({
       : "…";
   const owner = list?.owner ?? initial?.owner;
 
-  const share = async () => {
-    const url = window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title, url });
-      } catch {
-        /* cancelling is not failing */
-      }
-      return;
-    }
-    await navigator.clipboard?.writeText(url);
-  };
+  /**
+   * Sharing opens the card rather than the system dialog.
+   *
+   * It used to hand the URL straight to `navigator.share`, which on a phone
+   * means the receiving app gets a line of text — and a rack is a wall of
+   * covers, which is the only part of it worth looking at. The sheet makes the
+   * picture first and still offers the link underneath for anybody who wanted
+   * the link.
+   */
+  const share = () => setShareCard(true);
 
   return (
     <Page width={1000}>
@@ -346,6 +348,17 @@ export default function ListView({
         onRemoveFromActive={() => {}}
         onDelete={() => {}}
       />
+
+      {owner && list && (
+        <ShareSheet
+          open={shareCard}
+          onClose={() => setShareCard(false)}
+          image={`/api/share/list?user=${encodeURIComponent(owner.username)}&list=${encodeURIComponent(list.slug)}`}
+          link={`${SITE_URL}/u/${owner.username}/${list.slug}`}
+          title={`${title} · un rack de ${owner.displayName}`}
+          filename={`${list.slug}.png`}
+        />
+      )}
 
       {list && (
         <CollaboratorsSheet

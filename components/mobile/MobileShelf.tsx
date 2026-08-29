@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import ShareSheet from "@/components/ShareSheet";
+import { SITE_URL } from "@/lib/site";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import MarqueeText from "@/components/MarqueeText";
 import Button from "@/components/ui/Button";
@@ -142,6 +144,8 @@ export default function MobileShelf({
    * three get a button of their own — the alternative is a set of actions that
    * exist on one device and simply do not on the other.
    */
+  /** the rack whose 9:16 card is open */
+  const [sharingList, setSharingList] = useState<SavedList | null>(null);
   const [listMenu, setListMenu] = useState<SavedList | null>(null);
 
   // the lighting bench, and only when it has been asked for by hand
@@ -474,9 +478,10 @@ export default function MobileShelf({
               }}
             />
             <SheetRow
-              label="Compartir enlace"
+              label="Compartir"
+              detail="Imagen para historias"
               onClick={() => {
-                void shareList(listMenu);
+                setSharingList(listMenu);
                 setListMenu(null);
               }}
             />
@@ -487,6 +492,17 @@ export default function MobileShelf({
           </div>
         )}
       </Sheet>
+
+      {sharingList && (
+        <ShareSheet
+          open
+          onClose={() => setSharingList(null)}
+          image={`/api/share/list?user=${encodeURIComponent(sharingList.owner.username)}&list=${encodeURIComponent(sharingList.slug)}`}
+          link={`${SITE_URL}/u/${sharingList.owner.username}/${sharingList.slug}`}
+          title={`${sharingList.title} · un rack de ${sharingList.owner.displayName}`}
+          filename={`${sharingList.slug}.png`}
+        />
+      )}
 
       {lab && <LightLab rig={rig} onChange={setRig} />}
 
@@ -624,27 +640,6 @@ function RoundButton({
   );
 }
 
-/**
- * Share a list: the platform sheet where there is one, the clipboard where
- * there is not — and it says which, because a button that silently did
- * nothing is indistinguishable from a broken one.
- */
-async function shareList(l: SavedList) {
-  const url = `${window.location.origin}/u/${l.owner.username}/${l.slug}`;
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: l.title, url });
-    } catch {
-      // cancelled: not an error, and not something to report
-    }
-    return;
-  }
-  try {
-    await navigator.clipboard.writeText(url);
-  } catch {
-    // nothing sensible to do; the link is still one tap away in the address bar
-  }
-}
 
 /**
  * The two views, as the two shapes.
