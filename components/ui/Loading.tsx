@@ -27,6 +27,22 @@ export default function Loading({
 }) {
   return (
     <span role="status" aria-label={label} className="inline-flex">
+      <Mark size={size} spinning />
+    </span>
+  );
+}
+
+/**
+ * The badge, still or turning.
+ *
+ * Still, it is the mark standing in for something that is not there — a card
+ * whose owner has not chosen their three records yet. Turning, it is the
+ * loader. Same drawing either way, because the empty state and the wait are
+ * the same absence at different speeds, and a second illustration for one of
+ * them would be a second brand.
+ */
+export function Mark({ size = 44, spinning = false }: { size?: number; spinning?: boolean }) {
+  return (
       <svg
         width={size}
         height={(size * 256) / 531}
@@ -66,7 +82,7 @@ export default function Loading({
         />
         {/* the turning meridian: scaled about the globe's own centre */}
         <path
-          className="loader-meridian"
+          className={spinning ? "loader-meridian" : undefined}
           d="M133.027 43.6855C109.488 43.6855 87.3558 81.4365 87.3558 128C87.3558 174.563 109.488 212.314 133.027 212.314C156.567 212.314 178.699 174.563 178.699 128C178.699 81.4365 156.567 43.6855 133.027 43.6855Z"
           stroke="currentColor"
           strokeWidth="12.97"
@@ -78,7 +94,6 @@ export default function Loading({
           fill="currentColor"
         />
       </svg>
-    </span>
   );
 }
 

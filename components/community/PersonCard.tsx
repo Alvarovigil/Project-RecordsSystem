@@ -4,6 +4,7 @@ import Link from "next/link";
 import Avatar from "@/components/ui/Avatar";
 import FollowButton from "./FollowButton";
 import { useImagesReady } from "@/hooks/useImagesReady";
+import { Mark } from "@/components/ui/Loading";
 import type { SuggestedProfile } from "@/lib/data/types";
 
 /**
@@ -41,8 +42,24 @@ export default function PersonCard({ profile }: { profile: SuggestedProfile }) {
 
   return (
     <div className="group/card relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-surface-raised ring-1 ring-inset ring-paper/[0.06]">
-      {/* Their records, stacked. Three because two is a pair and four is a
-          pattern — three reads as "some of what they have". */}
+      {/**
+       * The three they chose, or the three they last added, or the mark.
+       *
+       * The empty state is a state, not a failure: somebody who has not picked
+       * their three yet gets the badge on grey rather than a pretend shelf.
+       * Fabricating a stack for them would make the card lie about the one
+       * thing it is for — what this person wants you to see.
+       */}
+      {covers.length === 0 ? (
+        <span
+          aria-label="Todavía no ha elegido sus tres discos"
+          className="absolute inset-0 flex items-center justify-center bg-fill-subtle"
+        >
+          <span className="text-paper/25">
+            <Mark size={44} />
+          </span>
+        </span>
+      ) : (
       <span
         aria-hidden
         className={`absolute inset-0 transition-opacity duration-base ease-out ${
@@ -69,6 +86,7 @@ export default function PersonCard({ profile }: { profile: SuggestedProfile }) {
           />
         ))}
       </span>
+      )}
 
       {/* the floor the type stands on: without it a name over a bright sleeve
           is unreadable exactly when the sleeve is worth looking at */}

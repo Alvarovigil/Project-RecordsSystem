@@ -133,7 +133,9 @@ export default function ExploreView() {
         .then(([l, p]) => {
           if (!alive) return;
           setLists(l);
-          setPeople(p.map((x) => ({ ...x, shared: 0, mutuals: 0, followers: 0, covers: [] })));
+          setPeople(
+            p.map((x) => ({ ...x, shared: 0, mutuals: 0, followers: 0, covers: [], chosen: false })),
+          );
           setLoading(false);
         })
         .catch(() => alive && setLoading(false));

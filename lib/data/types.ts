@@ -77,8 +77,14 @@ export type SuggestedProfile = Profile & {
   /** people you follow who follow them */
   mutuals: number;
   followers: number;
-  /** a few of their most recent covers, newest first */
+  /**
+   * The three they present themselves with — or, until they have chosen, the
+   * last three they added. `chosen` says which of the two you are looking at,
+   * because a card built from someone's own choice and a card built from
+   * whatever they bought last are not making the same claim.
+   */
   covers: string[];
+  chosen: boolean;
 };
 
 export type ShallowProfile = Pick<Profile, "id" | "username" | "displayName" | "avatarUrl">;

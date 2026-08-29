@@ -581,6 +581,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         mutuals: r.mutuals ?? 0,
         followers: r.followers ?? 0,
         covers: (r.covers ?? []).filter(Boolean),
+        chosen: Boolean(r.chosen),
       }));
     },
 

@@ -615,6 +615,9 @@ export function createLocalRepository(): LibraryRepository {
           mutuals: (i * 3) % 4,
           followers: 12 + ((i * 11) % 40),
           covers,
+          // the placeholder community has not chosen anything: this is what
+          // the fallback looks like, which is the state worth designing for
+          chosen: false,
         };
       });
     },
