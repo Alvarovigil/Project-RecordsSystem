@@ -65,10 +65,21 @@ function Panel({
              confirmar de borrar — is a sheet that has to land on top. At 80 it
              covered them, so pressing Guardar on a phone appeared to do
              nothing at all. */
-            className="scroll-y fixed inset-0 z-[60] overflow-y-auto bg-surface-raised"
+          /**
+           * The frame and the scroller are two elements on purpose.
+           *
+           * They were one, with the safe-area insets as padding on the
+           * scrolling box — and padding on a scroller holds nothing back:
+           * content travels up through it and paints in the region the inset
+           * existed to keep clear. On an iPhone that means the catalogue
+           * number of whatever you were reading sliding out from behind the
+           * clock and the island. The inset belongs to the frame, which does
+           * not scroll; the scroller lives inside it and is clipped by it.
+           */
+          className="fixed inset-0 z-[60] bg-surface-raised"
           style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }}
         >
-          {children}
+          <div className="scroll-y h-full overflow-y-auto">{children}</div>
         </motion.div>
       )}
     </AnimatePresence>
