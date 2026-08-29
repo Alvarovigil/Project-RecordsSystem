@@ -364,11 +364,16 @@ export default function ExploreView() {
                  skim past, not a wall you have to get through before the rest
                  of the page starts. It bleeds to both edges so the last card
                  is cut off — the only honest way to say "there is more". */
-              // The padding is on both ends, not just the left: scrolled to
-              // the end, the last crate sat flush against the edge as if cut
-              // off rather than finished. A rail needs a margin to stop
-              // against, the same one it starts from.
-              <ul className="rail -mx-5 flex snap-x snap-mandatory gap-9 px-5 pb-2 pr-10 sm:-mx-8 sm:px-8 sm:pr-14">
+              // Padding on both ends — and scroll-padding to match it.
+              //
+              // The margin was there and the rail ignored it: snapping aligns
+              // an item to the container's snapport, which starts at its edge
+              // unless scroll-padding says otherwise. So the browser scrolled
+              // twenty pixels on load to put the first crate flush against the
+              // screen, and the row looked mis-indented against the heading
+              // above it. scroll-pl teaches the snap where the content
+              // actually begins.
+              <ul className="rail -mx-5 flex snap-x snap-mandatory scroll-pl-5 gap-9 px-5 pb-2 pr-10 sm:-mx-8 sm:scroll-pl-8 sm:px-8 sm:pr-14">
                 {lists.slice(0, 12).map((l) => (
                   <li
                     key={l.id}
