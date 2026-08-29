@@ -99,7 +99,7 @@ export default function ActivityView() {
           secondary={{ label: "Ver mi colección", href: "/coleccion" }}
         />
       ) : (
-        <div className="-mx-3">
+        <div className="appear -mx-3">
           {byDay(groups).map(([day, rows]) => (
             <section key={day}>
               {/* A day is the unit people actually think in, and a river with

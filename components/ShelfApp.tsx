@@ -589,8 +589,16 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
     <main className="relative h-screen w-screen overflow-hidden bg-ink text-paper">
       {/* loading card — fades out when hydrated */}
       <div
-        className={`absolute inset-0 z-50 flex items-center justify-center bg-ink transition-opacity duration-700 ${
-          hydrated ? "opacity-0 pointer-events-none" : "opacity-100"
+        /**
+         * Out of focus on the way out, like everything else.
+         *
+         * The loader used to cross-fade on opacity alone while the shelf
+         * behind it was already sharp — two different vocabularies for the
+         * same half-second. Blurring it as it leaves makes the hand-off read
+         * as one movement: the wait dissolves and the room comes into focus.
+         */
+        className={`absolute inset-0 z-50 flex items-center justify-center bg-ink transition-[opacity,filter] duration-700 ease-out ${
+          hydrated ? "pointer-events-none opacity-0 blur-md" : "opacity-100 blur-0"
         }`}
       >
         {/* The mark, turning. This used to be a 320px card with a fake

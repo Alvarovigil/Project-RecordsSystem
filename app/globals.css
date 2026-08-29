@@ -648,3 +648,18 @@ body[data-sheet-open="1"] {
 @media (prefers-reduced-motion: reduce) {
   .loader-meridian { animation: none; }
 }
+
+/* Content arriving where a loader was.
+   The same language as a page transition — out of focus, then settled — so
+   that waiting and navigating feel like one system rather than two. Only ever
+   on the way in: an exit animation delays the thing somebody asked for. */
+@keyframes appear {
+  from { opacity: 0; filter: blur(8px); }
+  to { opacity: 1; filter: blur(0); }
+}
+.appear {
+  animation: appear var(--d-slow) var(--ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .appear { animation: none; }
+}
