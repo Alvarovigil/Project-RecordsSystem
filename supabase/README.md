@@ -55,3 +55,17 @@ caracteres). La cookie de sesión guarda una firma HMAC, no la contraseña, es
 Las lecturas del panel usan `SUPABASE_SERVICE_ROLE_KEY` porque tiene que ver
 también lo privado para poder moderarlo. Sin esa variable, el panel entra pero
 avisa de que no puede leer.
+
+## El QR de /qr
+
+`public/qr-instalar.svg` está generado a mano contra `https://rackr.club/instalar`
+con corrección de errores alta. Si esa dirección cambia, hay que regenerarlo:
+
+```bash
+python3 -m pip install --user segno
+python3 -c "import segno; segno.make('https://rackr.club/instalar', error='h').save('public/qr-instalar.svg', kind='svg', scale=1, border=0, dark='#0a0a0a', light=None, omitsize=True)"
+```
+
+Se guarda como fichero en vez de generarse en cada visita porque la URL es fija:
+un códec de QR en el servidor sería una dependencia y un cálculo por carga para
+producir siempre exactamente la misma imagen.
