@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useDevice } from "@/hooks/useDevice";
 import Avatar from "@/components/ui/Avatar";
 import Confirm from "@/components/ui/Confirm";
+import RecordSpecsCard from "@/components/RecordSpecsCard";
 import { useToast } from "@/components/ui/Toast";
 import { useRepository } from "@/hooks/useRepository";
 import { coverFor } from "@/lib/cover";
@@ -35,7 +36,13 @@ function Panel({
   if (!isPhone) {
     return (
       <Sheet open={open} onClose={onClose} size="tall" bare>
-        {children}
+        {/**
+         * The dialog is a fixed box with its overflow hidden, so the body has
+         * to do its own scrolling — otherwise anything past 78vh is simply
+         * not reachable, which is what was happening to the end of a long
+         * tracklist and to this card the moment it opened.
+         */}
+        <div className="scroll-y min-h-0 flex-1 overflow-y-auto">{children}</div>
       </Sheet>
     );
   }
@@ -348,6 +355,12 @@ export default function RecordSheet({
                 También en {inLists.map((c) => c.name).join(", ")}.
               </p>
             )}
+
+            {/* Folded away under the actions and above the tracklist, which is
+                where the question belongs in time: you decide to listen, you
+                decide to keep it, and only then — still holding the sleeve —
+                do you wonder which pressing this is. */}
+            <RecordSpecsCard discogsId={vinyl.discogsId} />
 
             {/* By side, because that is how the object works: you do not play
                 a record from track 1 to track 12, you play a side and then get

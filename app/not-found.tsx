@@ -18,11 +18,11 @@ export const metadata = { title: "No encontrado" };
  * point, and they are the only things on the page that can be pressed.
  */
 
-/** Six covers off the demo shelf: files that are already on disk. */
+/** Ten covers off the demo shelf: files that are already on disk. */
 const COVERS = (data as { cover?: string }[])
   .map((v) => v.cover)
   .filter((c): c is string => Boolean(c?.startsWith("/covers/")))
-  .slice(0, 6);
+  .slice(0, 10);
 
 export default function NotFound() {
   return (
@@ -32,7 +32,7 @@ export default function NotFound() {
       {/* the sleeves pass behind the words, not over them */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(10,10,10,0.82)_0%,rgba(10,10,10,0.45)_58%,rgba(10,10,10,0.1)_100%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(10,10,10,0.6)_0%,rgba(10,10,10,0.2)_52%,rgba(10,10,10,0)_100%)]"
       />
 
       <div className="relative flex flex-col items-center">

@@ -38,10 +38,10 @@ import { useEffect, useRef } from "react";
  * everything moves a third as far per frame. Arc length does not care about
  * either.
  *
- * 0.82 leaves each record covering a fifth of the one behind, which is what
- * makes it read as a stack in motion rather than as six things in a line.
+ * 0.26 leaves each record showing barely a quarter of itself: the train reads
+ * as one thick stack sliding across the screen, not as a line of records.
  */
-const GAP = 0.82;
+const GAP = 0.26;
 /** Viewport widths per second: a drift, not a projectile. */
 const SPEED = 0.13;
 
@@ -56,13 +56,13 @@ export default function NotFoundTrain({ covers }: { covers: string[] }) {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const size = () => nodes[0].offsetWidth;
 
-    // start somewhere off-centre, heading down-right at an angle that is not
-    // 45° — a diagonal that divides the screen evenly reads as a wipe rather
-    // than as something wandering
+    // start low and off-centre, heading up-right at an angle that is not 45° —
+    // a diagonal that divides the screen evenly reads as a wipe rather than as
+    // something wandering
     let x = window.innerWidth * 0.22;
-    let y = window.innerHeight * 0.3;
+    let y = window.innerHeight * 0.68;
     let vx = 1;
-    let vy = 0.62;
+    let vy = -0.62;
 
     /** the leader's path, with how far it had travelled at each point */
     const path: { x: number; y: number; d: number }[] = [];
@@ -157,10 +157,9 @@ export default function NotFoundTrain({ covers }: { covers: string[] }) {
           }}
           className="absolute left-0 top-0 h-[26vw] w-[26vw] max-h-[210px] max-w-[210px] will-change-transform"
           style={{
-            // the head is whole and the tail fades: the queue reads as one
-            // thing moving rather than as six records that happen to be near
-            // each other
-            opacity: 1 - i * 0.13,
+            // every sleeve at full strength: the overlap and the z-order give
+            // the train its direction, so fading the tail only bought dirty
+            // covers
             zIndex: covers.length - i,
           }}
         >
