@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { previousPath } from "@/lib/nav-history";
 
 /**
  * Where "back" actually goes.
@@ -11,14 +13,17 @@ import { useEffect, useState } from "react";
  * the same bug as a breadcrumb on a page with no hierarchy: it describes the
  * shape of the data instead of the shape of the visit.
  *
- * So it reads the referrer, and only trusts it when it is one of this app's
- * own screens on this same origin. Anything else — arriving from a shared
- * link, from a search engine, from nothing at all — falls back to the caller's
- * default, which is the one destination that is always true.
+ * It reads the trail the shell keeps (lib/nav-history) rather than
+ * `document.referrer`: a Next.js navigation never leaves the document, so the
+ * referrer is frozen at whatever loaded the tab. Built on it, this named the
+ * right place exactly once — on a cold load — and lied for the rest of the
+ * session.
  *
- * `document.referrer` rather than history.length: the second only says that
- * there is something behind you, not what it is, and "atrás" to a page you
- * cannot name is exactly the guess this exists to avoid.
+ * When the previous screen is not one this knows how to name, it returns null
+ * and the caller falls back to the one destination that is always true for its
+ * own page. Never history.back(): that only says there is something behind
+ * you, not what it is, and "atrás" to a page you cannot name is precisely the
+ * guess this exists to avoid.
  */
 export type BackTo = { href: string; label: string };
 
@@ -42,29 +47,20 @@ const KNOWN: { test: RegExp; label: string; href?: string }[] = [
  */
 export function useBackTo(): BackTo | null {
   const [back, setBack] = useState<BackTo | null>(null);
+  const here = usePathname();
 
   useEffect(() => {
-    const ref = document.referrer;
-    if (!ref) return;
-    let url: URL;
-    try {
-      url = new URL(ref);
-    } catch {
-      return;
-    }
-    // never leave the app on a "back": a referrer from another site is a place
-    // this link has no business sending anyone
-    if (url.origin !== window.location.origin) return;
-    if (url.pathname === window.location.pathname) return;
-
-    const hit = KNOWN.find((k) => k.test.test(url.pathname));
+    const from = previousPath(here);
+    if (!from) return;
+    const path = from.split("?")[0];
+    const hit = KNOWN.find((k) => k.test.test(path));
     if (!hit) return;
-    const handle = url.pathname.match(/^\/u\/([^/]+)$/)?.[1];
+    const handle = path.match(/^\/u\/([^/]+)$/)?.[1];
     setBack({
-      href: hit.href ?? url.pathname + url.search,
+      href: hit.href ?? from,
       label: hit.label || (handle ? `@${handle}` : "Atrás"),
     });
-  }, []);
+  }, [here]);
 
   return back;
 }

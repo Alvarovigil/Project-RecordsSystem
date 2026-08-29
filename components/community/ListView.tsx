@@ -120,7 +120,12 @@ export default function ListView({
           className="pressable inline-flex items-center gap-2 text-sub text-content-muted transition-colors hover:text-paper"
         >
           <span aria-hidden>←</span>
-          {cameFrom?.label ?? owner.displayName}
+          {/* coming from the owner's own profile, say their name rather than
+              their handle — the page already knows it, and "@nachobeltran" is
+              an address where "Nacho Beltrán" is a person */}
+          {cameFrom && cameFrom.href !== `/u/${owner.username}`
+            ? cameFrom.label
+            : owner.displayName}
         </Link>
       )}
 

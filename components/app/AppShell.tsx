@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { recordVisit } from "@/lib/nav-history";
 import TopNav from "./TopNav";
 import TabBar from "./TabBar";
 import { useDevice } from "@/hooks/useDevice";
@@ -28,6 +29,12 @@ export default function AppShell({
 }) {
   const { isPhone } = useDevice();
   const pathname = usePathname();
+
+  // the trail every back link reads; kept here because this is the one
+  // component that survives navigation
+  useEffect(() => {
+    recordVisit(pathname);
+  }, [pathname]);
 
   // The shelf is its own world — a 3D canvas edge to edge — so it draws its own
   // header over the artwork. It still gets the tab bar: leaving is not
