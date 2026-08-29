@@ -4,8 +4,10 @@ import Link from "next/link";
 import Avatar from "@/components/ui/Avatar";
 import FollowButton from "./FollowButton";
 import { useImagesReady } from "@/hooks/useImagesReady";
-import { Mark } from "@/components/ui/Loading";
 import type { SuggestedProfile } from "@/lib/data/types";
+
+/** The sleeve that stands for a record nobody has chosen yet. */
+const EMPTY_SLEEVE = "/sleeve-vacio.jpg";
 
 /**
  * A collector, as a shelf rather than as a face.
@@ -29,7 +31,7 @@ import type { SuggestedProfile } from "@/lib/data/types";
  */
 export default function PersonCard({ profile }: { profile: SuggestedProfile }) {
   const covers = profile.covers.slice(0, 3);
-  const ready = useImagesReady(covers);
+  const ready = useImagesReady(covers.length ? covers : [EMPTY_SLEEVE]);
 
   const reason =
     profile.shared > 0
@@ -43,30 +45,24 @@ export default function PersonCard({ profile }: { profile: SuggestedProfile }) {
   return (
     <div className="group/card relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-surface-raised ring-1 ring-inset ring-paper/[0.06]">
       {/**
-       * The three they chose, or the three they last added, or the mark.
+       * The three they chose, or the three they last added, or a record that
+       * does not exist.
        *
-       * The empty state is a state, not a failure: somebody who has not picked
-       * their three yet gets the badge on grey rather than a pretend shelf.
-       * Fabricating a stack for them would make the card lie about the one
-       * thing it is for — what this person wants you to see.
+       * The empty state used to be the badge on grey — a hole where a shelf
+       * should be. But this card is a stack of sleeves, and the honest empty
+       * state of a stack of sleeves is one sleeve with nothing in it: the
+       * phantom pressing, in the product's own colour, sitting exactly where
+       * a real one would. It reads as "this person has not chosen yet" rather
+       * than as "something failed to load", which is what an icon on grey
+       * always reads as.
        */}
-      {covers.length === 0 ? (
-        <span
-          aria-label="Todavía no ha elegido sus tres discos"
-          className="absolute inset-0 flex items-center justify-center bg-fill-subtle"
-        >
-          <span className="text-paper/25">
-            <Mark size={44} />
-          </span>
-        </span>
-      ) : (
       <span
         aria-hidden
         className={`absolute inset-0 transition-opacity duration-base ease-out ${
           ready ? "opacity-100" : "opacity-0"
         }`}
       >
-        {covers.map((src, i) => (
+        {(covers.length ? covers : [EMPTY_SLEEVE]).map((src, i, all) => (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             key={`${src}-${i}`}
@@ -82,17 +78,16 @@ export default function PersonCard({ profile }: { profile: SuggestedProfile }) {
                * has chosen two has chosen two — so the offsets are measured
                * from the middle of the card outwards instead of from a fixed
                * left edge. Padding a short stack with something they did not
-               * pick would be the card inventing a third of an introduction.
+               * pick would be the card inventing part of an introduction.
                */
-              left: `${23 - (covers.length - 1) * 6 + i * 12}%`,
-              top: `${13 - (covers.length - 1) * 4 + i * 8}%`,
-              transform: `rotate(${(i - (covers.length - 1) / 2) * 4}deg)`,
+              left: `${23 - (all.length - 1) * 6 + i * 12}%`,
+              top: `${13 - (all.length - 1) * 4 + i * 8}%`,
+              transform: `rotate(${(i - (all.length - 1) / 2) * 4}deg)`,
               zIndex: i,
             }}
           />
         ))}
       </span>
-      )}
 
       {/* the floor the type stands on: without it a name over a bright sleeve
           is unreadable exactly when the sleeve is worth looking at */}
