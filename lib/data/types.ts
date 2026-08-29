@@ -63,6 +63,24 @@ export type FriendWithRecord = {
   viaListTitle: string;
 };
 
+/**
+ * Somebody worth following, and the reason.
+ *
+ * The numbers travel with the person because the card shows them: a suggestion
+ * that says "5 discos en común" is a reason, and one that says nothing is an
+ * advert. The covers come along for the same purpose — a collector is their
+ * records, and a row of faces tells you nothing about who to follow.
+ */
+export type SuggestedProfile = Profile & {
+  /** records of yours that are also in their public lists */
+  shared: number;
+  /** people you follow who follow them */
+  mutuals: number;
+  followers: number;
+  /** a few of their most recent covers, newest first */
+  covers: string[];
+};
+
 export type ShallowProfile = Pick<Profile, "id" | "username" | "displayName" | "avatarUrl">;
 
 /**
@@ -224,7 +242,7 @@ export interface LibraryRepository {
   searchLists(query: string): Promise<ListWithRecord[]>;
   /** what to show someone who hasn't searched for anything yet */
   popularLists(): Promise<ListWithRecord[]>;
-  suggestedProfiles(): Promise<Profile[]>;
+  suggestedProfiles(): Promise<SuggestedProfile[]>;
   /** everything moving around you: additions, new lists, saves, follows */
   activity(): Promise<ActivityEvent[]>;
 

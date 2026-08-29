@@ -8,6 +8,7 @@ import { Cover } from "@/components/ui/Avatar";
 import EmptyState, { CoverGridSkeleton } from "@/components/ui/EmptyState";
 import CatalogueNotice from "@/components/ui/CatalogueNotice";
 import PersonRow from "@/components/community/PersonRow";
+import PersonCard from "@/components/community/PersonCard";
 import ListCard from "@/components/community/ListCard";
 import { useRepository } from "@/hooks/useRepository";
 import RecordSheet from "@/components/mobile/RecordSheet";
@@ -16,7 +17,7 @@ import { useLibrary } from "@/hooks/useLibrary";
 import { useCatalogueSearch } from "@/hooks/useCatalogueSearch";
 import { useToast } from "@/components/ui/Toast";
 import { coverFor } from "@/lib/cover";
-import type { ListWithRecord, Profile } from "@/lib/data/types";
+import type { ListWithRecord, SuggestedProfile } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 
 /**
@@ -63,7 +64,14 @@ export default function ExploreView() {
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<Scope>("all");
   const [lists, setLists] = useState<ListWithRecord[]>([]);
-  const [people, setPeople] = useState<Profile[]>([]);
+  /**
+   * Suggestions carry their reason, search results do not.
+   *
+   * The same slot holds both — what to look at before you type, and who
+   * matched after — so it keeps the richer shape and searching fills in zeros.
+   * The card then simply has nothing to say about affinity, which is true.
+   */
+  const [people, setPeople] = useState<SuggestedProfile[]>([]);
   const [library, setLibrary] = useState<Vinyl[]>([]);
   const [loading, setLoading] = useState(false);
   const [recents, setRecents] = useState<string[]>([]);
@@ -125,7 +133,7 @@ export default function ExploreView() {
         .then(([l, p]) => {
           if (!alive) return;
           setLists(l);
-          setPeople(p);
+          setPeople(p.map((x) => ({ ...x, shared: 0, mutuals: 0, followers: 0, covers: [] })));
           setLoading(false);
         })
         .catch(() => alive && setLoading(false));
@@ -343,7 +351,7 @@ export default function ExploreView() {
             </Section>
           )}
 
-          <Section title="Colecciones destacadas">
+          <Section title="Racks destacados">
             {loading && lists.length === 0 ? (
               <CoverGridSkeleton count={8} />
             ) : lists.length === 0 ? (
@@ -387,11 +395,16 @@ export default function ExploreView() {
           </Section>
 
           <Section title="Gente que colecciona">
-            {/* people in columns for the same reason */}
-            <ul className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3 [&>li]:border-b [&>li]:border-line">
-              {people.slice(0, 8).map((p) => (
-                <li key={p.id}>
-                  <PersonRow profile={p} subtitle={p.bio || `@${p.username}`} />
+            {/* The same rail as the crates above, for the same reason: this is
+                something to skim past, not a directory to work through. And
+                the cards are shelves rather than faces — see PersonCard. */}
+            <ul className="rail -mx-5 flex snap-x snap-mandatory scroll-pl-5 gap-4 px-5 pb-2 pr-10 sm:-mx-8 sm:scroll-pl-8 sm:gap-5 sm:px-8 sm:pr-14">
+              {people.slice(0, 12).map((p) => (
+                <li
+                  key={p.id}
+                  className="w-[46vw] shrink-0 snap-start sm:w-[196px] lg:w-[212px]"
+                >
+                  <PersonCard profile={p} />
                 </li>
               ))}
             </ul>

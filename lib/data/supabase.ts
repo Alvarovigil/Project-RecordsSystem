@@ -562,18 +562,26 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     },
 
     async suggestedProfiles() {
-      // "gente que colecciona" is a place to find someone, and you are not
-      // someone you need to find. Asked for, not required: signed out there is
-      // nobody to exclude and the list is the same.
-      const { data: auth } = await sb.auth.getUser();
-      let q = sb
-        .from("profiles")
-        .select("id, username, display_name, bio, avatar_url")
-        .order("created_at", { ascending: false })
-        .limit(12);
-      if (auth.user) q = q.neq("id", auth.user.id);
-      const { data } = await q;
-      return ((data ?? []) as any[]).map(toProfile);
+      /**
+       * Ranked, not listed. See 0014_people_for_me.sql for the reasoning: what
+       * you have in common first, then who the people you trust follow, then
+       * popularity as a capped tiebreak. The alternative — the twelve newest
+       * accounts — showed everybody the same screen, which is the opposite of
+       * a suggestion.
+       */
+      const { data, error } = await sb.rpc("people_for_me", { max_rows: 24 });
+      if (error) return [];
+      return ((data ?? []) as any[]).map((r) => ({
+        id: r.id,
+        username: r.username,
+        displayName: r.display_name,
+        bio: r.bio ?? "",
+        avatarUrl: r.avatar_url,
+        shared: r.shared ?? 0,
+        mutuals: r.mutuals ?? 0,
+        followers: r.followers ?? 0,
+        covers: (r.covers ?? []).filter(Boolean),
+      }));
     },
 
     async followedLists() {

@@ -268,7 +268,7 @@ function RecordView({
         )}
       </Section>
 
-      <Section label="Colecciones destacadas" count={lists.length}>
+      <Section label="Racks destacados" count={lists.length}>
         <ul className="grid grid-cols-1 gap-px bg-paper/[0.07] sm:grid-cols-2">
           {lists.map((l) => (
             <li key={l.id} className="bg-[#0b0b0b]">

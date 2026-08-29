@@ -588,13 +588,35 @@ export function createLocalRepository(): LibraryRepository {
     },
 
     async suggestedProfiles() {
-      return communityUsers().map((u) => ({
-        id: u.id,
-        username: u.handle,
-        displayName: u.name,
-        bio: u.bio,
-        avatarUrl: null,
-      }));
+      /**
+       * The placeholder version of the ranking in 0014_people_for_me.sql.
+       *
+       * It cannot compute affinity — there is no real graph here — so it
+       * fabricates it from the same seed everything else in this backend uses,
+       * which at least makes the numbers stable between reloads and lets the
+       * card be built against something that looks like the real thing.
+       */
+      const all = readReleases();
+      const ids = all.map((v) => v.id);
+      return communityUsers().map((u, i) => {
+        const lists = listsOfUser(u.id, ids);
+        const covers = lists
+          .flatMap((l) => l.vinylIds)
+          .map((id) => all.find((v) => v.id === id)?.cover)
+          .filter((c): c is string => Boolean(c))
+          .slice(0, 6);
+        return {
+          id: u.id,
+          username: u.handle,
+          displayName: u.name,
+          bio: u.bio,
+          avatarUrl: null,
+          shared: covers.length ? ((i * 7) % 9) + 1 : 0,
+          mutuals: (i * 3) % 4,
+          followers: 12 + ((i * 11) % 40),
+          covers,
+        };
+      });
     },
 
     async followedLists() {
