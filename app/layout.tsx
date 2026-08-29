@@ -71,6 +71,24 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  /**
+   * No pinch zoom.
+   *
+   * Reversing an earlier decision, and worth saying why both ways. Refusing to
+   * let somebody enlarge text is a real cost, and on a page it would be the
+   * wrong trade. This is not a page: installed, it is the only app on the
+   * phone whose content can be pinched, and the gesture collides with
+   * everything the shelf is made of — a stack you drag, sleeves you flick, a
+   * scroll that snaps. A pinch that half-zooms the interface and leaves it
+   * there is a broken app, and the way back out is not obvious to anyone.
+   *
+   * Safari ignores this in a browser tab and honours it in a standalone
+   * window, which is exactly the split we want: the web page stays zoomable,
+   * the installed app does not. `touch-action: manipulation` in globals.css
+   * kills the double-tap zoom that this flag does not cover.
+   */
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   themeColor: "#0a0a0a",
 };

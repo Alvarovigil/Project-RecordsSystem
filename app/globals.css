@@ -676,3 +676,11 @@ body[data-sheet-open="1"] {
 @media (prefers-reduced-motion: reduce) {
   .appear { animation: none; }
 }
+
+/* Double-tap zoom is a separate gesture from pinch and survives
+   user-scalable=no. `manipulation` keeps taps and scrolling and drops
+   double-tap-to-zoom with it — which also takes 300ms off every tap on older
+   WebKit. Not behind a media query: a mouse has no double tap to lose. */
+body {
+  touch-action: manipulation;
+}
