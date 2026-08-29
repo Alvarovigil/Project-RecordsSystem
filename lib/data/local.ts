@@ -317,6 +317,12 @@ export function createLocalRepository(): LibraryRepository {
       return idsOf(listId);
     },
 
+    async itemsOfLists(listIds) {
+      const out: Record<string, string[]> = {};
+      for (const id of listIds) out[id] = idsOf(id);
+      return out;
+    },
+
     async addToList(listId, releaseId) {
       const toWishlist = listId === WISHLIST_ID;
       mutate((cols) =>

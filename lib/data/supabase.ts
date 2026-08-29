@@ -313,6 +313,21 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       );
     },
 
+    async itemsOfLists(listIds) {
+      if (listIds.length === 0) return {};
+      const { data } = await sb
+        .from("list_items")
+        .select("list_id, position, releases!inner(slug)")
+        .in("list_id", listIds)
+        .order("position");
+      const out: Record<string, string[]> = {};
+      for (const id of listIds) out[id] = [];
+      for (const row of (data ?? []) as any[]) {
+        (out[row.list_id] ??= []).push(row.releases.slug);
+      }
+      return out;
+    },
+
     async addToList(listId, releaseSlug) {
       const id = await releaseIdOf(releaseSlug);
       if (!id) return;

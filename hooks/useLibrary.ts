@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Vinyl } from "@/lib/types";
 import { type SortMode, DEFAULT_ID, WISHLIST_ID, loadActiveId, saveActiveId } from "@/lib/collections";
-import { getRepository, type List, type NewListInput } from "@/lib/data";
+import { type List, type NewListInput } from "@/lib/data";
 import { useRepository } from "./useRepository";
 
 /**
@@ -48,10 +48,17 @@ export function useLibrary() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const entries = await Promise.all(
-        lists.map(async (l) => [l.id, await repo.listItems(l.id)] as const),
-      );
-      if (alive) setItemsByList(Object.fromEntries(entries));
+      /**
+       * One request for every list, not one request per list.
+       *
+       * This used to fan out into `listItems` per list — seven lists, seven
+       * round trips on a phone before the shelf could say how many records
+       * were in anything. They ran in parallel, which hides it on a laptop and
+       * does not on a connection where each one costs a hundred milliseconds
+       * of latency it does not share.
+       */
+      const map = await repo.itemsOfLists(lists.map((l) => l.id));
+      if (alive) setItemsByList(map);
     })();
   }, [lists, repo]);
 
@@ -63,18 +70,28 @@ export function useLibrary() {
   }, []);
 
   // ---- actions: every one refreshes from the source of truth --------------
+  /**
+   * Do the thing, then re-read the truth.
+   *
+   * The re-read is the point — the database applies rules the client does not
+   * know (the wishlist is exclusive, counters are triggers) so guessing the
+   * new state is how the two drift apart. What it must not do is cost more
+   * than the action did: this was `listLists` and then one request per list on
+   * top of the refresh, so adding a single record fired nine requests before
+   * the interface settled. That is the delay you feel after a tap.
+   *
+   * Now: the library and the lists together, then their contents in one go.
+   * Three requests, whatever the shelf is holding.
+   */
   const act = useCallback(
     async (fn: () => Promise<unknown>) => {
       await fn();
-      await refresh();
-      const entries = await Promise.all(
-        (await getRepository().listLists()).map(
-          async (l) => [l.id, await repo.listItems(l.id)] as const,
-        ),
-      );
-      setItemsByList(Object.fromEntries(entries));
+      const [r, l] = await Promise.all([repo.listReleases(), repo.listLists()]);
+      setReleases(r);
+      setLists(l);
+      setItemsByList(await repo.itemsOfLists(l.map((x) => x.id)));
     },
-    [refresh, repo],
+    [repo],
   );
 
   return {

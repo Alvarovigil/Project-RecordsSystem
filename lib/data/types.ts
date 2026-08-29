@@ -205,6 +205,16 @@ export interface LibraryRepository {
 
   // ---- list contents ------------------------------------------------------
   listItems(listId: string): Promise<string[]>;
+  /**
+   * The contents of several lists at once.
+   *
+   * The shelf needs every list's records the moment it opens — to know what is
+   * in each one, to sort them, to say "5 discos" — and asking list by list is
+   * one request per list on every load and after every edit. On a phone that
+   * is the difference between a screen that answers and a screen that thinks
+   * about it.
+   */
+  itemsOfLists(listIds: string[]): Promise<Record<string, string[]>>;
   addToList(listId: string, releaseId: string): Promise<void>;
   removeFromList(listId: string, releaseId: string): Promise<void>;
   reorderList(listId: string, fromIndex: number, toIndex: number): Promise<void>;
