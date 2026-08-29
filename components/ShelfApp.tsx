@@ -8,6 +8,7 @@ import MiniVinyl from "@/components/MiniVinyl";
 import VinylGrid from "@/components/VinylGrid";
 import SearchOverlay from "@/components/SearchOverlay";
 import CollectionsOverlay from "@/components/CollectionsOverlay";
+import RecordSpecsCard from "@/components/RecordSpecsCard";
 import VinylEditOverlay from "@/components/VinylEditOverlay";
 import CommunityBridge from "@/components/CommunityBridge";
 import MarqueeText from "@/components/MarqueeText";
@@ -70,6 +71,15 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   const [hydrated, setHydrated] = useState(false);
   const [collectionFading, setCollectionFading] = useState(false);
   const [view, setView] = useState<"shelf" | "grid">("shelf");
+  /**
+   * Whether the technical sheet has taken over the right-hand column.
+   *
+   * Held here rather than inside the card because opening it rearranges what
+   * is around it: the three facts step aside and the column becomes a tall
+   * rail with its own scroll. Three fields and a sheet that repeats two of
+   * them, stacked, would have been the same information twice in one column.
+   */
+  const [specsOpen, setSpecsOpen] = useState(false);
 
   // remember the last used view
   useEffect(() => {
@@ -686,11 +696,36 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             }}
             data-side="right"
             style={{ left: "calc(50% + var(--cover-half, 21vw) + 32px)" }}
-            className="pointer-events-none absolute right-6 top-[42%] -translate-y-1/2 z-10 text-left text-paper/80"
+            /**
+             * Anchored at 42% while it is three facts, and top-to-bottom the
+             * moment it is the sheet — which is long by design and has to
+             * scroll somewhere. A block that keeps growing downward from the
+             * middle of the screen ends up underneath the player.
+             */
+            className={`pointer-events-none absolute right-6 z-10 text-left text-paper/80 ${
+              specsOpen
+                ? "scroll-y bottom-28 top-20 overflow-y-auto pr-1"
+                : "top-[42%] -translate-y-1/2"
+            }`}
           >
-            <Field label="Label" value={open.label} />
-            <Field label="Country" value={open.country} />
-            <Field label="Tracks" value={String(open.tracklist.length)} />
+            {!specsOpen && (
+              <>
+                <Field label="Label" value={open.label} />
+                <Field label="Country" value={open.country} />
+                <Field label="Tracks" value={String(open.tracklist.length)} />
+              </>
+            )}
+
+            {/* Everything in this column is pointer-transparent so the sleeve
+                behind it stays clickable — the one thing here you can press
+                has to say so itself. */}
+            <div className="pointer-events-auto mt-4 w-[min(30vw,380px)]">
+              <RecordSpecsCard
+                discogsId={open.discogsId}
+                open={specsOpen}
+                onOpenChange={setSpecsOpen}
+              />
+            </div>
           </motion.div>
 
           {/* edit icon over the cover — appears only once the open animation

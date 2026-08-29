@@ -14,8 +14,8 @@ export const metadata = { title: "No encontrado" };
  * nowhere to be.
  *
  * The type sits over it and the way out sits under that. However good the
- * animation is, somebody arrived here by accident: the two links are the
- * point, and they are the only things on the page that can be pressed.
+ * animation is, somebody arrived here by accident: the one link back is the
+ * point, and it is the only thing on the page that can be pressed.
  */
 
 /** Ten covers off the demo shelf: files that are already on disk. */
@@ -40,24 +40,18 @@ export default function NotFound() {
           404
         </h1>
         <p className="mt-5 max-w-[26ch] text-body leading-snug text-content-secondary sm:text-[17px]">
-          Este disco no está en la colección.
+          Esta página no existe.
         </p>
         <p className="mt-1.5 max-w-[34ch] text-sub text-content-muted">
-          La página que buscas no existe, o su dueño la ha hecho privada.
+          O la dirección está mal escrita, o lo que había aquí ya no está.
         </p>
 
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+        <div className="mt-8 flex justify-center">
           <Link
-            href="/coleccion"
+            href="/"
             className="pressable rounded-full bg-paper px-5 py-2.5 text-sub font-medium text-ink transition-colors hover:bg-paper/85"
           >
-            Ir a mi colección
-          </Link>
-          <Link
-            href="/explorar"
-            className="pressable rounded-full border border-line-strong px-5 py-2.5 text-sub text-paper transition-colors hover:border-line-focus"
-          >
-            Explorar
+            Volver a Rackr Club
           </Link>
         </div>
       </div>

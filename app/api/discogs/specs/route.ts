@@ -124,6 +124,22 @@ export async function GET(req: NextRequest) {
     return `${qty}${f.name}${parts.length ? `, ${parts.join(", ")}` : ""}`;
   });
 
+  /**
+   * The photographs of this copy, which is the part a screen can actually
+   * show. A release page on Discogs carries the back, the gatefold, the inner
+   * sleeves and a scan of each label — the things you turn a record over to
+   * look at. The front is left out: it is already three hundred pixels tall at
+   * the top of the sheet.
+   */
+  const images = (release.images ?? [])
+    .filter((i: any) => i.type !== "primary" && typeof i.uri === "string")
+    .slice(0, 8)
+    .map((i: any) => ({
+      thumb: `/api/cover?url=${encodeURIComponent(i.uri150 || i.uri)}`,
+      full: `/api/cover?url=${encodeURIComponent(i.uri)}`,
+      wide: (i.width ?? 0) > (i.height ?? 0) * 1.4,
+    }));
+
   const credits = ROLES.map(({ match, label: role }) => {
     const names = (release.extraartists ?? [])
       .filter((a: any) => match.test(a.role ?? ""))
@@ -133,6 +149,25 @@ export async function GET(req: NextRequest) {
     // noise, not information
     return { role, names: Array.from(new Set(names)).slice(0, 3) as string[] };
   }).filter((c) => c.names.length > 0);
+
+  /**
+   * The same credits again, but by person rather than by job.
+   *
+   * Kevin Parker wrote it, played it, produced it and mixed it — printed by
+   * role that is his name four times down the card, which reads as a database
+   * dump. Printed by person it reads the way a sleeve does, and it is the one
+   * fact about Currents worth noticing.
+   */
+  const people: { name: string; roles: string[] }[] = [];
+  for (const { role, names } of credits) {
+    for (const name of names) {
+      const found = people.find((p) => p.name === name);
+      if (found) found.roles.push(role);
+      else people.push({ name, roles: [role] });
+    }
+  }
+  // most credited first: the person who made most of the record leads
+  people.sort((a, b) => b.roles.length - a.roles.length);
 
   const specs: RecordSpecs = {
     label: label?.name ? clean(label.name) : null,
@@ -149,6 +184,8 @@ export async function GET(req: NextRequest) {
     barcode: identifier(/barcode/i)?.value ?? null,
     matrix: identifier(/matrix/i)?.value ?? null,
     credits,
+    images,
+    people: people.slice(0, 8),
     notes: notes(release.notes),
     have: release.community?.have ?? null,
     want: release.community?.want ?? null,

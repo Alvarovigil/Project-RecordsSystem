@@ -40,6 +40,10 @@ export type RecordSpecs = {
   /** what is etched in the run-out groove */
   matrix: string | null;
   credits: { role: string; names: string[] }[];
+  /** the same credits by person — how a sleeve prints them */
+  people: { name: string; roles: string[] }[];
+  /** back, gatefold, inner sleeves, label scans; never the front */
+  images: { thumb: string; full: string; wide: boolean }[];
   notes: string | null;
   have: number | null;
   want: number | null;
