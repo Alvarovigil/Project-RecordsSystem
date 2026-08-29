@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
+import { AnimatePresence, motion } from "framer-motion";
+import { useDevice } from "@/hooks/useDevice";
 import Avatar from "@/components/ui/Avatar";
 import Confirm from "@/components/ui/Confirm";
 import { useToast } from "@/components/ui/Toast";
@@ -11,6 +13,52 @@ import { coverFor } from "@/lib/cover";
 import type { ListWithRecord } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 import type { Collection } from "@/lib/collections";
+
+/**
+ * The surface a record lives on.
+ *
+ * A phone gets a screen — fixed, full bleed, one scroller, no gesture of its
+ * own. A desktop gets the app's dialog, because there the shelf around it is
+ * the context and taking the whole window away would be theft.
+ */
+function Panel({
+  open,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const { isPhone } = useDevice();
+
+  if (!isPhone) {
+    return (
+      <Sheet open={open} onClose={onClose} size="tall" bare>
+        {children}
+      </Sheet>
+    );
+  }
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          role="dialog"
+          aria-modal="true"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          className="scroll-y fixed inset-0 z-[80] overflow-y-auto bg-surface-raised"
+          style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 /**
  * A record, on a phone.
@@ -122,19 +170,38 @@ export default function RecordSheet({
 
   return (
     <>
-      {/* Short of the top on purpose. A sheet that reaches the ceiling is a
-          screen — you have navigated somewhere — and this is a record you have
-          picked up off a shelf that is still there behind it. The strip of
-          shelf left showing is what says so, and it is also what tells you
-          that throwing the sheet down puts you back. */}
-      <Sheet open={Boolean(vinyl)} onClose={onClose} size="tall" bare>
-        {/* the grabber has to exist even in a bare sheet: it is the only thing
-            telling you this is draggable */}
-        {/* Opaque, not translucent: this bar has to hide what scrolls under it,
-            and 95% of a near-black over a white button is still a white button. */}
+      {/**
+       * A screen on a phone, a dialog on a desktop.
+       *
+       * It was a sheet you could throw away, with a scrolling body inside it.
+       * That pairing is where iOS gets confused: the drag and the scroll are
+       * the same gesture until one of them wins, and when the wrong one does —
+       * or when neither does — the page stops answering entirely. Which is
+       * exactly the freeze this had, several lists and several records in.
+       *
+       * A record is not a peek at something behind, it is the thing you went
+       * to look at. Full screen says that, and it costs nothing: the way back
+       * is a button in the corner rather than a gesture that competes with
+       * reading a tracklist.
+       */}
+      <Panel open={Boolean(vinyl)} onClose={onClose}>
         <div className="sticky top-0 z-30 bg-surface-raised">
-          <div className="flex justify-center pb-2 pt-2.5">
-            <span className="sheet-grabber" aria-hidden />
+          <div className="flex items-center justify-between px-2 pb-1 pt-1.5 sm:hidden">
+            <button
+              onClick={onClose}
+              aria-label="Cerrar"
+              className="pressable flex h-11 w-11 items-center justify-center rounded-full text-content-muted transition-colors hover:text-paper"
+            >
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
+                <path
+                  d="M11.5 3.5 L5.5 9 L11.5 14.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
           </div>
           {/**
            * Once the artwork has scrolled away, the title and the transport
@@ -366,7 +433,7 @@ export default function RecordSheet({
             )}
           </div>
         </div>
-      </Sheet>
+      </Panel>
 
       {/* saving into a list: its own sheet, so the record stays behind it */}
       <Sheet open={picking} onClose={() => setPicking(false)} title="Guardar en" size="auto" width={380}>
