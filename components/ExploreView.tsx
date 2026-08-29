@@ -60,6 +60,8 @@ export default function ExploreView() {
   const router = useRouter();
   const params = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
+  /** only the phone pill cares: it stays open while the cursor is in it */
+  const [focused, setFocused] = useState(false);
 
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<Scope>("all");
@@ -219,20 +221,62 @@ export default function ExploreView() {
        * for something with edges, and on a page this wide a lone line does not
        * read as a place to type at all.
        */}
-      <div className="sticky top-0 z-20 -mx-5 bg-surface/95 px-5 pb-3 pt-1 backdrop-blur-sm sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-7 sm:pt-0 sm:backdrop-blur-none">
+      {/* The bar itself carries no background on a phone: the pill is the
+           thing that floats, and it can only look like it floats if what is
+           behind it goes past it. A scrim across the full width would have
+           made the blur decorative. */}
+      <div className="sticky top-0 z-20 -mx-5 px-5 pb-3 pt-1 sm:static sm:mx-0 sm:px-0 sm:pb-7 sm:pt-0">
         <div className="mx-auto w-full max-w-[560px]">
-          <div className="relative w-full border-b border-line transition-colors focus-within:border-line-strong">
+          {/**
+           * On a phone this is the same bubble as the list selector on the
+           * shelf: a dark pill with the background blurred through it. That
+           * pairing is the point — one floating control per screen, always the
+           * same object, so the search reads as part of the app's furniture
+           * and not as a web page's form.
+           *
+           * And it opens. Collapsed it is a button-sized pill saying Buscar,
+           * because with nothing typed the field is a promise, not a workspace;
+           * touched, it takes the full width so the words have room. The width
+           * animates in CSS off `focus-within`, which means it is right on the
+           * very first paint — no hook, no hydration flash on the one screen
+           * where the field is the first thing you see.
+           */}
+          <div
+            className={`relative mx-auto flex h-12 items-center gap-2 rounded-full bg-paper/[0.07] px-4 shadow-overlay ring-1 ring-inset ring-paper/[0.07] backdrop-blur-xl transition-[width] duration-slow ease-out ${
+              searching || focused ? "w-full" : "w-[9.5rem]"
+            } sm:h-auto sm:w-full sm:gap-0 sm:rounded-none sm:border-b sm:border-line sm:bg-transparent sm:px-0 sm:shadow-none sm:ring-0 sm:backdrop-blur-none sm:transition-colors sm:focus-within:border-line-strong`}
+          >
+            {/* the magnifier lives on the phone only: collapsed to a pill the
+                field has no shape of its own to explain what it is, which is
+                exactly the job the icon exists for — and exactly why the wide
+                version, where the placeholder is a full sentence, does without
+                it */}
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 16 16"
+              fill="none"
+              aria-hidden
+              className="shrink-0 text-content-faint sm:hidden"
+            >
+              <circle cx="7" cy="7" r="4.6" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M10.4 10.4 L14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
             <input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onBlur={() => remember(query)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => {
+                setFocused(false);
+                remember(query);
+              }}
               enterKeyHint="search"
               type="search"
               autoCapitalize="none"
               autoCorrect="off"
               aria-label="Buscar discos, listas o personas"
-              placeholder="Busca discos, listas o personas"
+              placeholder="Buscar"
               /**
                * The query, set as type rather than typed into a widget.
                *
@@ -245,8 +289,22 @@ export default function ExploreView() {
                * went from the bar — the placeholder already says what to do,
                * and the icon was saying it a second time in another language.
                */
-              className="w-full bg-transparent pb-3 pt-1 text-center text-title text-paper outline-none placeholder:text-content-faint"
+              className="peer min-w-0 flex-1 bg-transparent text-left text-sub text-paper outline-none placeholder:text-content-faint sm:w-full sm:pb-3 sm:pt-1 sm:text-center sm:text-title sm:placeholder:text-transparent"
             />
+
+            {/* The wide field asks the longer question, and it is drawn rather
+                than set as the placeholder because the two breakpoints want
+                different words and only one `placeholder` exists. Reading it
+                off the device would mean swapping the text after hydration on
+                the screen where this is the first thing you see. CSS decides,
+                so it is right on frame one. */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-1 hidden text-center text-title text-content-faint sm:peer-placeholder-shown:block"
+            >
+              Busca discos, listas o personas
+            </span>
+
             {searching && (
               <button
                 onClick={() => {
@@ -254,7 +312,7 @@ export default function ExploreView() {
                   inputRef.current?.focus();
                 }}
                 aria-label="Borrar búsqueda"
-                className="pressable absolute right-0 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-content-faint transition-colors hover:text-paper"
+                className="pressable -mr-1.5 flex h-8 w-8 shrink-0 items-center justify-center text-content-faint transition-colors hover:text-paper sm:absolute sm:right-0 sm:top-1/2 sm:mr-0 sm:-translate-y-1/2"
               >
                 <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                   <path
