@@ -75,12 +75,18 @@ export default function PersonCard({ profile }: { profile: SuggestedProfile }) {
             loading="lazy"
             className="absolute aspect-square w-[54%] rounded-[3px] object-cover shadow-[0_12px_32px_rgba(0,0,0,0.6)]"
             style={{
-              // A stack, not a crop: small enough that the card's own edge is
-              // still visible around it, offset the way sleeves sit when you
-              // pull three half out of a crate.
-              left: `${11 + i * 12}%`,
-              top: `${9 + i * 8}%`,
-              transform: `rotate(${(i - 1) * 4}deg)`,
+              /**
+               * The stack centres itself on however many there are.
+               *
+               * One record, two or three are all real answers — somebody who
+               * has chosen two has chosen two — so the offsets are measured
+               * from the middle of the card outwards instead of from a fixed
+               * left edge. Padding a short stack with something they did not
+               * pick would be the card inventing a third of an introduction.
+               */
+              left: `${23 - (covers.length - 1) * 6 + i * 12}%`,
+              top: `${13 - (covers.length - 1) * 4 + i * 8}%`,
+              transform: `rotate(${(i - (covers.length - 1) / 2) * 4}deg)`,
               zIndex: i,
             }}
           />
