@@ -22,21 +22,55 @@ export default function MarqueeText({ children, className, speed = 60 }: Props) 
 
   useEffect(() => {
     const outer = outerRef.current;
-    const inner = innerRef.current;
-    if (!outer || !inner) return;
+    if (!outer) return;
+    /**
+     * Ask the container, not the text.
+     *
+     * This measured the inner span, and the inner span is exactly the thing
+     * that gets replaced the moment the answer is yes: overflowing swaps one
+     * span for a flex row holding two copies. The observer went on watching
+     * the old node, which by then was detached from the document and reported
+     * a width of zero — so the marquee turned itself off in the same breath it
+     * turned on, and a long title just sat there truncated.
+     *
+     * The container survives both branches, and its own scrollWidth answers
+     * the same question: is there more text here than there is room for.
+     */
     const measure = () => {
-      const overflow = inner.scrollWidth > outer.clientWidth + 1;
+      const overflow = outer.scrollWidth > outer.clientWidth + 1;
       setOverflows(overflow);
       if (overflow) {
-        // total travel is the inner width + a gap; tweak via speed
-        setDuration((inner.scrollWidth + 40) / 1000 * speed);
+        // travel is one copy plus the gap; in marquee mode the container holds
+        // two, so halving it is the same number from the other side
+        const single = innerRef.current?.scrollWidth || outer.scrollWidth / 2;
+        setDuration(((single + 40) / 1000) * speed);
       }
     };
     measure();
+
+    /**
+     * Measure again once the real typeface has arrived.
+     *
+     * The first measurement happens in the fallback font, which is narrower —
+     * a title that overflows by ten pixels in Inter does not overflow in
+     * Helvetica, so the marquee never started. And the ResizeObserver cannot
+     * catch the swap: the span is block-level, so its border box stays exactly
+     * as wide as the container while only the text inside it grows.
+     *
+     * Two more looks: after the next frame, for a layout that has not settled,
+     * and when the font loader says it is done.
+     */
+    const raf = requestAnimationFrame(measure);
+    let alive = true;
+    void document.fonts?.ready.then(() => alive && measure());
+
     const ro = new ResizeObserver(measure);
     ro.observe(outer);
-    ro.observe(inner);
-    return () => ro.disconnect();
+    return () => {
+      alive = false;
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
   }, [children, speed]);
 
   return (

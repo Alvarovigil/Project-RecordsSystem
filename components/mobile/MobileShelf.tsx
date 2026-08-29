@@ -207,7 +207,16 @@ export default function MobileShelf({
             <button
               onClick={() => setSwitching(true)}
               aria-label={`Lista actual: ${activeName}. Cambiar de lista`}
-              className="pressable flex h-12 max-w-full items-center gap-1.5 rounded-full bg-ink/72 px-4 text-paper/90 backdrop-blur-xl"
+              /**
+               * A ceiling, or the marquee never runs.
+               *
+               * The pill grew to fit whatever it held, so a long name simply
+               * made a wider button and the text never overflowed its own box
+               * — which is the only condition MarqueeText scrolls on. Capped
+               * at 62% of the screen it has to give, and a name too long to
+               * read at a glance starts moving instead of being cut.
+               */
+              className="pressable flex h-12 max-w-[62vw] items-center gap-1.5 rounded-full bg-ink/72 px-4 text-paper/90 backdrop-blur-xl"
             >
               <MarqueeText className="min-w-0 text-sub font-medium">
                 {activeName}
@@ -648,9 +657,17 @@ async function shareList(l: SavedList) {
  */
 function ShelfIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden>
-      <circle cx="7" cy="7" r="5.6" stroke="currentColor" strokeWidth="1.3" />
-      <circle cx="7" cy="7" r="1.5" fill="currentColor" />
+    /**
+     * Three slabs in perspective: the shelf seen from the front, with the
+     * records behind receding. The old one was a record — a circle with a hole
+     * — which named the contents rather than the view, and sat next to a grid
+     * of squares that named a layout. Both marks describe an arrangement now,
+     * which is what the switch is choosing between.
+     */
+    <svg width="15" height="15" viewBox="0 0 83 83" fill="none" aria-hidden>
+      <rect x="10" width="63" height="10" fill="currentColor" />
+      <rect x="5" y="18" width="73" height="10" fill="currentColor" />
+      <rect y="36" width="83" height="47" fill="currentColor" />
     </svg>
   );
 }

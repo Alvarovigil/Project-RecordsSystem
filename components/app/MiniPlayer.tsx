@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useDevice } from "@/hooks/useDevice";
 import { coverFor } from "@/lib/cover";
 import { usePlaybackContext } from "@/lib/playback-context";
+import RecordSheet from "@/components/mobile/RecordSheet";
+import { useLibrary } from "@/hooks/useLibrary";
+import type { Vinyl } from "@/lib/types";
 
 /**
  * The player that follows you around.
@@ -22,6 +25,8 @@ export default function MiniPlayer() {
   const { nowPlaying, playing, loading, toggleCurrent } = usePlaybackContext();
   const pathname = usePathname();
   const { isPhone } = useDevice();
+  /** the record whose sheet the strip opened */
+  const [open, setOpen] = useState<Vinyl | null>(null);
 
   // The phone shelf has no transport of its own in the scene, so the player is
   // exactly what it needs; only the 3D desktop shelf hides it.
@@ -43,17 +48,34 @@ export default function MiniPlayer() {
       style={{ bottom: isPhone ? "var(--tabbar-h)" : 0 }}
     >
       <div className="mx-auto flex w-full max-w-[1180px] items-center gap-3 px-4 py-2.5 sm:gap-4 sm:px-6 sm:py-3">
-        <span className="h-10 w-10 shrink-0 overflow-hidden bg-paper/[0.06] sm:h-11 sm:w-11">
+        <button
+          onClick={() => setOpen(nowPlaying)}
+          aria-label={`Abrir ${nowPlaying.title}`}
+          className="pressable h-10 w-10 shrink-0 overflow-hidden bg-paper/[0.06] sm:h-11 sm:w-11"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={coverFor(nowPlaying)} alt="" className="h-full w-full object-cover" />
-        </span>
+        </button>
 
-        <span className="min-w-0 flex-1">
+        {/**
+         * The strip is the record.
+         *
+         * It said what was playing and led nowhere: to see the sleeve you were
+         * hearing you had to go and find it. Now the whole left side opens it —
+         * the same sheet as everywhere else, so listening and looking are one
+         * gesture apart. The play button stays its own target, because the one
+         * thing you must be able to do without leaving the screen is stop it.
+         */}
+        <button
+          onClick={() => setOpen(nowPlaying)}
+          aria-label={`Abrir ${nowPlaying.title}`}
+          className="pressable min-w-0 flex-1 text-left"
+        >
           <span className="block truncate text-[13px] text-paper">{nowPlaying.title}</span>
           <span className="mono block truncate text-[10px] uppercase tracking-[0.16em] text-paper/40">
             {loading ? "Cargando" : nowPlaying.artist}
           </span>
-        </span>
+        </button>
 
         <button
           onClick={toggleCurrent}
@@ -81,6 +103,41 @@ export default function MiniPlayer() {
           Ver en mi colección
         </Link>
       </div>
+
+      {/**
+       * Mounted only once something has been opened.
+       *
+       * The sheet needs your lists, to offer to save the record into one — and
+       * asking for them on every screen that happens to be playing something
+       * would be a request nobody asked for. Mounting the launcher on demand
+       * means the fetch happens when the sheet does.
+       */}
+      {open && <PlayingSheet vinyl={open} onClose={() => setOpen(null)} />}
     </div>
+  );
+}
+
+function PlayingSheet({ vinyl, onClose }: { vinyl: Vinyl; onClose: () => void }) {
+  const lib = useLibrary();
+  const audio = usePlaybackContext();
+  const { nowPlaying, playing } = audio;
+  return (
+    <RecordSheet
+      vinyl={vinyl}
+      onClose={onClose}
+      canEdit={false}
+      collections={lib.lists.map((l) => ({
+        id: l.id,
+        name: l.title,
+        vinylIds: lib.idsOf(l.id),
+        kind: l.kind,
+      }))}
+      activeListId=""
+      playing={playing && nowPlaying?.id === vinyl.id}
+      onTogglePlay={(v) => (nowPlaying?.id === v.id ? audio.toggleCurrent() : audio.play(v))}
+      onAddTo={(listId, v) => void lib.saveToList(v, listId)}
+      onRemoveFromActive={() => {}}
+      onDelete={() => {}}
+    />
   );
 }

@@ -776,9 +776,13 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                 }`}
               >
                 {v === "shelf" ? (
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <circle cx="6" cy="6" r="5" stroke="currentColor" strokeWidth="1" />
-                    <circle cx="6" cy="6" r="1.3" fill="currentColor" />
+                  // the same mark as the phone's switch: three slabs receding.
+                  // A record named the contents; this names the view, which is
+                  // what the control is actually choosing.
+                  <svg width="12" height="12" viewBox="0 0 83 83" fill="none">
+                    <rect x="10" width="63" height="10" fill="currentColor" />
+                    <rect x="5" y="18" width="73" height="10" fill="currentColor" />
+                    <rect y="36" width="83" height="47" fill="currentColor" />
                   </svg>
                 ) : (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
