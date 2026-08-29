@@ -82,7 +82,10 @@ export default function PersonCard({ profile }: { profile: SuggestedProfile }) {
                */
               left: `${23 - (all.length - 1) * 6 + i * 12}%`,
               top: `${13 - (all.length - 1) * 4 + i * 8}%`,
-              transform: `rotate(${(i - (all.length - 1) / 2) * 4}deg)`,
+              // A single sleeve would land at exactly zero degrees, which is
+              // the one angle no record ever sits at when somebody leaves it
+              // leaning somewhere. Straight reads as placed by a machine.
+              transform: `rotate(${all.length === 1 ? -3.5 : (i - (all.length - 1) / 2) * 4}deg)`,
               zIndex: i,
             }}
           />
