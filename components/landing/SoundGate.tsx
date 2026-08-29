@@ -44,7 +44,23 @@ function fadeIn(audio: HTMLAudioElement, to: number, ms: number) {
  * the needle, the needle hands over to the song, and the control that stays on
  * screen drives the same element.
  */
-export default function SoundGate() {
+export default function SoundGate({
+  title = "Tu colección de vinilos, más allá de la estantería.",
+  body = "Organiza, descubre y comparte tu colección con el club.",
+  cta = "Vamos allá",
+}: {
+  /**
+   * The door's words, because the same door now stands in front of two rooms.
+   *
+   * The mechanism is identical everywhere — a page out of focus, one press,
+   * the music starting — but what is behind it is not, and a door that says
+   * the same thing regardless of what it opens is a door that has stopped
+   * saying anything.
+   */
+  title?: string;
+  body?: string;
+  cta?: string;
+} = {}) {
   const [entered, setEntered] = useState(false);
   /**
    * The door does not slam in your face on arrival. The page lands clear —
@@ -313,10 +329,10 @@ export default function SoundGate() {
               legible, and printing "RACKR CLUB" underneath it says the same
               thing twice in two typefaces. */}
           <h1 className="mt-7 max-w-[18ch] text-[30px] leading-[1.1] tracking-[-0.02em] text-paper md:max-w-[20ch] md:text-[44px]">
-            Tu colección de vinilos, más allá de la estantería.
+            {title}
           </h1>
           <p className="mt-4 max-w-[34ch] text-[15px] leading-relaxed text-paper/60 md:text-[17px]">
-            Organiza, descubre y comparte tu colección con el club.
+            {body}
           </p>
 
           <button
@@ -339,7 +355,7 @@ export default function SoundGate() {
                 strokeLinecap="round"
               />
             </svg>
-            Vamos allá
+            {cta}
           </button>
 
           <button
