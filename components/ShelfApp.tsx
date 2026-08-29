@@ -776,13 +776,18 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                 }`}
               >
                 {v === "shelf" ? (
-                  // the same mark as the phone's switch: three slabs receding.
-                  // A record named the contents; this names the view, which is
-                  // what the control is actually choosing.
+                  /**
+                   * Three sleeves stood on edge — the rack, seen from where
+                   * you stand at it. The phone gets a different mark for the
+                   * same view because it IS a different view: there the
+                   * records lie in a pile you look down on, and drawing them
+                   * upright would describe a screen that does not exist on
+                   * that device.
+                   */
                   <svg width="12" height="12" viewBox="0 0 83 83" fill="none">
-                    <rect x="10" width="63" height="10" fill="currentColor" />
-                    <rect x="5" y="18" width="73" height="10" fill="currentColor" />
-                    <rect y="36" width="83" height="47" fill="currentColor" />
+                    <rect width="22.33" height="83" fill="currentColor" />
+                    <rect x="30.33" width="22.33" height="83" fill="currentColor" />
+                    <rect x="60.67" width="22.33" height="83" fill="currentColor" />
                   </svg>
                 ) : (
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
