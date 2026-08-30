@@ -235,16 +235,37 @@ export default function RecordSheet({
        * reading a tracklist.
        */}
       <Panel open={Boolean(vinyl)} onClose={onClose}>
-        {/* No background of its own: the artwork's colour bleeds up behind
-            the back button, and a solid strip across the top cut it in a
-            straight line. The button carries its own dark blur instead, which
-            is what keeps it legible over whatever is passing underneath. */}
-        <div className="sticky top-0 z-30">
-          <div className="flex items-center justify-between px-2 pb-1 pt-1.5 sm:hidden">
+        {/**
+         * One header, always the same height.
+         *
+         * It was two: a transparent strip with the back button, and a bar that
+         * hung *below* it on `top-full` — which is why there was a band of
+         * page above the title and the play button, with content sliding
+         * through it. Hanging it below was itself a fix, for a flicker loop
+         * the bar caused when it grew inside the flow and pushed the sentinel
+         * back into view.
+         *
+         * Both problems go away by giving the header a fixed height from the
+         * start. Nothing grows, so nothing oscillates, and nothing hangs
+         * underneath: the record's name and its play button arrive in the
+         * space the back button was already occupying, and the background
+         * fades in under them.
+         */}
+        <div className="sticky top-0 z-30 h-14">
+          <div
+            className={`absolute inset-0 border-b border-line bg-surface-raised transition-opacity duration-base ease-out ${
+              scrolled ? "opacity-100" : "opacity-0"
+            }`}
+          />
+          <div className="relative flex h-14 items-center gap-3 px-2">
             <button
               onClick={onClose}
               aria-label="Cerrar"
-              className="pressable flex h-11 w-11 items-center justify-center rounded-full bg-ink/55 text-paper backdrop-blur-xl"
+              /* Its own dark blur only while it is alone over the artwork: on
+                 the bar it would be a pill on a panel. */
+              className={`pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-paper transition-colors ${
+                scrolled ? "" : "bg-ink/55 backdrop-blur-xl"
+              }`}
             >
               <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
                 <path
@@ -256,67 +277,49 @@ export default function RecordSheet({
                 />
               </svg>
             </button>
-          </div>
-          {/**
-           * Once the artwork has scrolled away, the title and the transport
-           * come with you. Reading a tracklist and having to scroll back up to
-           * press play is the whole reason people close these.
-           *
-           * It hangs BELOW the sticky strip instead of sitting inside it, and
-           * that is not a layout preference — it is the fix for a flicker. When
-           * the bar grew inside the flow it pushed everything down, which slid
-           * the sentinel back into view, which hid the bar, which pulled
-           * everything up again: a loop that ran as fast as the browser could
-           * paint it. Out of the flow, appearing costs nothing below it and
-           * there is nothing to oscillate.
-           */}
-          <div
-            className={`absolute inset-x-0 top-full flex items-center gap-3 border-b border-line bg-surface-raised px-5 py-2.5 transition-all duration-base ease-out ${
-              scrolled ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
-            }`}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={coverFor(vinyl)}
-              alt=""
-              className="h-9 w-9 shrink-0 rounded-[2px] object-cover"
-            />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sub font-medium text-paper">{vinyl.title}</span>
-              <span className="block truncate text-caption text-content-muted">{vinyl.artist}</span>
-            </span>
-            <button
-              onClick={() => onTogglePlay(vinyl)}
-              disabled={!vinyl.previewUrl}
-              aria-label={playing ? "Pausar" : `Escuchar ${vinyl.title}`}
-              className="pressable flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line-strong text-paper disabled:opacity-30"
+
+            {/* Once the artwork has scrolled away, the title and the transport
+                come with you. Reading a tracklist and having to scroll back up
+                to press play is the whole reason people close these. */}
+            <div
+              className={`flex min-w-0 flex-1 items-center gap-3 transition-opacity duration-base ease-out ${
+                scrolled ? "opacity-100" : "pointer-events-none opacity-0"
+              }`}
             >
-              {playing ? (
-                <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden>
-                  <rect x="3" y="2" width="3" height="10" fill="currentColor" />
-                  <rect x="8" y="2" width="3" height="10" fill="currentColor" />
-                </svg>
-              ) : (
-                <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden>
-                  <path d="M3 2 L12 7 L3 12 Z" fill="currentColor" />
-                </svg>
-              )}
-            </button>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverFor(vinyl)}
+                alt=""
+                className="h-9 w-9 shrink-0 rounded-[2px] object-cover"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sub font-medium text-paper">{vinyl.title}</span>
+                <span className="block truncate text-caption text-content-muted">
+                  {vinyl.artist}
+                </span>
+              </span>
+              <button
+                onClick={() => onTogglePlay(vinyl)}
+                disabled={!vinyl.previewUrl}
+                aria-label={playing ? "Pausar" : `Escuchar ${vinyl.title}`}
+                className="pressable mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line-strong text-paper disabled:opacity-30"
+              >
+                {playing ? (
+                  <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden>
+                    <rect x="3" y="2" width="3" height="10" fill="currentColor" />
+                    <rect x="8" y="2" width="3" height="10" fill="currentColor" />
+                  </svg>
+                ) : (
+                  <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden>
+                    <path d="M3 2 L12 7 L3 12 Z" fill="currentColor" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/**
-         * The screen, as a stack of cards.
-         *
-         * It used to be one long column of hairline-separated sections: facts
-         * over a rule, tracklist under a rule, everything the same weight and
-         * nothing telling you where one subject ended. That reads as a
-         * document. A record is not a document — it is an object you were
-         * looking at — so the artwork gets the top of the screen with its own
-         * colour bleeding behind it, and everything else lives in cards you
-         * can skim past.
-         */}
-        <div className="relative pb-10">
+        <div className="relative -mt-14 pb-10">
           {/* The cover's own colour, thrown behind the top of the screen and
               faded out. It costs nothing — the image is already downloaded —
               and it is what stops a black page with a square in the middle
@@ -334,7 +337,11 @@ export default function RecordSheet({
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-surface-raised/70 to-surface-raised" />
           </div>
 
-          <div className="relative mx-auto w-full max-w-[440px] px-5">
+          {/* The wash starts at the very top of the screen — the column it
+              lives in is pulled up under the header — so the content puts the
+              header's height back, or the sleeve would begin under the back
+              button. */}
+          <div className="relative mx-auto w-full max-w-[440px] px-5 pt-14">
             {/* The record, half out of its sleeve — the same object the shelf
                 is made of rather than a thumbnail of it. The disc is a couple
                 of gradients, not an image: at this size nobody is reading a
