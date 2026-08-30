@@ -463,7 +463,7 @@ const PILLARS = [
     body: "Entra con su portada, su ficha y un trozo que suena, sin que teclees el título ni lo busques en tres webs. Después lo colocas donde quieras: el turno de noche, los domingos largos, los que no pondrías con gente delante. Tu colección, con tu lógica rara.",
     points: [
       { label: "Escanear", text: "Apuntas con la cámara y sigue abierta: puedes vaciar una balda de una sentada." },
-      { label: "Ordenar", text: "Listas propias y el orden que decidas. Nadie te reordena la colección por detrás." },
+      { label: "Ordenar", text: "Racks propios y el orden que decidas. Nadie te reordena la colección por detrás." },
       { label: "Sonar", text: "Cada disco trae un adelanto. Una colección muda es un inventario." },
     ],
     aside: "Y sí: por fin vas a saber si ese disco ya lo tienes. Todos hemos comprado alguno dos veces; casi nadie lo cuenta.",
@@ -497,11 +497,11 @@ const PILLARS = [
     word: "Comparte",
     kicker: "Sigue a gente y llévate lo que veas",
     lead: "Los discos llevan a la gente.",
-    body: "Desde cualquier vinilo ves en qué otras colecciones vive y quién lo tiene. Ahí empieza todo: sigues a quien tenga buen oído, ves lo que va metiendo y te lo llevas a tu lista. Tú publicas las tuyas y alguien hará lo mismo contigo.",
+    body: "Desde cualquier vinilo ves en qué otras colecciones vive y quién lo tiene. Ahí empieza todo: sigues a quien tenga buen oído, ves lo que va metiendo y te lo llevas a tu rack. Tú publicas las tuyas y alguien hará lo mismo contigo.",
     points: [
       { label: "El puente", text: "Cada disco enseña las colecciones donde también está. Se llega a la gente por lo que guarda." },
-      { label: "Seguir", text: "Personas y listas. Lo que añaden aparece en tus novedades, sin ordenar por popularidad." },
-      { label: "Robar", text: "Ves una lista que te puede, la sigues y te llevas los discos a la tuya. Está permitido." },
+      { label: "Seguir", text: "Personas y racks. Lo que añaden aparece en tus novedades, sin ordenar por popularidad." },
+      { label: "Robar", text: "Ves un rack que te puede, la sigues y te llevas los discos a la tuya. Está permitido." },
     ],
     aside: "El mejor algoritmo de recomendación sigue siendo alguien con mejor gusto que tú. Aquí lo llamamos seguir a la gente.",
     covers: [

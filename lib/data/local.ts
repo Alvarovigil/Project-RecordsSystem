@@ -773,7 +773,7 @@ export function createLocalRepository(): LibraryRepository {
     async duplicateList(listId, title) {
       const source = getGeneratedList(listId);
       const sourceIds = source ? source.vinylIds : idsOf(listId);
-      const name = title ?? `${source?.title ?? "Lista"} (copia)`;
+      const name = title ?? `${source?.title ?? "Rack"} (copia)`;
       const created = newCollection(name);
       const have = new Set(readReleases().map((v) => v.id));
       // A copy that points at records you do not have would be a list of holes.
@@ -810,7 +810,7 @@ export function createLocalRepository(): LibraryRepository {
       if (!user) return { ok: false, error: `No encontramos a @${clean}.` };
       const current = readCollaborators(listId);
       if (current.some((c) => c.profile.username === clean)) {
-        return { ok: false, error: `@${clean} ya está en esta lista.` };
+        return { ok: false, error: `@${clean} ya está en este rack.` };
       }
       setCollaborators(listId, [
         ...current,

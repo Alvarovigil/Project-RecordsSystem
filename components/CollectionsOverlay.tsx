@@ -231,7 +231,7 @@ export default function CollectionsOverlay({
         <div className="h-full flex flex-col">
           <header className="flex items-center justify-between px-6 pt-6 pb-3">
             <span className="text-[11px] uppercase tracking-[0.2em] text-paper/40">
-              {editing ? "Editar lista" : "Listas"}
+              {editing ? "Editar el rack" : "Racks"}
             </span>
             <button
               onClick={editing ? () => setEditId(null) : onClose}
@@ -282,7 +282,7 @@ export default function CollectionsOverlay({
                     <h2 className="text-[22px] font-medium leading-tight tracking-tight flex items-center gap-2">
                       {active.name}
                       {isPrimaryIn(collections, active.id) && (
-                        <span className="text-paper/30 mt-1" title="Lista predefinida">
+                        <span className="text-paper/30 mt-1" title="Rack predefinido">
                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                             <rect x="2.5" y="5.5" width="7" height="5" rx="0.6" stroke="currentColor" />
                             <path d="M4 5.5V4a2 2 0 1 1 4 0v1.5" stroke="currentColor" />
@@ -468,7 +468,7 @@ export default function CollectionsOverlay({
                             <span className="flex items-center gap-1.5">
                               <span className="truncate text-[14px] text-paper">{c.name}</span>
                               {isPrimaryIn(collections, c.id) && (
-                                <span className="text-paper/25" title="Lista predefinida">
+                                <span className="text-paper/25" title="Rack predefinido">
                                   <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                                     <rect x="2.5" y="5.5" width="7" height="5" rx="0.6" stroke="currentColor" />
                                     <path d="M4 5.5V4a2 2 0 1 1 4 0v1.5" stroke="currentColor" />
@@ -507,7 +507,7 @@ export default function CollectionsOverlay({
                           </RowAction>
                           {!preview && !isPrimaryIn(collections, c.id) && (
                             <RowAction
-                              label="Borrar lista"
+                              label="Borrar el rack"
                               danger
                               onClick={() => {
                                 if (confirm(`Eliminar "${c.name}"? Los discos siguen en tu biblioteca.`))
@@ -588,7 +588,7 @@ export default function CollectionsOverlay({
                                   nothing and separates the badge from the
                                   artwork under it on any background. */}
                               <span
-                                title={`Lista de ${l.owner.displayName}`}
+                                title={`Rack de ${l.owner.displayName}`}
                                 className="absolute -bottom-1 -right-1 rounded-full shadow-[0_0_0_2px_rgba(10,10,10,0.85)]"
                               >
                                 <Avatar
@@ -626,7 +626,7 @@ export default function CollectionsOverlay({
                         setNewName("");
                       }
                     }}
-                    placeholder="Nueva lista"
+                    placeholder="Rack nuevo"
                     className="flex-1 bg-transparent border-b border-paper/[0.07] py-1.5 text-[13px] text-paper outline-none placeholder:text-paper/30 focus:border-paper/60 transition"
                   />
                   <button
@@ -860,7 +860,7 @@ function EditPanel({
         <div className="flex items-center justify-between gap-4 py-3">
           <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">Orden</span>
           <Select
-            label="Orden de la lista"
+            label="Orden del rack"
             value={sortBy}
             onChange={(m) => onSetSort(editing.id, m)}
             options={(Object.keys(SORT_LABELS) as SortMode[]).map((m) => ({
@@ -965,7 +965,7 @@ function EditPanel({
             );
           })}
           {orderedVinilos.length === 0 && (
-            <li className="px-3 py-3 text-[12px] text-paper/35">Lista vacía</li>
+            <li className="px-3 py-3 text-[12px] text-paper/35">Rack vacío</li>
           )}
         </ul>
 

@@ -9,7 +9,7 @@
  */
 export default function SharedMark({ title }: { title?: string }) {
   return (
-    <span aria-label={title ?? "Lista compartida"} title={title} className="shrink-0">
+    <span aria-label={title ?? "Rack compartido"} title={title} className="shrink-0">
       <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
         <circle cx="5.2" cy="5" r="2.1" stroke="currentColor" strokeWidth="1.1" />
         <path

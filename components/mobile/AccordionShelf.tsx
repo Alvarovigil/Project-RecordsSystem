@@ -143,7 +143,7 @@ export default function AccordionShelf({
     return (
       <div className="px-5 pb-chrome" style={{ paddingTop: "calc(var(--safe-top) + 130px)" }}>
         <EmptyState
-          title="Esta lista está vacía"
+          title="Este rack está vacío"
           body="Busca un disco por título, artista o código de barras y aparecerá aquí."
           action={{ label: "Buscar discos", href: "/explorar?buscar=1" }}
         />

@@ -16,7 +16,7 @@ import { useRepository } from "@/hooks/useRepository";
 import { coverFor } from "@/lib/cover";
 import type { ListWithRecord } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
-import type { Collection } from "@/lib/collections";
+import { findCollection, findWishlist, isWished, type Collection } from "@/lib/collections";
 
 /**
  * The surface a record lives on.
@@ -173,6 +173,8 @@ export default function RecordSheet({
    */
   const [scrolled, setScrolled] = useState(false);
   const sentinel = useRef<HTMLDivElement>(null);
+  /** the picker is doing double duty: "guardar en" and "lo tengo, ¿en qué rack?" */
+  const [acquiring, setAcquiring] = useState(false);
 
   useEffect(() => {
     const el = sentinel.current;
@@ -197,6 +199,30 @@ export default function RecordSheet({
   }, [repo, vinyl]);
 
   if (!vinyl) return null;
+
+  const wished = isWished(collections, vinyl.id);
+  const mine = findCollection(collections);
+  const wishlist = findWishlist(collections);
+
+  /**
+   * Acquiring is one write and its reversal, not a flow.
+   *
+   * The undo has to put it back in the wishlist explicitly — saving into a
+   * list is what took it out, so "deshacer" cannot be "remove from the list
+   * we just added to" or the record would end up owned and unwished, which is
+   * neither of the two states it was ever in.
+   */
+  const acquire = (listId?: string) => {
+    const v = vinyl;
+    if (!listId || !v) return;
+    onAddTo(listId, v);
+    const name = collections.find((c) => c.id === listId)?.name ?? "tu colección";
+    toast.undo(
+      `${v.title} → ${name}`,
+      () => wishlist && onAddTo(wishlist.id, v),
+      { media: { src: coverFor(v) } },
+    );
+  };
 
   /**
    * Tracks grouped by the side they are printed on.
@@ -421,7 +447,7 @@ export default function RecordSheet({
                   </>
                 )}
               </button>
-              <IconButton label="Guardar en una lista" onClick={() => setPicking(true)}>
+              <IconButton label="Guardar en un rack" onClick={() => setPicking(true)}>
                 <path
                   d="M4.5 2.5h7a.5.5 0 0 1 .5.5v10.2L8 10.8l-4 2.4V3a.5.5 0 0 1 .5-.5Z"
                   stroke="currentColor"
@@ -445,6 +471,50 @@ export default function RecordSheet({
                 />
               </IconButton>
             </div>
+
+            {/* --------------------------------------------------- lo tengo */}
+            {/**
+             * The wishlist's one-way door.
+             *
+             * A wanted record has exactly one interesting thing that can
+             * happen to it, and it is not "guardar en una lista" three taps
+             * deep behind a bookmark icon — it is *you bought it*. So while a
+             * record is wished, that gets a control of its own, full width,
+             * under the row.
+             *
+             * Nothing here is a new concept in the data: owned and wished are
+             * already mutually exclusive, and saving a record into any list
+             * takes it out of the wishlist — `Mi Colección` is simply
+             * everything you have that you are not still waiting for. This
+             * button is that rule, said out loud.
+             */}
+            {wished && canEdit && (
+              <div className="mt-2.5 flex items-center gap-2.5">
+                <button
+                  onClick={() => acquire(mine?.id)}
+                  className="pressable flex h-12 flex-1 items-center justify-center gap-2 rounded-full border border-line-strong text-body font-medium text-content"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                    <path d="M2.5 7.4 L5.6 10.5 L11.5 3.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Ya lo tengo
+                </button>
+                {/* the same act, aimed somewhere else — a rack you keep for
+                    this, rather than the collection at large */}
+                <button
+                  onClick={() => {
+                    setAcquiring(true);
+                    setPicking(true);
+                  }}
+                  aria-label="Lo tengo, guardar en un rack"
+                  className="pressable flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-line-strong text-content-muted"
+                >
+                  <svg width="10" height="10" viewBox="0 0 8 8" fill="none" aria-hidden>
+                    <path d="M1 2.5 L4 5.5 L7 2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+            )}
 
             <div className="mt-7 space-y-2.5">
               {/* Where it already lives, so "guardar" never means "otra vez".
@@ -584,9 +654,20 @@ export default function RecordSheet({
       />
 
       {/* saving into a list: its own sheet, so the record stays behind it */}
-      <Sheet open={picking} onClose={() => setPicking(false)} title="Guardar en" size="auto" width={380}>
+      <Sheet
+        open={picking}
+        onClose={() => {
+          setPicking(false);
+          setAcquiring(false);
+        }}
+        title={acquiring ? "Lo tengo, ¿en qué rack?" : "Guardar en"}
+        size="auto"
+        width={380}
+      >
         <div className="py-1">
-          {collections.map((c) => {
+          {collections
+            .filter((c) => !acquiring || c.id !== wishlist?.id)
+            .map((c) => {
             const has = c.vinylIds.includes(vinyl.id);
             return (
               <SheetRow
@@ -594,8 +675,12 @@ export default function RecordSheet({
                 label={c.name}
                 detail={has ? "✓" : `${c.vinylIds.length}`}
                 onClick={() => {
-                  onAddTo(c.id, vinyl);
                   setPicking(false);
+                  if (acquiring) {
+                    setAcquiring(false);
+                    return acquire(c.id);
+                  }
+                  onAddTo(c.id, vinyl);
                   toast.show(has ? `Ya estaba en ${c.name}` : `Guardado en ${c.name}`, {
                     media: { src: coverFor(vinyl) },
                   });
@@ -610,7 +695,7 @@ export default function RecordSheet({
         open={deleting}
         onClose={() => setDeleting(false)}
         title="Se borrará de toda tu colección"
-        body={`${vinyl.title} desaparecerá de todas tus listas. Esto no se puede deshacer.`}
+        body={`${vinyl.title} desaparecerá de todos tus racks. Esto no se puede deshacer.`}
         confirmLabel="Borrar"
         onConfirm={() => {
           onDelete(vinyl);

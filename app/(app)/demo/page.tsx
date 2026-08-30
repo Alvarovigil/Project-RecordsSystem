@@ -4,7 +4,7 @@ import ShelfApp from "@/components/ShelfApp";
 export const metadata = {
   title: "Una colección de ejemplo",
   description:
-    "Treinta discos, cinco listas y la gente que los comparte. Entra, pon uno y mira cómo funciona.",
+    "Treinta discos, cinco racks y la gente que los comparte. Entra, pon uno y mira cómo funciona.",
   robots: { index: false },
 };
 

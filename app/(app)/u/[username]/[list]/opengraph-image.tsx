@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
-export const alt = "Lista en Rackr";
+export const alt = "Un rack en Rackr";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

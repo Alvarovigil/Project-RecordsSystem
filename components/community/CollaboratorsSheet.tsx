@@ -202,7 +202,7 @@ export default function CollaboratorsSheet({
         open={leaving}
         onClose={() => setLeaving(false)}
         title={`¿Salir de «${listTitle}»?`}
-        body="Dejarás de poder editarla. Los discos que añadiste se quedan en la lista."
+        body="Dejarás de poder editarla. Los discos que añadiste se quedan en el rack."
         confirmLabel="Salir"
         onConfirm={() => void leave()}
       />
@@ -210,7 +210,7 @@ export default function CollaboratorsSheet({
         open={Boolean(removing)}
         onClose={() => setRemoving(null)}
         title={`¿Quitar a ${removing?.profile.displayName ?? ""}?`}
-        body="Dejará de poder editar esta lista. Lo que ya añadió se queda."
+        body="Dejará de poder editar este rack. Lo que ya añadió se queda."
         confirmLabel="Quitar"
         onConfirm={() => removing && void remove(removing)}
       />

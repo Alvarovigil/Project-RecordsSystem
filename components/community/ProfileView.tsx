@@ -110,7 +110,7 @@ export default function ProfileView({
   const coversOf = useCallback((l: ListWithRecord) => covers[l.id] ?? [], [covers]);
 
   const tabs = [
-    { value: "lists" as const, label: "Listas", count: stats?.lists },
+    { value: "lists" as const, label: "Racks", count: stats?.lists },
     ...(isYou
       ? [
           { value: "records" as const, label: "Discos", count: stats?.records },
@@ -170,7 +170,7 @@ export default function ProfileView({
         {/* the counts ARE the navigation into the people */}
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2">
           <Stat n={stats?.records} label="discos" />
-          <Stat n={stats?.lists} label="listas" />
+          <Stat n={stats?.lists} label="racks" />
           <Stat n={stats?.followers} label="seguidores" onClick={() => setPeople("followers")} />
           <Stat n={stats?.following} label="siguiendo" onClick={() => setPeople("following")} />
         </div>
@@ -206,13 +206,13 @@ export default function ProfileView({
             empty={
               isYou ? (
                 <EmptyState
-                  title="Todavía no has publicado ninguna lista"
-                  body="Una lista es la forma de contar por qué estos discos están juntos. «El turno de noche» dice más que «Rock, 40 discos»."
+                  title="Todavía no has publicado ningún rack"
+                  body="Un rack es la forma de contar por qué estos discos están juntos. «El turno de noche» dice más que «Rock, 40 discos»."
                   action={{ label: "Ir a mi colección", href: "/coleccion" }}
                 />
               ) : (
                 <EmptyState
-                  title={`${profile?.displayName ?? "Esta persona"} no tiene listas públicas`}
+                  title={`${profile?.displayName ?? "Esta persona"} no tiene racks públicos`}
                   body="Cuando publique alguna aparecerá aquí. Mientras tanto, puedes seguirle para enterarte."
                   action={{ label: "Explorar otras colecciones", href: "/explorar" }}
                 />
@@ -254,9 +254,9 @@ export default function ProfileView({
             coversOf={coversOf}
             empty={
               <EmptyState
-                title="No has guardado ninguna lista"
-                body="Cuando guardes la lista de otra persona vivirá aquí y en tu colección, siempre con su nombre encima. Sigue siendo suya: si la cambia, cambia la tuya."
-                action={{ label: "Ver listas de la comunidad", href: "/explorar" }}
+                title="No has guardado ningún rack"
+                body="Cuando guardes el rack de otra persona vivirá aquí y en tu colección, siempre con su nombre encima. Sigue siendo suya: si la cambia, cambia la tuya."
+                action={{ label: "Ver racks de la comunidad", href: "/explorar" }}
               />
             }
           />

@@ -24,6 +24,7 @@ import Avatar from "@/components/ui/Avatar";
 import { coverFor } from "@/lib/cover";
 import { useImagesReady } from "@/hooks/useImagesReady";
 import { listTitleFor } from "@/lib/list-title";
+import { findWishlist } from "@/lib/collections";
 import SharedMark from "@/components/ui/SharedMark";
 import LightLab, { DEFAULT_RIG, useLightLab } from "./LightLab";
 import { useRepository } from "@/hooks/useRepository";
@@ -80,6 +81,7 @@ export default function MobileShelf({
   onUnsaveList,
   onOpenSaved,
   onRemoveRecordFromList,
+  onAcquire,
   readOnly = false,
 }: {
   vinilos: Vinyl[];
@@ -109,9 +111,14 @@ export default function MobileShelf({
   onOpenSaved: (list: SavedList) => void;
   /** take a record out of a list from the list's own editor */
   onRemoveRecordFromList: (listId: string, vinylId: string) => void;
+  /** "ya lo tengo", from the wishlist grid — absent means don't offer it */
+  onAcquire?: (v: Vinyl) => void;
   /** the shelf is showing somebody else's list, so it cannot be edited */
   readOnly?: boolean;
 }) {
+  /** the wishlist is the only list where "ya lo tengo" means anything */
+  const isWishlist = findWishlist(collections)?.id === activeListId;
+
   /**
    * The two ways of looking at the same records — the phone's version of the
    * desktop switch, and the same pair: the shelf, or all of it at once.
@@ -210,7 +217,7 @@ export default function MobileShelf({
           <div className="flex min-w-0 flex-1 justify-center">
             <button
               onClick={() => setSwitching(true)}
-              aria-label={`Lista actual: ${activeName}. Cambiar de lista`}
+              aria-label={`Rack actual: ${activeName}. Cambiar de rack`}
               /**
                * A ceiling, or the marquee never runs.
                *
@@ -261,14 +268,19 @@ export default function MobileShelf({
           />
         </div>
       ) : (
-        <CoverGrid vinilos={vinilos} onOpen={onOpen} nowPlayingId={nowPlayingId} />
+        <CoverGrid
+          vinilos={vinilos}
+          onOpen={onOpen}
+          nowPlayingId={nowPlayingId}
+          onAcquire={!readOnly && isWishlist ? onAcquire : undefined}
+        />
       )}
 
       {/* ---------------------------------------------------- list switcher */}
       <Sheet
         open={switching}
         onClose={() => setSwitching(false)}
-        title="Tus listas"
+        title="Tus racks"
         size="tall"
         width={400}
       >
@@ -324,7 +336,7 @@ export default function MobileShelf({
                         </span>
                       )}
                       {isPrimary && (
-                        <span aria-label="Lista predefinida" className="shrink-0 text-content-faint">
+                        <span aria-label="Rack predefinido" className="shrink-0 text-content-faint">
                           <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                             <rect x="2.5" y="5.5" width="7" height="5" rx="0.6" stroke="currentColor" />
                             <path d="M4 5.5V4a2 2 0 1 1 4 0v1.5" stroke="currentColor" />
@@ -386,7 +398,7 @@ export default function MobileShelf({
               </Button>
             </form>
           ) : (
-            <SheetRow label="Nueva lista" onClick={() => setCreating(true)} />
+            <SheetRow label="Rack nuevo" onClick={() => setCreating(true)} />
           )}
         </div>
         {savedLists.length > 0 && (
@@ -464,7 +476,7 @@ export default function MobileShelf({
         open={Boolean(listMenu)}
         onClose={() => setListMenu(null)}
         title={listMenu ? listTitleFor(listMenu, false) : undefined}
-        subtitle={listMenu ? `Lista de ${listMenu.owner.displayName}` : undefined}
+        subtitle={listMenu ? `Rack de ${listMenu.owner.displayName}` : undefined}
         size="auto"
         width={380}
       >
@@ -545,10 +557,13 @@ function CoverGrid({
   vinilos,
   onOpen,
   nowPlayingId,
+  onAcquire,
 }: {
   vinilos: Vinyl[];
   onOpen: (v: Vinyl) => void;
   nowPlayingId?: string;
+  /** only ever passed for the wishlist: a tick that means "compré este" */
+  onAcquire?: (v: Vinyl) => void;
 }) {
   // Only the first screenful is waited for. Gating four hundred covers on each
   // other would mean waiting for the ones nobody has scrolled to yet; the rest
@@ -560,7 +575,7 @@ function CoverGrid({
     return (
       <div className="px-5 pb-chrome" style={{ paddingTop: "calc(var(--safe-top) + 130px)" }}>
         <EmptyState
-          title="Esta lista está vacía"
+          title="Este rack está vacío"
           body="Busca un disco por título, artista o código de barras y aparecerá aquí."
           action={{ label: "Buscar discos", href: "/explorar?buscar=1" }}
         />
@@ -593,6 +608,40 @@ function CoverGrid({
                   loading={i < 8 ? "eager" : "lazy"}
                   className="aspect-square w-full rounded-[3px] object-cover"
                 />
+                {/**
+                 * Going down the wishlist is the one pass where the same
+                 * decision repeats — you got these three, you did not get
+                 * those. Opening each record to say so is four taps for a
+                 * one-bit answer, so the answer lives on the cover.
+                 *
+                 * On the artwork rather than under it, because a control in
+                 * the caption would sit between the title and the next row
+                 * and turn a grid of pictures into a form. It has to survive
+                 * any sleeve passing behind it, hence the same dark glass the
+                 * shelf's own round buttons use.
+                 */}
+                {onAcquire && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Ya tengo ${v.title}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAcquire(v);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.stopPropagation();
+                      e.preventDefault();
+                      onAcquire(v);
+                    }}
+                    className="pressable absolute bottom-1.5 right-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-ink/72 text-paper/90 backdrop-blur-xl"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                      <path d="M2.5 7.4 L5.6 10.5 L11.5 3.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                )}
                 {v.id === nowPlayingId && (
                   <span
                     aria-label="Sonando"

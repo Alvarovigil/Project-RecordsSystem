@@ -10,6 +10,7 @@ import SearchOverlay from "@/components/SearchOverlay";
 import CollectionsOverlay from "@/components/CollectionsOverlay";
 import { RecordSpecsContent } from "@/components/RecordSpecsCard";
 import VinylEditOverlay from "@/components/VinylEditOverlay";
+import CoverGlow from "@/components/CoverGlow";
 import CommunityBridge from "@/components/CommunityBridge";
 import MarqueeText from "@/components/MarqueeText";
 import DemoNotice from "@/components/DemoNotice";
@@ -21,7 +22,13 @@ import TopNav from "@/components/app/TopNav";
 import { BarcodeIcon, useCanScan } from "@/components/BarcodeScanner";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
-import { type Collection, type SortMode, sortedVinylIds } from "@/lib/collections";
+import {
+  findCollection,
+  findWishlist,
+  sortedVinylIds,
+  type Collection,
+  type SortMode,
+} from "@/lib/collections";
 import { useDevice } from "@/hooks/useDevice";
 import MobileShelf from "@/components/mobile/MobileShelf";
 import RecordSheet from "@/components/mobile/RecordSheet";
@@ -43,6 +50,9 @@ import { useSearchParams } from "next/navigation";
  * `ssr: false` because it needs a WebGL context, which the server does not have.
  */
 const VinylShelf = dynamic(() => import("@/components/VinylShelf3D"), { ssr: false });
+
+/** how much of the window the spec sheet takes when it is open */
+const SPECS_VW = 50;
 
 export default function ShelfApp({ authenticated = false }: { authenticated?: boolean }) {
   // set synchronously, before any data hook reads the backend
@@ -307,19 +317,42 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
     lib.activate(id);
   };
 
+  /**
+   * Adding a record somewhere — and the way back.
+   *
+   * This said "Guardado en X" and left you there. Every other write in the app
+   * hands you the reversal in the same breath, and adding is not the harmless
+   * one of the set: saving into any list is *also* what takes a record out of
+   * the wishlist, so one careless click can end a want you had been keeping
+   * for a year, and "quitar de la lista" would not bring it back — it would
+   * leave the record owned by nothing and wished by nobody.
+   *
+   * So the undo restores the state that actually existed before: back to the
+   * wishlist if that is where it was, out of the rack if it was not.
+   */
   const handleAddVinylTo = (colId: string, vinylId: string) => {
     const release = allVinilos.find((v) => v.id === vinylId);
     if (!release) return;
+    const wishlist = findWishlist(resolvedCollections);
+    const wasWished = Boolean(wishlist?.vinylIds.includes(vinylId));
+
     void lib.saveToList(release, colId);
-    const name = lib.lists.find((l) => l.id === colId)?.title;
-    toast.show(`Guardado en ${name ?? "tu colección"}`, { media: { src: coverFor(release) } });
+    const name = lib.lists.find((l) => l.id === colId)?.title ?? "tu colección";
+    toast.undo(
+      `${release.title} → ${name}`,
+      () => {
+        if (wasWished && wishlist) void lib.saveToList(release, wishlist.id);
+        else void lib.removeFromList(colId, vinylId);
+      },
+      { media: { src: coverFor(release) } },
+    );
   };
 
   const handleRemoveVinylFromActive = (vinylId: string) => {
     const v = allVinilos.find((x) => x.id === vinylId);
     void lib.removeFromList(activeCollectionId, vinylId);
     if (v) {
-      toast.undo(`${v.title} fuera de la lista`, () => void lib.saveToList(v, activeCollectionId), {
+      toast.undo(`${v.title} fuera del rack`, () => void lib.saveToList(v, activeCollectionId), {
         media: { src: coverFor(v) },
       });
     }
@@ -350,7 +383,38 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   };
 
   /** Save a record — new to the library or already in it — into a list. */
+  /** how much of the window the spec sheet takes, and therefore how far the
+   *  rack slides: half the width, so the record keeps the other half */
+  /**
+   * The sheet belongs to the record, not to the session.
+   *
+   * Leave the record — close it, click through to another sleeve, jump in
+   * from the grid — and the sheet goes with it. Without this it stayed open
+   * and simply repainted itself with the next record's data, so the shelf sat
+   * shoved 25vw to the left around a panel nobody asked to keep, and closing
+   * the record left half the window reading the specs of nothing.
+   */
+  useEffect(() => {
+    setSpecsOpen(false);
+  }, [open?.id]);
+
+  const shifted = specsOpen && Boolean(open?.discogsId);
+
   const handleSaveToList = (v: Vinyl, listId: string) => void lib.saveToList(v, listId);
+
+  /**
+   * "Ya lo tengo": the wishlist's exit.
+   *
+   * One door, not two: it is `handleAddVinylTo` aimed at your collection, so
+   * the acknowledgement and its undo are the same ones every other add gets.
+   * Saving into the collection is all it takes — owned and wished are
+   * mutually exclusive downstream, so the record leaves the wishlist by
+   * arriving.
+   */
+  const handleAcquire = (v: Vinyl) => {
+    const mine = findCollection(resolvedCollections);
+    if (mine) handleAddVinylTo(mine.id, v.id);
+  };
 
   // sound is its own concern, in its own hook
   const audio = usePlaybackContext();
@@ -394,7 +458,12 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleClose();
+      // Escape closes the topmost thing, not everything: with the sheet out
+      // it takes back the half of the window, and the record stays open.
+      if (e.key === "Escape") {
+        if (specsOpen) setSpecsOpen(false);
+        else handleClose();
+      }
       if ((e.key === "/" || ((e.metaKey || e.ctrlKey) && e.key === "k")) && !searchOpen) {
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag !== "INPUT" && tag !== "TEXTAREA") {
@@ -419,7 +488,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handleClose, searchOpen, open]);
+  }, [handleClose, searchOpen, open, specsOpen]);
 
   // Paused and you keep browsing? Then the paused record stops being "yours":
   // the transport re-syncs with the shelf, so Play always means the one in
@@ -551,6 +620,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           onRemoveFromList={(v) => handleRemoveVinylFromActive(v.id)}
           onOpenSaved={(l) => void openForeign(l)}
           onRemoveRecordFromList={(listId, vinylId) => handleToggleVinyl(listId, vinylId)}
+          onAcquire={handleAcquire}
           readOnly={readOnly}
           onUnsaveList={(id) => {
             // both lists of kept lists: the phone reads `saved`, the desktop
@@ -625,6 +695,30 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           !hydrated || collectionFading ? "opacity-0" : "opacity-100"
         }`}
       >
+      {/* the light the open record throws on the room. Outside the stage: a
+          lamp belongs to the ceiling, not to the thing under it, so it stays
+          put when the spec sheet slides everything left. */}
+      <CoverGlow vinyl={view === "shelf" ? open : null} />
+
+      {/**
+       * The stage: the rack and everything welded to the centred sleeve.
+       *
+       * It slides left as one piece when the spec sheet opens, because the
+       * sleeve, the facts flanking it and the controls under it are one
+       * object — moving the artwork and leaving its own labels behind would
+       * read as the page coming apart. The chrome (the bar, the transport,
+       * the corner that opens your racks) is NOT in here: it belongs to the
+       * window, not to the record, and furniture that slides when a panel
+       * opens is furniture nobody trusts.
+       *
+       * `transform: none` while closed on purpose — a permanent translate
+       * would make this a stacking context for good, and the layering of the
+       * pieces inside it against the top bar is load-bearing.
+       */}
+      <div
+        className="absolute inset-0 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+        style={{ transform: shifted ? `translateX(-${SPECS_VW / 2}vw)` : undefined }}
+      >
       {vinilos.length > 0 && view === "shelf" && (
         <VinylShelf
           handleRef={shelfRef}
@@ -655,7 +749,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
       )}
 
       {/* invisible backdrop while opened — click anywhere outside the vinyl closes */}
-      {open && (
+      {open && view === "shelf" && (
         <div
           onClick={handleClose}
           className="absolute inset-0 z-10"
@@ -663,18 +757,33 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         />
       )}
 
-      {/* side info that flanks the centred vinyl when opened — placed at the
-          far edges of the viewport so it sits on the black background, never
-          on top of the vinyl */}
-      {open && (
+      {/**
+       * Side info that flanks the centred vinyl when opened — placed at the
+       * far edges of the viewport so it sits on the black background, never
+       * on top of the vinyl.
+       *
+       * Gated on the shelf as well as on `open`, and that is not belt and
+       * braces. Everything in here is positioned against a sleeve that only
+       * exists in the 3D view: the two columns of facts hang off
+       * `--cover-half`, the exit sits at 85% of the window, the edit pencil
+       * floats over artwork. Switch to the grid with a record open and all of
+       * it stayed on screen, anchored to a cover that was no longer there —
+       * facts printed across the thumbnails, a floating "añadir a mi
+       * colección", a pencil in the corner of nothing.
+       */}
+      {open && view === "shelf" && (
         <>
           {/* containers are bounded so they NEVER cross the vinyl on screen.
               vinyl occupies the central ~42% horizontally → reserve 29% for each side. */}
           <motion.div
             key={`l-${open.id}`}
             initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.45 }}
+            /* Gone while the sheet is out. The three facts live in the gutter
+               beside the sleeve, and after the slide that gutter is 4vw wide
+               on one side and underneath the panel on the other. The sheet
+               says all of this and more anyway. */
+            animate={{ opacity: shifted ? 0 : 1, x: 0 }}
+            transition={{ duration: shifted ? 0.2 : 0.5, delay: shifted ? 0 : 0.45 }}
             ref={(el) => {
               sideRefs.current[0] = el;
             }}
@@ -689,8 +798,12 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           <motion.div
             key={`r-${open.id}`}
             initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.45 }}
+            /* Gone while the sheet is out. The three facts live in the gutter
+               beside the sleeve, and after the slide that gutter is 4vw wide
+               on one side and underneath the panel on the other. The sheet
+               says all of this and more anyway. */
+            animate={{ opacity: shifted ? 0 : 1, x: 0 }}
+            transition={{ duration: shifted ? 0.2 : 0.5, delay: shifted ? 0 : 0.45 }}
             ref={(el) => {
               sideRefs.current[1] = el;
             }}
@@ -704,124 +817,56 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           </motion.div>
 
           {/**
-           * The way in, on the sleeve itself.
+           * The record's own column: what it can do, and the way out.
            *
-           * It lived in the right-hand column, which meant the control for the
-           * thing that happens *on the artwork* was eighteen inches away from
-           * it, in a stack of read-only facts. On the bottom edge of the
-           * sleeve it is where the eye already is, and it reads as what it is:
-           * a lid on the record in front of you.
+           * They were two absolutely-positioned elements at 78% and 85% of
+           * the window, which is not a relationship — it is two numbers that
+           * happen to be near each other on one screen size and drift apart
+           * on every other. One stack, one gap, and they stay a pair.
            *
-           * Positioned off the same `--cover-half` the sheet uses, so button
-           * and panel stay welded to the artwork at any window size.
            */}
-          {open.discogsId && (
-            <button
-              onClick={() => setSpecsOpen((v) => !v)}
-              aria-expanded={specsOpen}
-              style={{
-                top: "calc(50% + var(--cover-half, 21vw) - 54px)",
-              }}
-              /* Lighter than the panel behind it and mostly blur: over
-                 artwork this reads as glass over the sleeve rather than as a
-                 black tablet sitting on it. No chevron — the label already
-                 says which of the two states it is in, and an arrow that
-                 flips is a second way of saying the same thing. */
-              className="pressable absolute left-1/2 z-50 flex h-10 -translate-x-1/2 items-center rounded-full bg-paper/[0.14] px-5 text-[13px] text-paper backdrop-blur-xl transition-colors hover:bg-paper/20"
-            >
-              {specsOpen ? "Cerrar la ficha" : "Ficha técnica"}
-            </button>
-          )}
-
-          {/**
-           * The sheet, over the sleeve rather than beside it.
-           *
-           * A column on the right worked and cost too much: it pushed the
-           * three facts out of the way and turned a screen whose whole subject
-           * is one big piece of artwork into a page with a sidebar. Here the
-           * artwork stays exactly where it is and goes soft behind the type,
-           * which is the same move the app makes everywhere else — what is
-           * behind a panel becomes colour rather than content.
-           *
-           * The box is measured from the sleeve itself. `--cover-half` is
-           * written every frame by the shelf, because how wide the centred
-           * sleeve lands depends on the field of view, the camera distance and
-           * the window — so this is the artwork's real rectangle, not a
-           * percentage that happens to look right on one screen.
-           */}
-          <AnimatePresence>
-            {specsOpen && open.discogsId && (
-              <motion.div
-                key={`specs-${open.id}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                style={{
-                  left: "calc(50% - var(--cover-half, 21vw))",
-                  top: "calc(50% - var(--cover-half, 21vw))",
-                  width: "calc(var(--cover-half, 21vw) * 2)",
-                  height: "calc(var(--cover-half, 21vw) * 2)",
-                }}
-                /* Above the edit overlay's hover sensor, which is a
-                   full-cover invisible div at z-20 and comes later in the
-                   DOM: the wheel was landing on that instead of on the sheet,
-                   so the panel would not scroll while looking perfectly
-                   scrollable. */
-                className="absolute z-40 overflow-hidden bg-ink/55 backdrop-blur-xl"
-              >
-                <motion.div
-                  /* the cards come up from below: the sheet arrives from
-                     underneath the sleeve, the way a record slides out of one */
-                  initial={{ y: 28, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 16, opacity: 0 }}
-                  transition={{ duration: 0.34, ease: [0.16, 1, 0.3, 1], delay: 0.04 }}
-                  /* The shelf listens for the wheel on the window and turns
-                     it into rotation. `data-scrollable` is its existing way of
-                     saying "this one is a scroller, keep your hands off" —
-                     without it the sheet simply refused to move. */
-                  data-scrollable
-                  /* room at the end for the pill that floats over the bottom
-                     edge, so the last card is not permanently under it */
-                  className="scroll-y h-full overflow-y-auto p-5 pb-20"
-                >
-                  <RecordSpecsContent discogsId={open.discogsId} open />
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* edit icon over the cover — appears only once the open animation
-              has finished, and on hover */}
           {fullyOpen && (
-            <motion.button
-              onClick={handleClose}
+            <motion.div
               initial={{ opacity: 0, x: "-50%", y: -4 }}
               animate={{ opacity: 1, x: "-50%", y: 0 }}
               transition={{ duration: 0.4 }}
-              aria-label="Cerrar"
-              className="absolute left-1/2 top-[78%] z-20 flex h-6 w-6 items-center justify-center text-paper/50 hover:text-paper transition"
+              className="absolute left-1/2 top-[78%] z-20 flex flex-col items-center gap-3"
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeLinecap="round" strokeWidth="1.2" />
-              </svg>
-            </motion.button>
+              {/* In a capsule, so it reads as a control rather than as one
+                  more caption under the sleeve — the record already has three
+                  lines of type stacked over it and a fourth in the same voice
+                  was scenery. Filled while the sheet is out: the button is
+                  also the tell for which of the two states you are in. */}
+              {open.discogsId && (
+                <button
+                  onClick={() => setSpecsOpen((v) => !v)}
+                  aria-expanded={specsOpen}
+                  className={`pressable flex h-9 items-center whitespace-nowrap rounded-full border px-5 text-[11px] uppercase tracking-[0.22em] transition ${
+                    specsOpen
+                      ? "border-paper bg-paper text-ink"
+                      : "border-paper/25 text-paper/60 hover:border-paper/70 hover:text-paper"
+                  }`}
+                >
+                  {specsOpen ? "Cerrar la ficha" : "Ficha técnica"}
+                </button>
+              )}
+              <button
+                onClick={handleClose}
+                aria-label="Cerrar el disco"
+                className="pressable flex h-10 w-10 items-center justify-center rounded-full border border-paper/20 text-paper/50 transition hover:border-paper/60 hover:text-paper"
+              >
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+                  <path
+                    d="M2.5 2.5 L11.5 11.5 M11.5 2.5 L2.5 11.5"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </button>
+            </motion.div>
           )}
-          {fullyOpen && (
-            <CommunityBridge
-              vinyl={open}
-              allVinilos={allVinilos}
-              onOpenOwn={(v) => {
-                const idx = vinilos.findIndex((x) => x.id === v.id);
-                if (idx >= 0) {
-                  setOpen(v);
-                  shelfRef.current?.open(idx);
-                }
-              }}
-              onSave={(v) => handleSaveToList(v, activeCollectionId)}
-            />
-          )}
+
           {fullyOpen && (
             <VinylEditOverlay
               preview={!authenticated}
@@ -850,6 +895,79 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           )}
         </>
       )}
+      </div>
+
+      {/**
+       * The spec sheet, as half the window.
+       *
+       * It used to be a square laid over the sleeve, which meant reading the
+       * pressing details and looking at the record were the same half-second
+       * apart as reading them with your eyes shut. Discogs data is a long
+       * column — tracklist, formats, credits, catalogue numbers — and a
+       * square the size of a cover is the one shape that cannot hold a long
+       * column: everything past the fourth line was a scroll inside a box
+       * inside a shelf that also wanted the wheel.
+       *
+       * Half the window, with the record sliding over to make room, gives the
+       * column its height and keeps the artwork in the same glance. Under the
+       * top bar's z-index, not over it: the bar is the way out of here.
+       */}
+      <AnimatePresence>
+        {specsOpen && open?.discogsId && (
+          <motion.aside
+            key={`specs-${open.id}`}
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            aria-label="Ficha técnica"
+            style={{ width: `${SPECS_VW}vw` }}
+            /* Over the top bar (z-40), not under it. Half a window of reading
+               with the view switch and the search field floating on top of it
+               is two screens fighting for the same corner — and the sheet now
+               carries its own way out, so nothing up there is needed while it
+               is open. */
+            className="absolute right-0 top-0 z-[45] h-full border-l border-paper/10 bg-ink/80 backdrop-blur-2xl"
+          >
+            {/* the shelf turns the wheel into rotation unless a scroller says
+                otherwise — without this the column simply refuses to move */}
+            {/**
+             * A way out on the panel itself.
+             *
+             * There were two already — the capsule under the sleeve turns
+             * into "Cerrar la ficha", and Escape takes the half-window back —
+             * and neither is where a hand looks. You are reading a column on
+             * the right; the control that dismisses it belongs at the top of
+             * that column, not eighteen inches away under the artwork you
+             * stopped looking at.
+             *
+             * Its own row rather than floating over the text: a button laid
+             * on top of a scroller sits on whatever happens to scroll under
+             * it, and the first thing under it here is a heading.
+             *
+             * No room kept for the top bar, either — the sheet covers it, so
+             * the 88px that used to be held at the top was a gap reserved for
+             * furniture that is not there.
+             */}
+            <div className="flex h-full flex-col">
+              <div className="shrink-0 px-6 pt-6">
+                <button
+                  onClick={() => setSpecsOpen(false)}
+                  aria-label="Cerrar la ficha técnica"
+                  className="pressable flex h-9 w-9 items-center justify-center rounded-full bg-fill-subtle text-paper/50 transition hover:bg-fill hover:text-paper"
+                >
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+                    <path d="M2.5 2.5 L11.5 11.5 M11.5 2.5 L2.5 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </div>
+              <div data-scrollable className="scroll-y min-h-0 flex-1 overflow-y-auto px-10 pb-10 pt-4">
+                <RecordSpecsContent discogsId={open.discogsId} open />
+              </div>
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
       {/* the shared bar, with the shelf's own controls in the same row */}
       <TopNav
@@ -865,7 +983,12 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             {(["shelf", "grid"] as const).map((v) => (
               <button
                 key={v}
-                onClick={() => setView(v)}
+                onClick={() => {
+                  // leaving the rack leaves the record: the grid is a way of
+                  // looking at the whole list, not a backdrop for one sleeve
+                  if (v !== view) handleClose();
+                  setView(v);
+                }}
                 aria-label={v === "shelf" ? "Vista colección" : "Vista cuadrícula"}
                 aria-pressed={view === v}
                 className={`flex h-[26px] w-[30px] items-center justify-center transition ${
@@ -907,6 +1030,10 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           overlaps the centred cover */}
       {active && view === "shelf" && (
         <div
+          /* The caption belongs to the sleeve, so it makes the same journey:
+             without this the title stayed centred on the window while the
+             record it names sat a quarter of the screen to the left. */
+          style={{ transform: shifted ? `translateX(-${SPECS_VW / 2}vw)` : undefined }}
           className={`pointer-events-none absolute inset-x-0 z-10 flex flex-col items-center text-center transition-all ease-out ${
             open
               ? "top-[10%] duration-500"
@@ -930,6 +1057,23 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
               <div className="mt-2 text-[13px] text-paper/60">{active.artist}</div>
             )}
           </div>
+
+          {/* who else has this — a subtitle, under the name of the record it
+              is a fact about */}
+          {open && fullyOpen && (
+            <CommunityBridge
+              vinyl={open}
+              allVinilos={allVinilos}
+              onOpenOwn={(v) => {
+                const idx = vinilos.findIndex((x) => x.id === v.id);
+                if (idx >= 0) {
+                  setOpen(v);
+                  shelfRef.current?.open(idx);
+                }
+              }}
+              onSave={(v) => handleSaveToList(v, activeCollectionId)}
+            />
+          )}
         </div>
       )}
 
@@ -941,7 +1085,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
       <div className="absolute bottom-0 left-0 z-20 px-8 py-6">
         <button
           onClick={() => setCollectionsOpen(true)}
-          aria-label="Abrir listas"
+          aria-label="Abrir racks"
           className="group flex items-center gap-3 text-left"
         >
           {/* Somebody else's list wears their face here; yours wears the

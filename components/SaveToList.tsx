@@ -101,7 +101,7 @@ export function ListPicker({
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar lista…"
+          placeholder="Buscar rack…"
           className="w-full bg-transparent text-[13px] text-paper outline-none placeholder:text-paper/30"
         />
       </div>
@@ -114,7 +114,7 @@ export function ListPicker({
           <Row key={c.id} c={c} />
         ))}
         {listed.length === 0 && (
-          <div className="px-3 py-3 text-[12px] text-paper/40">Ninguna lista con ese nombre</div>
+          <div className="px-3 py-3 text-[12px] text-paper/40">Ningún rack con ese nombre</div>
         )}
       </div>
       <div className="border-t border-paper/10">
@@ -122,7 +122,7 @@ export function ListPicker({
           <input
             autoFocus
             defaultValue={listed.length === 0 ? q.trim() : ""}
-            placeholder="Nombre de la lista"
+            placeholder="Nombre del rack"
             onKeyDown={async (e) => {
               if (e.key !== "Enter") return;
               const name = (e.target as HTMLInputElement).value.trim();
@@ -175,7 +175,7 @@ export function DestinationBar({
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1.5 border-b border-paper/25 pb-0.5 text-[13px] text-paper transition hover:border-paper/70"
       >
-        <span className="max-w-[170px] truncate">{target?.name ?? "Lista"}</span>
+        <span className="max-w-[170px] truncate">{target?.name ?? "Rack"}</span>
         <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden>
           <path d="M1 2.5 L4 5.5 L7 2.5" stroke="currentColor" strokeWidth="1.1" />
         </svg>
@@ -274,8 +274,8 @@ export function RowSave({
       </button>
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label="Guardar en otra lista"
-        title="Guardar en otra lista"
+        aria-label="Guardar en otro rack"
+        title="Guardar en otro rack"
         className="reveal-on-hover ml-1 flex w-6 items-center justify-center rounded-sm text-paper/30 transition hover:text-paper"
       >
         <svg width="9" height="9" viewBox="0 0 8 8" fill="none">

@@ -275,7 +275,7 @@ export default function ExploreView() {
               type="search"
               autoCapitalize="none"
               autoCorrect="off"
-              aria-label="Buscar discos, listas o personas"
+              aria-label="Buscar discos, racks o personas"
               placeholder="Buscar"
               /**
                * The query, set as type rather than typed into a widget.
@@ -346,7 +346,7 @@ export default function ExploreView() {
                 [
                   ["all", "Todo", null],
                   ["records", "Discos", counts.records],
-                  ["lists", "Listas", counts.lists],
+                  ["lists", "Racks", counts.lists],
                   ["people", "Gente", counts.people],
                 ] as const
               ).map(([value, label, n]) => {
@@ -420,8 +420,8 @@ export default function ExploreView() {
                  went wrong" — it just looks like the page stopped loading. */
               <EmptyState
                 compact
-                title="Todavía no hay listas que enseñarte"
-                body="O nadie ha publicado una lista pública, o no hemos podido leerlas. Prueba a recargar; si sigue vacío, busca algo concreto."
+                title="Todavía no hay racks que enseñarte"
+                body="O nadie ha publicado un rack público, o no hemos podido leerlas. Prueba a recargar; si sigue vacío, busca algo concreto."
                 action={{
                   label: "Recargar",
                   onClick: () => window.location.reload(),
@@ -650,7 +650,7 @@ export default function ExploreView() {
 
               {show("lists") && lists.length > 0 && (
                 <ResultBlock
-                  title="Listas"
+                  title="Racks"
                   onAll={() => setScope("lists")}
                   showAll={scope === "all"}
                 >

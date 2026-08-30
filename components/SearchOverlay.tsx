@@ -180,7 +180,7 @@ export default function SearchOverlay({
                 mode === m ? "text-paper" : "text-paper/35 hover:text-paper/70"
               }`}
             >
-              {m === "vinyls" ? "Vinilos" : "Gente y listas"}
+              {m === "vinyls" ? "Vinilos" : "Gente y racks"}
               {mode === m && (
                 <span className="absolute left-0 right-0 -bottom-px h-px bg-paper" />
               )}
@@ -195,7 +195,7 @@ export default function SearchOverlay({
             placeholder={
               mode === "vinyls"
                 ? "Buscar un disco, tuyo o por añadir…"
-                : "Buscar personas o listas…"
+                : "Buscar personas o racks…"
             }
             className="flex-1 bg-transparent py-4 text-[18px] text-paper outline-none placeholder:text-paper/30"
           />
@@ -297,7 +297,7 @@ export default function SearchOverlay({
 
               {communityLists.length > 0 && (
                 <>
-                  <SectionLabel>Listas</SectionLabel>
+                  <SectionLabel>Racks</SectionLabel>
                   <ul className="divide-y divide-paper/[0.07]">
                     {communityLists.map((l) => (
                       <li key={l.id}>

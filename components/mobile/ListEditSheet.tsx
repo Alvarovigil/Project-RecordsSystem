@@ -75,7 +75,7 @@ export default function ListEditSheet({
     const clean = name.trim();
     if (!clean || clean === list.name) return;
     onRename(list.id, clean);
-    toast.show("Lista renombrada", { media: { icon: ToastIcon.list } });
+    toast.show("Rack renombrado", { media: { icon: ToastIcon.list } });
   };
 
   return (
@@ -88,7 +88,7 @@ export default function ListEditSheet({
         }}
         title={
           pane === "root"
-            ? "Lista"
+            ? "Rack"
             : pane === "sort"
               ? "Ordenar por"
               : pane === "records"
@@ -148,7 +148,7 @@ export default function ListEditSheet({
 
             {!isPrimary && (
               <div className="border-t border-line py-1">
-                <SheetRow label="Borrar lista" danger onClick={() => setDeleting(true)} />
+                <SheetRow label="Borrar el rack" danger onClick={() => setDeleting(true)} />
               </div>
             )}
             {isPrimary && (
@@ -256,12 +256,12 @@ export default function ListEditSheet({
         open={deleting}
         onClose={() => setDeleting(false)}
         title={`Se borrará «${list.name}»`}
-        body={`La lista desaparece. Los ${list.vinylIds.length} discos siguen en tu colección.`}
-        confirmLabel="Borrar lista"
+        body={`El rack desaparece. Los ${list.vinylIds.length} discos siguen en tu colección.`}
+        confirmLabel="Borrar el rack"
         onConfirm={() => {
           onDelete(list.id);
           onClose();
-          toast.show("Lista borrada", { media: { icon: ToastIcon.trash } });
+          toast.show("Rack borrado", { media: { icon: ToastIcon.trash } });
         }}
       />
     </>

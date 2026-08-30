@@ -118,6 +118,23 @@ export function resolveCollections(cols: Collection[], allVinylIds: string[]): C
   return cols.map((c) => (c.id === DEFAULT_ID ? { ...c, vinylIds: owned } : c));
 }
 
+/**
+ * The two predefined lists, found by what they ARE.
+ *
+ * Never by id alone: signed in, the collection and the wishlist are database
+ * uuids and only `kind` tells them apart; local-only they are the constants
+ * and `kind` may be missing entirely. Both checks, always.
+ */
+export const findCollection = (cols: Collection[]) =>
+  cols.find((c) => c.kind === "collection" || c.id === DEFAULT_ID);
+
+export const findWishlist = (cols: Collection[]) =>
+  cols.find((c) => c.kind === "wishlist" || c.id === WISHLIST_ID);
+
+/** Wished, not owned — the state the "ya lo tengo" shortcut exists to end. */
+export const isWished = (cols: Collection[], vinylId: string) =>
+  Boolean(findWishlist(cols)?.vinylIds.includes(vinylId));
+
 /** Neither of the two predefined lists can be deleted. */
 export function isDeletable(id: string) {
   return id !== DEFAULT_ID && id !== WISHLIST_ID;

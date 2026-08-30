@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { analyseCover, type Tone } from "@/lib/palette";
+import { coverFor } from "@/lib/cover";
 import type { Vinyl } from "@/lib/types";
 import type { Collection } from "@/lib/collections";
 
@@ -55,6 +57,28 @@ export default function VinylEditOverlay({
     return () => window.removeEventListener("mousedown", onDown);
   }, [menuOpen]);
 
+  /**
+   * What the sleeve looks like under each control.
+   *
+   * White glass over a white cover is nothing at all — and half the sleeves
+   * ever printed are mostly paper. A control that floats over artwork cannot
+   * pick a colour once and hope; it has to answer to what is behind it, in
+   * the corner it actually sits in rather than in the sleeve's average.
+   */
+  const [look, setLook] = useState<{ corner: Tone; centre: Tone }>({
+    corner: "dark",
+    centre: "dark",
+  });
+  useEffect(() => {
+    let alive = true;
+    void analyseCover(coverFor(vinyl)).then((l) => {
+      if (alive) setLook({ corner: l.corner, centre: l.centre });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [vinyl]);
+
   // reset state when changing vinyl
   useEffect(() => {
     setMenuOpen(false);
@@ -69,8 +93,21 @@ export default function VinylEditOverlay({
   return (
     <div
       className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 group"
-      // sized to roughly the visible cover when opened (aspect-aware)
-      style={{ width: "min(36vw, 50vh)", height: "min(36vw, 50vh)" }}
+      /**
+       * The sleeve's real rectangle, not a guess at it.
+       *
+       * This box was `min(36vw, 50vh)` — a pair of numbers that happened to
+       * land near the cover on the window it was written on. The shelf
+       * publishes `--cover-half` every frame, measured from the actual
+       * geometry (field of view, camera distance, window), and everything
+       * else on this screen is already positioned off it. A corner control
+       * anchored to an approximation is not in the corner: it floats inside
+       * the artwork, which is exactly what it was doing.
+       */
+      style={{
+        width: "calc(var(--cover-half, 21vw) * 2)",
+        height: "calc(var(--cover-half, 21vw) * 2)",
+      }}
     >
       {/* hover sensor — covers the whole cover area */}
       <div className="pointer-events-auto absolute inset-0" />
@@ -79,18 +116,35 @@ export default function VinylEditOverlay({
       {isInWishlist && onMoveToCollection && (
         <button
           onClick={onMoveToCollection}
-          className="pointer-events-auto absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-5 py-3 rounded-md bg-ink/70 backdrop-blur-sm border border-paper/25 text-paper text-[13px] uppercase tracking-[0.18em] hover:bg-ink/90 hover:border-paper/60 transition reveal-on-hover"
+          /* Same material as the pencil, same words as the phone. It was a
+             black tablet laid on the artwork with a two-line label in tracked
+             capitals; over a bright sleeve that is the loudest thing on the
+             screen and it is not even the main action. */
+          className={`pointer-events-auto reveal-on-hover absolute left-1/2 top-1/2 flex h-11 -translate-x-1/2 -translate-y-1/2 items-center gap-2 whitespace-nowrap rounded-full px-5 text-[13px] backdrop-blur-xl transition ${
+            look.centre === "light"
+              ? "bg-ink/30 text-paper hover:bg-ink/50"
+              : "bg-paper/[0.14] text-paper hover:bg-paper/25"
+          }`}
         >
-          Añadir a mi colección
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+            <path d="M2.5 7.4 L5.6 10.5 L11.5 3.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Ya lo tengo
         </button>
       )}
 
-      <div ref={wrapperRef} className="pointer-events-auto absolute top-3 right-3">
+      <div ref={wrapperRef} className="pointer-events-auto absolute right-3 top-3">
         <button
           onClick={() => setMenuOpen((v) => !v)}
-          className={`flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 backdrop-blur-sm border border-paper/20 text-paper/70 hover:text-paper hover:border-paper/60 transition-opacity ${
-            menuOpen ? "opacity-100" : "reveal-on-hover"
-          }`}
+          /* Glass, like every control that floats over artwork in this app —
+             but glass of whichever polarity the sleeve leaves room for. An
+             opaque black puck on a sleeve is a hole punched in it; white
+             glass on a white sleeve is nothing at all. */
+          className={`flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-xl transition ${
+            look.corner === "light"
+              ? "bg-ink/25 text-paper hover:bg-ink/45"
+              : "bg-paper/[0.14] text-paper/80 hover:bg-paper/25 hover:text-paper"
+          } ${menuOpen ? "opacity-100" : "reveal-on-hover"}`}
           aria-label="Editar vinilo"
         >
           {/* pencil icon */}
@@ -138,7 +192,7 @@ export default function VinylEditOverlay({
                 }}
                 className="w-full text-left px-3 py-2 text-paper/80 hover:bg-paper/5 hover:text-paper rounded-control"
               >
-                {isInWishlist ? "Quitar de deseos" : "Quitar de esta lista"}
+                {isInWishlist ? "Quitar de deseos" : "Quitar de este rack"}
               </button>
             )}
             <div className="h-px bg-paper/10 my-1" />

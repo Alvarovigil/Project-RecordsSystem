@@ -48,7 +48,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   ref,
 ) {
   const cls = [
-    "pressable inline-flex select-none items-center justify-center gap-2 rounded-control font-medium",
+    // Fully round, not the 10px of --r-control. That radius belongs to boxes
+    // you type into and to panels; a button is an object you press, and the
+    // capsule is what tells the two apart at a glance — which is the shape
+    // the record screen's own controls already settled on.
+    "pressable inline-flex select-none items-center justify-center gap-2 rounded-full font-medium",
     "transition-colors duration-fast ease-out",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-line-focus focus-visible:ring-offset-2 focus-visible:ring-offset-surface",
     "disabled:cursor-not-allowed disabled:opacity-45",

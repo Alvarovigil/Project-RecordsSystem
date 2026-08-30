@@ -52,7 +52,7 @@ export default async function Image({ params }: { params: { username: string } }
           ) : null}
         </div>
         <span style={{ fontSize: 26, opacity: 0.45 }}>
-          {count ?? 0} {count === 1 ? "lista pública" : "listas públicas"}
+          {count ?? 0} {count === 1 ? "rack público" : "racks públicos"}
         </span>
       </div>
     ),

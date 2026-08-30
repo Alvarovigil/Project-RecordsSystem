@@ -126,7 +126,7 @@ export default function SaveListButton({
         open={menu}
         onClose={() => setMenu(false)}
         title={listTitle}
-        subtitle={`Lista de ${ownerName}`}
+        subtitle={`Rack de ${ownerName}`}
         size="auto"
         width={380}
       >

@@ -248,16 +248,16 @@ export default function ListView({
           <CoverGridSkeleton count={10} />
         ) : items.length === 0 ? (
           <EmptyState
-            title={isOwner ? "Esta lista todavía está vacía" : "Aquí no hay discos todavía"}
+            title={isOwner ? "Este rack todavía está vacío" : "Aquí no hay discos todavía"}
             body={
               isOwner
-                ? "Abre tu colección y arrastra discos a esta lista, o guárdalos desde el buscador."
+                ? "Abre tu colección y arrastra discos a este rack, o guárdalos desde el buscador."
                 : "Quien la hizo no ha añadido nada por ahora. Guárdala y te enterarás cuando lo haga."
             }
             action={
               isOwner
                 ? { label: "Ir a mi colección", href: "/coleccion" }
-                : { label: "Explorar otras listas", href: "/explorar" }
+                : { label: "Explorar otros racks", href: "/explorar" }
             }
           />
         ) : (

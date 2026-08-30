@@ -105,7 +105,7 @@ const LIST_TITLES = [
 const LIST_NOTES = [
   "Sin orden ni criterio, solo discos que vuelvo a poner.",
   "Voy añadiendo lo que encuentro en tiendas de barrio.",
-  "Una lista que empezó como broma y ya va por 40 discos.",
+  "Un rack que empezó como broma y ya va por 40 discos.",
   "Lo que suena en casa entre semana.",
   "Ediciones que me costó encontrar más de lo razonable.",
 ];

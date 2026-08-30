@@ -142,8 +142,8 @@ export default function MobileSearch({
                 enterKeyHint="search"
                 autoCapitalize="none"
                 autoCorrect="off"
-                aria-label={mode === "vinyls" ? "Buscar un disco" : "Buscar personas o listas"}
-                placeholder={mode === "vinyls" ? "Un disco, tuyo o por añadir" : "Personas o listas"}
+                aria-label={mode === "vinyls" ? "Buscar un disco" : "Buscar personas o racks"}
+                placeholder={mode === "vinyls" ? "Un disco, tuyo o por añadir" : "Personas o racks"}
                 className="h-11 w-full bg-transparent pl-7 pr-2 text-body text-paper outline-none placeholder:text-content-faint"
               />
             </div>
@@ -159,7 +159,7 @@ export default function MobileSearch({
               onChange={setMode}
               segments={[
                 { value: "vinyls", label: "Discos" },
-                { value: "people", label: "Gente y listas" },
+                { value: "people", label: "Gente y racks" },
               ]}
             />
           </div>
@@ -216,7 +216,7 @@ export default function MobileSearch({
                 body={
                   mode === "vinyls"
                     ? "Prueba con menos palabras, o solo con el artista. El código de barras acierta más que el título."
-                    : "Ningún nombre ni ninguna lista con eso."
+                    : "Ningún nombre ni ningún rack con eso."
                 }
                 action={
                   canScan && mode === "vinyls"
@@ -331,7 +331,7 @@ export default function MobileSearch({
 
           {mode === "people" && search.communityLists.length > 0 && (
             <>
-              <Label>Listas</Label>
+              <Label>Racks</Label>
               <ul className="divide-y divide-line">
                 {search.communityLists.map((l) => (
                   <li key={l.id}>
@@ -373,9 +373,9 @@ export default function MobileSearch({
             />
           ))}
           <SheetRow
-            label="Nueva lista…"
+            label="Rack nuevo…"
             onClick={async () => {
-              const name = window.prompt("Nombre de la lista");
+              const name = window.prompt("Nombre del rack");
               if (!name?.trim()) return;
               const id = await onCreateList(name.trim());
               setTargetId(id);

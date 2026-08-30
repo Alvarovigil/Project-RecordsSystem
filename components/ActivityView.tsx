@@ -94,7 +94,7 @@ export default function ActivityView() {
       ) : groups.length === 0 ? (
         <EmptyState
           title="Todavía no se mueve nada"
-          body="Sigue a alguien o guarda una lista y aquí aparecerá lo que van añadiendo, las listas que publican y quién se fija en las tuyas. Es la parte del producto que no funciona en solitario."
+          body="Sigue a alguien o guarda un rack y aquí aparecerá lo que van añadiendo, los racks que publican y quién se fija en las tuyas. Es la parte del producto que no funciona en solitario."
           action={{ label: "Buscar gente", href: "/explorar" }}
           secondary={{ label: "Ver mi colección", href: "/coleccion" }}
         />
@@ -269,7 +269,7 @@ function Sentence({
     case "list-created":
       return (
         <>
-          {who} ha publicado {g.count === 1 ? "una lista nueva" : `${g.count} listas nuevas`}
+          {who} ha publicado {g.count === 1 ? "un rack nuevo" : `${g.count} racks nuevos`}
           {g.count === 1 && list ? <>: {list}</> : null}
         </>
       );
@@ -279,7 +279,7 @@ function Sentence({
       return g.mine ? (
         <>
           <span className="font-medium text-paper">{namesOf(g.actors)}</span>{" "}
-          {g.actors.length === 1 ? "ha guardado" : "han guardado"} tu lista {list}
+          {g.actors.length === 1 ? "ha guardado" : "han guardado"} tu rack {list}
         </>
       ) : (
         <>
@@ -293,7 +293,7 @@ function Sentence({
       return (
         <>
           <span className="font-medium text-paper">{namesOf(g.actors)}</span>{" "}
-          {g.actors.length === 1 ? "le ha gustado" : "les ha gustado"} tu lista {list}
+          {g.actors.length === 1 ? "le ha gustado" : "les ha gustado"} tu rack {list}
         </>
       );
 

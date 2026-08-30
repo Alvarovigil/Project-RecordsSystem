@@ -794,7 +794,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         .select("title, description")
         .eq("id", listId)
         .single();
-      const name = title ?? `${source?.title ?? "Lista"} (copia)`;
+      const name = title ?? `${source?.title ?? "Rack"} (copia)`;
       const { data: created, error } = await sb
         .from("lists")
         .insert({
@@ -869,7 +869,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         .eq("username", clean)
         .maybeSingle();
       if (!target) return { ok: false, error: `No encontramos a @${clean}.` };
-      if (target.id === userId) return { ok: false, error: "Esta lista ya es tuya." };
+      if (target.id === userId) return { ok: false, error: "Este rack ya es tuyo." };
       const { error } = await sb
         .from("list_collaborators")
         .insert({ list_id: listId, user_id: target.id, invited_by: userId });
@@ -877,7 +877,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       // failure worth a red message
       if (error) {
         return error.code === "23505"
-          ? { ok: false, error: `@${clean} ya está en esta lista.` }
+          ? { ok: false, error: `@${clean} ya está en este rack.` }
           : { ok: false, error: "No se pudo invitar." };
       }
       return { ok: true };
