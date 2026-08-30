@@ -684,3 +684,28 @@ body[data-sheet-open="1"] {
 body {
   touch-action: manipulation;
 }
+
+/* ---------------------------------------------------------------------------
+   Which door the landing offers.
+
+   Decided in CSS because the landing is server-rendered: a main button whose
+   label waits for JavaScript is either invisible in the HTML or says the wrong
+   thing until the phone finishes hydrating. `pointer: coarse` answers "is
+   there a finger on this?" before any of our code runs.
+
+   The two things a media query cannot know — that the app is already
+   installed, and that this is a webview where installing is impossible —
+   arrive as attributes on <html> from lib/install, and win. See EntryDoor.
+--------------------------------------------------------------------------- */
+/* The visible one takes --door-display, set per element: `revert` would fall
+   back to the user-agent value and throw away the flex the layout needs. */
+.door-touch { display: none; }
+.door-pointer { display: var(--door-display, block); }
+@media (pointer: coarse) {
+  .door-touch { display: var(--door-display, block); }
+  .door-pointer { display: none; }
+}
+html[data-standalone] .door-touch,
+html[data-no-install] .door-touch { display: none; }
+html[data-standalone] .door-pointer,
+html[data-no-install] .door-pointer { display: var(--door-display, block); }

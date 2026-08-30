@@ -7,6 +7,8 @@ import { migrateLocalLibrary, localLibraryMigrated, localLibrarySize } from "@/l
 import { useSession } from "@/hooks/useSession";
 import Avatar from "@/components/ui/Avatar";
 import { fileToAvatar } from "@/lib/avatar";
+import { useDevice } from "@/hooks/useDevice";
+import Slides from "@/components/onboarding/Slides";
 
 const HANDLE_RULE = /^[a-z0-9_]{3,24}$/;
 
@@ -24,8 +26,9 @@ const HANDLE_RULE = /^[a-z0-9_]{3,24}$/;
  */
 export default function Onboarding({ onDone }: { onDone?: () => void }) {
   const { user, profile } = useSession();
+  const { isPhone } = useDevice();
   const supabase = getSupabaseBrowserClient();
-  const [step, setStep] = useState<"identity" | "library" | null>(null);
+  const [step, setStep] = useState<"slides" | "identity" | "library" | null>(null);
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +67,7 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
         setDisplayName(profile.displayName);
         setAvatarUrl(profile.avatarUrl ?? googleAvatar);
         setPending(localLibraryMigrated() ? 0 : localLibrarySize());
-        setStep("identity");
+        setStep("slides");
       });
     return () => {
       alive = false;
@@ -121,20 +124,53 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
     finish();
   };
 
+  /**
+   * A screen on a phone, a dialog on a desktop.
+   *
+   * The same 440px box in the middle of a black scrim was the whole of this
+   * on both, and on a phone that is a website's idea of a first run: a card
+   * floating over a page you cannot reach, with the keyboard swallowing half
+   * of it. First launch of an installed app owns the screen. On a desktop it
+   * is genuinely a dialog — there is a window behind it that still means
+   * something — so there it stays a dialog.
+   */
+  const deck = step === "slides";
+
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-6 backdrop-blur-sm">
-      <div className="w-[440px] max-w-full border border-line-overlay bg-surface-raised shadow-overlay">
-        <div className="flex items-center justify-between border-b border-paper/10 px-6 py-3">
+    <div
+      className={
+        isPhone
+          ? "fixed inset-0 z-[70] bg-surface"
+          : "fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-6 backdrop-blur-sm"
+      }
+    >
+      <div
+        className={
+          isPhone
+            ? "h-full"
+            : `w-[440px] max-w-full border border-line-overlay bg-surface-raised shadow-overlay ${
+                deck ? "h-[620px] max-h-[86vh]" : ""
+              }`
+        }
+      >
+        {deck ? (
+          <Slides onDone={() => setStep("identity")} />
+        ) : (
+        <div className={isPhone ? "flex h-full flex-col" : undefined}>
+        <div
+          className="flex items-center justify-between border-b border-paper/10 px-6 py-3"
+          style={isPhone ? { paddingTop: "calc(var(--safe-top) + 14px)" } : undefined}
+        >
           <span className="mono text-[10px] uppercase tracking-[0.22em] text-paper/40">
             {step === "identity" ? "Tu nombre" : "Tu colección"}
-          </span>
-          <span className="mono text-[10px] tracking-[0.16em] text-paper/25">
-            {step === "identity" ? "1 / 2" : "2 / 2"}
           </span>
         </div>
 
         {step === "identity" ? (
-          <div className="px-6 py-6">
+          <div
+            className={`px-6 py-6 ${isPhone ? "scroll-y min-h-0 flex-1 overflow-y-auto" : ""}`}
+            style={isPhone ? { paddingBottom: "calc(var(--safe-bottom) + 24px)" } : undefined}
+          >
             <p className="text-[15px] text-paper">¿Con qué nombre te encuentran?</p>
             <p className="mt-1.5 text-[13px] text-paper/45">
               Tu perfil vivirá en rackr.club/u/{username || "tu-nombre"}
@@ -243,7 +279,10 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
             </div>
           </div>
         ) : (
-          <div className="px-6 py-6">
+          <div
+            className={`px-6 py-6 ${isPhone ? "scroll-y min-h-0 flex-1 overflow-y-auto" : ""}`}
+            style={isPhone ? { paddingBottom: "calc(var(--safe-bottom) + 24px)" } : undefined}
+          >
             <p className="text-[15px] text-paper">
               Tienes {pending} {pending === 1 ? "disco" : "discos"} en este navegador.
             </p>
@@ -267,6 +306,8 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
               </button>
             </div>
           </div>
+        )}
+        </div>
         )}
       </div>
     </div>

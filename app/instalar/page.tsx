@@ -55,7 +55,61 @@ export default function InstalarPage() {
         <div className="w-full">
           <InstallCTA url={`${SITE_URL}/instalar`} />
         </div>
+
+        {/**
+         * Why, after how.
+         *
+         * The instructions come first because somebody who arrived here is
+         * already sold — a friend sent them, or they pressed a button on the
+         * landing that said "Instalar". Arguing before answering would be
+         * selling to a customer holding a receipt.
+         *
+         * But it still has to be here, underneath, for the person who tapped
+         * out of curiosity and is deciding whether this is worth two taps.
+         * And every reason is a thing that happens, not a value: the pitch for
+         * an installed web app is entirely made of seconds.
+         */}
+        <div className="mt-16 w-full border-t border-line pt-10">
+          <p className="text-center text-caption uppercase tracking-label text-content-muted">
+            Por qué en la pantalla de inicio
+          </p>
+          <ul className="mt-7 space-y-6">
+            <Reason
+              title="La cámara, a un toque"
+              body="Estás en una tienda con una funda en la mano. Desde el icono son dos segundos; desde una pestaña son buscar el navegador, buscar la pestaña y esperar."
+            />
+            <Reason
+              title="Sin barra de navegador"
+              body="La pantalla entera es estantería. En un móvil eso es una fila más de fundas y una portada que llega hasta el borde."
+            />
+            <Reason
+              title="Se abre donde lo dejaste"
+              body="Con la sesión puesta y en el rack que estabas mirando. Nada que volver a encontrar."
+            />
+          </ul>
+          <p className="mx-auto mt-9 max-w-[36ch] text-center text-caption leading-relaxed text-content-faint">
+            No es una descarga ni pasa por ninguna tienda: la web se guarda como
+            app. Ocupa lo que ocupa una foto y se quita como cualquier icono.
+          </p>
+        </div>
       </div>
     </main>
+  );
+}
+
+function Reason({ title, body }: { title: string; body: string }) {
+  return (
+    <li className="flex gap-4">
+      {/* A rule rather than an icon. Three invented glyphs for three abstract
+          ideas is decoration pretending to be information — and the eye reads
+          the title first either way. */}
+      <span aria-hidden className="mt-2 h-px w-6 shrink-0 bg-line-strong" />
+      <span className="min-w-0">
+        <span className="block text-body font-medium text-paper">{title}</span>
+        <span className="mt-1.5 block text-sub leading-relaxed text-content-muted">
+          {body}
+        </span>
+      </span>
+    </li>
   );
 }

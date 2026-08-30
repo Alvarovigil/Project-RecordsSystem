@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import SignInButton from "./SignInButton";
+import EntryDoor from "./landing/EntryDoor";
 import ShelfBackdrop from "./ShelfBackdrop";
 import SoundGate from "./landing/SoundGate";
 import AboutProject from "./landing/AboutProject";
 import Reveal from "./landing/Reveal";
+import AppDoor from "./landing/AppDoor";
+import { useInstall } from "@/hooks/useInstall";
 
 /**
  * The front door.
@@ -20,6 +23,23 @@ import Reveal from "./landing/Reveal";
  * inert — see ShelfBackdrop.
  */
 export default function Landing() {
+  const { ready, standalone } = useInstall();
+
+  /**
+   * Installed and signed out: the app's own first screen, not the pitch.
+   *
+   * The condition is `standalone`, never `!ready` — and that distinction is
+   * the whole of it. This page is the public landing: it is server-rendered,
+   * it is what a crawler and a first-time visitor receive, and holding it
+   * blank until the client had measured would have shipped an empty document
+   * to everyone to spare installed users a single frame. `ready` is false on
+   * the server and true on the very first client render (the store measures
+   * at import), so a home-screen launch swaps in the same commit — and the
+   * only thing that would have been heavy about that frame, the WebGL shelf,
+   * is a `ssr: false` dynamic import that has not begun to load yet.
+   */
+  if (ready && standalone) return <AppDoor />;
+
   return (
     <main className="relative bg-ink text-paper">
       <Backdrop />
@@ -90,15 +110,7 @@ export default function Landing() {
            * question everybody has about a thing like this before they answer
            * anything else.
            */}
-          <Link
-            href="/coleccion"
-            // select-none: dragging across a white pill used to leave the
-            // page's own selection colour — paper on paper — which looked
-            // like the button was breaking rather than being highlighted
-            className="pressable inline-flex h-9 select-none items-center rounded-full bg-paper px-4 text-[12px] font-medium uppercase tracking-[0.07em] text-ink transition-colors hover:bg-paper/85"
-          >
-            Empezar gratis
-          </Link>
+          <EntryDoor variant="hero" />
           <ul className="mt-7 flex flex-col items-center leading-[0.92]">
             {INDEX.map((c) => (
               <li key={c.id}>
@@ -269,15 +281,8 @@ export default function Landing() {
               apetece un martes y para quien lleva doce años sin prestar un
               disco.
             </p>
-            <div className="mt-12 flex flex-col items-center gap-5 sm:flex-row sm:justify-center">
-              <SignInButton />
-              <Link
-                href="/demo"
-                className="group mono flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-paper/45 transition hover:text-paper"
-              >
-                Ver una colección de ejemplo
-                <span className="transition group-hover:translate-x-0.5">→</span>
-              </Link>
+            <div className="mt-12">
+              <EntryDoor variant="closing" />
             </div>
             <p className="mono mt-6 text-[10px] uppercase tracking-[0.2em] text-paper/25">
               Gratis · Sin anuncios · Cancela cuando quieras (no hay nada que cancelar)

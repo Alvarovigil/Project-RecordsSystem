@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Button from "@/components/ui/Button";
 import { SITE_NAME } from "@/lib/site";
+import { useInstall } from "@/hooks/useInstall";
+import { promptInstall } from "@/lib/install";
 
 /**
  * The page you send someone when you want them to end up with Rackr on their
@@ -22,72 +24,35 @@ import { SITE_NAME } from "@/lib/site";
  * get, and name the exact words they are looking for. Nobody discovers that
  * menu on purpose.
  *
- * The four situations that are not iOS:
- *
- * 1. **Already installed** — running standalone. Nothing to install, and
- *    saying so is the useful answer.
- * 2. **Promptable** — Chrome/Edge. The event is caught the moment it arrives
- *    (it is never replayed) and kept behind a real one-tap button.
- * 3. **A desktop** — offers to send the link to a phone rather than pretend.
- * 4. **An in-app browser** — the case that decides whether any of this works,
- *    because a link shared on WhatsApp or Instagram opens in their own webview
- *    where installing is impossible and instructions do not help.
+ * **The reading is no longer done here.** It lives in `lib/install`, listening
+ * from the moment the client boots, because `beforeinstallprompt` fires once
+ * and is never replayed — and the whole point of the new flow is that people
+ * arrive at this page *from the landing*, by a client-side navigation, long
+ * after that event has come and gone. A listener that starts when this
+ * component mounts would never see it, and every Android user would be handed
+ * "open the ⋮ menu" instead of a button that installs in one tap.
  */
-
-type Deferred = Event & { prompt: () => Promise<void> };
 
 type Situation =
   "installed" | "promptable" | "ios" | "in-app" | "desktop" | "android-other";
 
 export default function InstallCTA({ url }: { url: string }) {
-  const [deferred, setDeferred] = useState<Deferred | null>(null);
-  const [situation, setSituation] = useState<Situation | null>(null);
+  const { ready, standalone, platform, canPrompt } = useInstall();
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    const ua = navigator.userAgent;
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      // iOS says it its own way, and only on Safari
-      (navigator as unknown as { standalone?: boolean }).standalone === true;
-
-    // The webviews worth naming. Instagram and Facebook stamp themselves into
-    // the UA; WhatsApp's Android webview says "wv". Missing one only means
-    // someone sees the generic instructions, which is the safe direction.
-    const inApp = /Instagram|FBAN|FBAV|Line\/|Twitter|; wv\)/.test(ua);
-    const ios =
-      /iPhone|iPad|iPod/.test(ua) ||
-      (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-    const android = /Android/.test(ua);
-
-    setSituation(
-      standalone
-        ? "installed"
-        : inApp
-          ? "in-app"
-          : ios
+  const situation: Situation | null = !ready
+    ? null
+    : standalone
+      ? "installed"
+      : platform === "in-app"
+        ? "in-app"
+        : canPrompt
+          ? "promptable"
+          : platform === "ios"
             ? "ios"
-            : android
+            : platform === "android"
               ? "android-other"
-              : "desktop",
-    );
-
-    const onPrompt = (e: Event) => {
-      e.preventDefault();
-      setDeferred(e as Deferred);
-      setSituation((s) =>
-        s === "installed" || s === "in-app" ? s : "promptable",
-      );
-    };
-    const onInstalled = () => setSituation("installed");
-
-    window.addEventListener("beforeinstallprompt", onPrompt);
-    window.addEventListener("appinstalled", onInstalled);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onPrompt);
-      window.removeEventListener("appinstalled", onInstalled);
-    };
-  }, []);
+              : "desktop";
 
   const share = async () => {
     if (navigator.share) {
@@ -140,7 +105,7 @@ export default function InstallCTA({ url }: { url: string }) {
               variant="primary"
               size="lg"
               onClick={() => {
-                void deferred?.prompt();
+                void promptInstall();
               }}
             >
               Instalar Rackr Club

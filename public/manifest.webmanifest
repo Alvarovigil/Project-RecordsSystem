@@ -2,7 +2,7 @@
   "name": "Rackr Club",
   "short_name": "Rackr Club",
   "description": "Tu colección de vinilos, más allá de la estantería. Organiza, descubre y comparte tu colección con el club.",
-  "start_url": "/coleccion",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
