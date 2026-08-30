@@ -14,11 +14,19 @@ import { AnimatePresence, motion } from "framer-motion";
  * an app nobody wrote: the proportions drift, the type goes relatively huge,
  * and the thing on the install page stops matching the thing you install.
  *
+ * **The geometry is one number derived three ways, and it has to be.** The
+ * bezel is padding on the shell, so the shell measures screen + bezel on both
+ * axes; when it did not — when the shell was given the screen's own width and
+ * padded on top of it — the phone cropped fourteen pixels off the right of
+ * every screen inside it, which is exactly as noticeable as it sounds.
+ *
  * **And it plays the errand, not a pose.** A still of a grid says "there are
  * records in here", which nobody doubted. The loop shows the reason the icon
  * is worth having: a sleeve in your hand, the camera, and the record on your
- * shelf four seconds later. That is the same argument the copy underneath
- * makes, made once in pictures.
+ * shelf four seconds later. Two things make it read as *use* rather than as a
+ * slideshow — the scanner arrives the way it really does, rising over the
+ * shelf, and a press ripples where the finger would have been, so every
+ * transition has a visible cause.
  *
  * Presentational only, `aria-hidden`, and still on `prefers-reduced-motion`:
  * a screen reader that read out four scenes of fake interface would be reading
@@ -29,6 +37,10 @@ import { AnimatePresence, motion } from "framer-motion";
 const W = 390;
 const H = 844;
 const SCALE = 0.6;
+const BEZEL = 7;
+
+const SCREEN_W = W * SCALE;
+const SCREEN_H = H * SCALE;
 
 const COVERS = [
   "rosalia-lux-35578378",
@@ -48,33 +60,69 @@ const SCANNED = {
 
 const src = (slug: string) => `/covers/${slug}.jpg`;
 
-/** how long each beat of the loop holds, in ms */
-const BEATS = [2600, 2200, 2600, 3000] as const;
+/**
+ * The four beats, and where the finger lands to move between them.
+ *
+ * Coordinates are in the phone's own 390-wide space, so they are the real
+ * centres of the real controls: the search puck in the header, and the commit
+ * button in the scanner's bottom row.
+ */
+const BEATS = [
+  { hold: 2400, tap: { x: 354, y: 82 } },   // colección → toca buscar
+  { hold: 1800, tap: null },                 // la cámara, buscando
+  { hold: 2400, tap: { x: 268, y: 784 } },   // capturado → toca añadir
+  { hold: 2600, tap: null },                 // de vuelta, con el disco dentro
+] as const;
 
 export default function PhonePreview() {
   const [scene, setScene] = useState(0);
   const [still, setStill] = useState(false);
+  const [tapping, setTapping] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (mq.matches) return setStill(true);
-    const t = setTimeout(() => setScene((s) => (s + 1) % BEATS.length), BEATS[scene]);
-    return () => clearTimeout(t);
+
+    const beat = BEATS[scene];
+    // the press happens just before the screen answers it, which is the whole
+    // reason it reads as a cause rather than as decoration
+    const press = beat.tap
+      ? setTimeout(() => setTapping(true), beat.hold - 520)
+      : undefined;
+    const next = setTimeout(() => {
+      setTapping(false);
+      setScene((s) => (s + 1) % BEATS.length);
+    }, beat.hold);
+
+    return () => {
+      if (press) clearTimeout(press);
+      clearTimeout(next);
+    };
   }, [scene]);
 
   const shown = still ? 0 : scene;
+  const scanning = shown === 1 || shown === 2;
+  const tap = BEATS[shown].tap;
 
   return (
-    <div aria-hidden className="relative mx-auto select-none" style={{ width: W * SCALE }}>
+    <div
+      aria-hidden
+      className="relative mx-auto select-none"
+      style={{ width: SCREEN_W + BEZEL * 2 }}
+    >
       <span className="absolute inset-x-6 bottom-1 h-16 rounded-full bg-black/70 blur-2xl" />
 
       <div
-        className="relative overflow-hidden rounded-[46px] border border-paper/[0.16] bg-ink p-[7px] shadow-[0_30px_80px_rgba(0,0,0,0.7)]"
-        style={{ width: W * SCALE, height: H * SCALE + 14 }}
+        className="relative rounded-[46px] border border-paper/[0.16] bg-ink shadow-[0_30px_80px_rgba(0,0,0,0.7)]"
+        style={{
+          width: SCREEN_W + BEZEL * 2,
+          height: SCREEN_H + BEZEL * 2,
+          padding: BEZEL,
+        }}
       >
         <div
           className="relative overflow-hidden rounded-[40px] bg-surface"
-          style={{ width: W * SCALE, height: H * SCALE }}
+          style={{ width: SCREEN_W, height: SCREEN_H }}
         >
           <div
             style={{
@@ -84,38 +132,48 @@ export default function PhonePreview() {
               transformOrigin: "top left",
             }}
           >
-            <AnimatePresence initial={false} mode="popLayout">
-              {(shown === 0 || shown === 3) && (
-                <motion.div
-                  key="shelf"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.35 }}
-                  className="absolute inset-0"
-                >
-                  <Collection justAdded={shown === 3} />
-                </motion.div>
-              )}
-              {(shown === 1 || shown === 2) && (
+            {/* The shelf is always mounted underneath. It is the place you are
+                in; the camera is a thing that opens over it and closes again,
+                and cross-fading between two equals would say the opposite. */}
+            <div className="absolute inset-0">
+              <Collection justAdded={shown === 3} />
+            </div>
+
+            <AnimatePresence>
+              {scanning && (
                 <motion.div
                   key="scanner"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.35 }}
+                  initial={{ y: H }}
+                  animate={{ y: 0 }}
+                  exit={{ y: H }}
+                  transition={{ type: "spring", damping: 32, stiffness: 260, mass: 0.9 }}
                   className="absolute inset-0"
                 >
                   <Scanner caught={shown === 2} />
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* the finger, as the only thing it can honestly be: a press */}
+            <AnimatePresence>
+              {tapping && tap && (
+                <motion.span
+                  key={`${shown}-tap`}
+                  initial={{ opacity: 0, scale: 0.4 }}
+                  animate={{ opacity: [0, 0.9, 0], scale: [0.4, 1.9, 2.4] }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.62, ease: "easeOut" }}
+                  className="pointer-events-none absolute z-30 rounded-full border-2 border-paper"
+                  style={{ left: tap.x - 26, top: tap.y - 26, width: 52, height: 52 }}
+                />
+              )}
+            </AnimatePresence>
           </div>
 
           {/* the island, drawn over everything the way the hardware is */}
           <span
-            className="absolute left-1/2 z-20 -translate-x-1/2 rounded-full bg-ink"
-            style={{ top: 11 * SCALE + 6, height: 34 * SCALE, width: 122 * SCALE }}
+            className="absolute left-1/2 z-40 -translate-x-1/2 rounded-full bg-ink"
+            style={{ top: 11 * SCALE, height: 34 * SCALE, width: 122 * SCALE }}
           />
         </div>
       </div>
@@ -207,6 +265,19 @@ function Collection({ justAdded }: { justAdded: boolean }) {
 function Scanner({ caught }: { caught: boolean }) {
   return (
     <div className="relative flex h-full flex-col bg-black">
+      {/* the shutter: a frame of white over everything, gone in 260ms. It is
+          the only feedback a camera can give for "I have it" that does not
+          need a word. */}
+      <AnimatePresence>
+        {caught && (
+          <motion.div
+            initial={{ opacity: 0.55 }}
+            animate={{ opacity: 0 }}
+            transition={{ duration: 0.26 }}
+            className="pointer-events-none absolute inset-0 z-40 bg-paper"
+          />
+        )}
+      </AnimatePresence>
       {/* what the camera is looking at: a sleeve, close, out of focus */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -237,9 +308,9 @@ function Scanner({ caught }: { caught: boolean }) {
 
       <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center px-6">
         <motion.div
-          animate={caught ? { backgroundColor: "rgba(245,243,238,0.14)" } : { backgroundColor: "rgba(245,243,238,0)" }}
+          animate={{ backgroundColor: caught ? "rgba(245,243,238,0.14)" : "rgba(245,243,238,0)" }}
           transition={{ duration: 0.2 }}
-          className="relative aspect-[9/5] w-full max-w-[300px]"
+          className="relative aspect-[9/5] w-full max-w-[300px] overflow-hidden"
         >
           {(
             [
@@ -249,9 +320,28 @@ function Scanner({ caught }: { caught: boolean }) {
               "-bottom-px -right-px border-b border-r",
             ] as const
           ).map((pos) => (
-            <span key={pos} className={`absolute h-6 w-6 border-paper/80 ${pos}`} />
+            <span
+              key={pos}
+              className={`absolute h-6 w-6 ${pos} ${caught ? "border-paper" : "border-paper/80"}`}
+            />
           ))}
           <span className="absolute inset-x-4 top-1/2 h-px bg-paper/50" />
+
+          {/* The reader, looking. Nothing in the real scanner draws this — the
+              camera just watches — but a viewfinder that never moves reads as
+              a photograph of a viewfinder, and this is the one moment of the
+              loop where the app is doing something invisible. It stops the
+              instant the code is caught, because then something visible is
+              happening instead. */}
+          {!caught && (
+            <motion.span
+              className="absolute inset-x-0 h-[2px] bg-accent/80"
+              style={{ boxShadow: "0 0 14px 2px rgba(248,58,35,0.55)" }}
+              initial={{ top: "8%" }}
+              animate={{ top: ["8%", "92%", "8%"] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+            />
+          )}
         </motion.div>
         <p className="mt-5 text-center text-[13px] text-paper/70">
           Apunta al código de barras de la contraportada
