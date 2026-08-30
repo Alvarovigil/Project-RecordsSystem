@@ -9,7 +9,7 @@
  * not have one at all. Listening at module scope catches the event whenever it
  * arrives and holds it until something asks.
  *
- * The rest is the same reading `InstallCTA` was doing privately, moved here so
+ * The rest is the reading the install screen used to do privately, moved here so
  * the landing, the install page and the app door cannot disagree about what
  * kind of device this is.
  */
