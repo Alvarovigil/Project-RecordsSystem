@@ -6,6 +6,7 @@ import { SITE_NAME } from "@/lib/site";
 import { useInstall } from "@/hooks/useInstall";
 import { promptInstall } from "@/lib/install";
 import PhonePreview from "./PhonePreview";
+import Advantages from "./Advantages";
 import {
   BrowserBar,
   HomeScreenDrop,
@@ -127,11 +128,19 @@ export default function InstallScreen({ url }: { url: string }) {
               }
             />
           ) : (
-            /* ios y android-other: la acción son los pasos de abajo */
-            <p className="text-sub leading-relaxed text-content-muted">
-              {platform === "ios"
-                ? "En el iPhone ninguna web puede instalarse sola: lo decidió Apple y vale para todos los navegadores. Son dos toques y hacen exactamente lo mismo."
-                : "Tu navegador no ofrece el botón de instalar, pero lo tiene en su menú. Son dos toques."}
+            /**
+             * iOS and stubborn Androids: the steps below are the action.
+             *
+             * This used to open by explaining that Apple does not allow a web
+             * page to install itself and that WebKit has said it never will.
+             * All true, all irrelevant: nobody standing here cares whose fault
+             * it is, and an apology at the top of a page turns two taps into a
+             * problem. It says how short this is instead.
+             */
+            <p className="text-body leading-relaxed text-paper">
+              Para tenerla entera solo hay que dar{" "}
+              <b className="font-medium">{platform === "ios" ? "tres pasos" : "dos pasos"}</b>.
+              Treinta segundos y se queda en tu pantalla de inicio.
             </p>
           )}
         </div>
@@ -144,10 +153,10 @@ export default function InstallScreen({ url }: { url: string }) {
 
         {(situation === "ios" || situation === "android-other") && (
           <section className="mt-14">
-            <h2 className="text-caption uppercase tracking-label text-content-muted">
-              Cómo se instala
-            </h2>
-            <ol className="mt-4 space-y-2.5">
+            {/* No heading: the numbered cards are the heading. A label saying
+                "Cómo se instala" over a list of numbered steps is a caption
+                for a picture of itself. */}
+            <ol className="space-y-2.5">
               {situation === "ios" ? (
                 <>
                   <Step
@@ -157,18 +166,18 @@ export default function InstallScreen({ url }: { url: string }) {
                         Toca <ShareGlyph /> <b className="font-medium">Compartir</b>
                       </>
                     }
-                    detail="Está en la barra de tu navegador. En Safari abajo, en Chrome arriba."
+                    detail="En la barra de tu navegador: abajo en Safari, arriba en Chrome."
                   >
                     <BrowserBar />
                   </Step>
                   <Step
                     n={2}
                     title="Baja y elige esta fila"
-                    detail="Está bastante abajo, después de las opciones de compartir."
+                    detail="Baja un poco: está debajo de las opciones de compartir."
                   >
                     <SheetRow />
                   </Step>
-                  <Step n={3} title="Toca «Añadir», arriba a la derecha" detail="Y ya está en tu pantalla de inicio.">
+                  <Step n={3} title="Toca «Añadir», arriba a la derecha" detail="Listo. Ábrela desde el icono y entra con Google.">
                     <HomeScreenDrop />
                   </Step>
                 </>
@@ -182,7 +191,7 @@ export default function InstallScreen({ url }: { url: string }) {
                   <Step
                     n={2}
                     title="Elige «Instalar aplicación»"
-                    detail="En algunos navegadores se llama «Añadir a pantalla de inicio». Es lo mismo."
+                    detail="En algunos navegadores se llama «Añadir a pantalla de inicio». Listo: ábrela desde el icono y entra con Google."
                   >
                     <HomeScreenDrop />
                   </Step>
@@ -205,20 +214,10 @@ export default function InstallScreen({ url }: { url: string }) {
           <h2 className="text-caption uppercase tracking-label text-content-muted">
             Por qué en la pantalla de inicio
           </h2>
-          <ul className="mt-5 space-y-5">
-            <Reason
-              title="La cámara, a un toque"
-              body="Estás en una tienda con una funda en la mano. Desde el icono son dos segundos; desde una pestaña son buscar el navegador, buscar la pestaña y esperar."
-            />
-            <Reason
-              title="Sin barra de navegador"
-              body="La pantalla entera es estantería: una fila más de fundas y portadas que llegan hasta el borde."
-            />
-            <Reason
-              title="Se abre donde lo dejaste"
-              body="Con la sesión puesta y en el rack que estabas mirando. Nada que volver a encontrar."
-            />
-          </ul>
+          <div className="mt-5">
+            <Advantages />
+          </div>
+
           <p className="mt-8 text-caption leading-relaxed text-content-faint">
             No es una descarga ni pasa por ninguna tienda: la web se guarda como
             app. Ocupa lo que una foto y se quita como cualquier otro icono.
@@ -300,20 +299,5 @@ function Action({
       <p className="mt-3 text-sub leading-relaxed text-content-muted">{note}</p>
       {extra && <div className="mt-3">{extra}</div>}
     </div>
-  );
-}
-
-function Reason({ title, body }: { title: string; body: string }) {
-  return (
-    <li className="flex gap-4">
-      {/* A rule rather than an icon. Three invented glyphs for three abstract
-          ideas is decoration pretending to be information — and the eye reads
-          the title first either way. */}
-      <span aria-hidden className="mt-2.5 h-px w-5 shrink-0 bg-line-strong" />
-      <span className="min-w-0">
-        <span className="block text-body font-medium text-paper">{title}</span>
-        <span className="mt-1 block text-sub leading-relaxed text-content-muted">{body}</span>
-      </span>
-    </li>
   );
 }
