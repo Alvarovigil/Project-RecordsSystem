@@ -29,8 +29,18 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
-  // icon.png / apple-icon.png / opengraph-image are picked up by convention
-  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }] },
+  /**
+   * No `icons` override on purpose.
+   *
+   * There was one, pointing at `/icon.svg` — the old round mark with the
+   * ornate R — and because an explicit declaration outranks the convention,
+   * the tab kept showing it long after `app/icon.png` became the square
+   * wordmark that sits on every home screen. The icon in a tab and the icon on
+   * a phone have to be the same object; two marks for one product is how a
+   * brand stops being recognised.
+   *
+   * icon.png / apple-icon.png / opengraph-image are picked up by convention.
+   */
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
