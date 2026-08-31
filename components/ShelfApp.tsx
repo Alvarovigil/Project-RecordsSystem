@@ -830,7 +830,16 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
               initial={{ opacity: 0, x: "-50%", y: -4 }}
               animate={{ opacity: 1, x: "-50%", y: 0 }}
               transition={{ duration: 0.4 }}
-              className="absolute left-1/2 top-[78%] z-20 flex flex-col items-center gap-3"
+              /**
+               * Above the edit overlay, not level with it.
+               *
+               * That overlay is an invisible full-cover sensor at z-20, and it
+               * comes later in the DOM — so at the same z it painted on top of
+               * this column and swallowed every press. The button looked
+               * perfectly normal and did nothing, which is the worst way for a
+               * control to fail.
+               */
+              className="absolute left-1/2 top-[78%] z-30 flex flex-col items-center gap-3"
             >
               {/* In a capsule, so it reads as a control rather than as one
                   more caption under the sleeve — the record already has three
@@ -841,10 +850,16 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                 <button
                   onClick={() => setSpecsOpen((v) => !v)}
                   aria-expanded={specsOpen}
-                  className={`pressable flex h-9 items-center whitespace-nowrap rounded-full border px-5 text-[11px] uppercase tracking-[0.22em] transition ${
+                  /* Glass, not an outline. The sleeve reaches almost to the
+                     foot of the window, so these two sit ON the artwork
+                     whatever we do — and a hairline capsule over a photograph
+                     is a wireframe, legible on a dark cover and gone on a
+                     bright one. The app's rule for anything floating over a
+                     cover applies here like everywhere else. */
+                  className={`pressable flex h-9 items-center whitespace-nowrap rounded-full px-5 text-[11px] uppercase tracking-[0.22em] backdrop-blur-xl transition ${
                     specsOpen
-                      ? "border-paper bg-paper text-ink"
-                      : "border-paper/25 text-paper/60 hover:border-paper/70 hover:text-paper"
+                      ? "bg-paper text-ink"
+                      : "bg-paper/[0.14] text-paper/90 hover:bg-paper/25"
                   }`}
                 >
                   {specsOpen ? "Cerrar la ficha" : "Ficha técnica"}
@@ -853,7 +868,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
               <button
                 onClick={handleClose}
                 aria-label="Cerrar el disco"
-                className="pressable flex h-10 w-10 items-center justify-center rounded-full border border-paper/20 text-paper/50 transition hover:border-paper/60 hover:text-paper"
+                className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-paper/[0.12] text-paper/80 backdrop-blur-xl transition hover:bg-paper/25 hover:text-paper"
               >
                 <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
                   <path
