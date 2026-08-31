@@ -9,6 +9,7 @@ import SoundGate from "./landing/SoundGate";
 import AboutProject from "./landing/AboutProject";
 import Reveal from "./landing/Reveal";
 import AppDoor from "./landing/AppDoor";
+import { ScreenClub, ScreenScan, ScreenWishlist } from "./landing/Screens";
 import { useInstall } from "@/hooks/useInstall";
 
 /**
@@ -146,7 +147,7 @@ export default function Landing() {
           <div className="mx-auto max-w-[1100px]">
             <Reveal>
               <p className="mono text-[10px] uppercase tracking-[0.24em] text-paper/35">
-                Sobre nosotros
+                El club
               </p>
               {/* the mark signs the section instead of naming it twice */}
               <h2 className="mt-6">
@@ -165,15 +166,14 @@ export default function Landing() {
             <div className="mt-14 grid gap-10 md:grid-cols-2 md:gap-16">
               <Reveal delay={100}>
                 <p className="max-w-[46ch] text-[17px] leading-relaxed text-paper/75 md:text-[19px]">
-                  Un catálogo que no tienes que teclear, una lista de deseos que
-                  se puede enseñar y un puñado de gente con el mismo problema
-                  que tú. Eso es todo, y es bastante.
+                  Un catálogo que no hay que teclear, una lista de deseos con
+                  enlace y un club de gente con el mismo problema que tú. Eso es
+                  todo, y da para bastante.
                 </p>
                 <p className="mt-5 max-w-[46ch] text-[15px] leading-relaxed text-paper/50">
-                  Empezó por una pregunta tonta que se ha hecho cualquiera de
-                  pie en una tienda, con un disco en la mano y sin cobertura:
-                  «¿este ya lo tengo?». De ahí salió el escáner, y del escáner
-                  salió lo demás.
+                  Todo lo de aquí dentro sale de la misma idea: que una
+                  colección es un objeto y no una biblioteca de streaming. Se
+                  ordena a mano, se recorre funda a funda y se enseña entera.
                 </p>
               </Reveal>
 
@@ -203,75 +203,97 @@ export default function Landing() {
           </div>
         </section>
 
-        {PILLARS.map((p, i) => (
-          <section
-            key={p.id}
-            id={p.id}
-            className="scroll-mt-8 border-t border-paper/[0.07] px-5 py-24 sm:px-8 md:py-36"
-          >
-            <div className="mx-auto max-w-[1100px]">
-              <div className="grid gap-10 md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] md:gap-16">
+        {/**
+         * Each pillar: the claim across the full width, then the app beside
+         * the detail.
+         *
+         * It used to be two columns of type and, sometimes, a row of small
+         * covers at the end — five screens of argument about a product that
+         * never appeared. A landing that only writes about a thing is asking
+         * to be believed instead of looked at, which is the one thing a
+         * landing cannot afford.
+         *
+         * The device is sticky on a desktop, so it holds while the specifics
+         * scroll past it: the claim, the proof and the detail stay in the same
+         * glance. On a phone it sits between the big line and the detail,
+         * which is where the doubt appears.
+         */}
+        {PILLARS.map((p, i) => {
+          const Screen = SCREENS[p.id];
+          const flip = i % 2 === 1;
+          return (
+            <section
+              key={p.id}
+              id={p.id}
+              className="scroll-mt-8 border-t border-paper/[0.07] px-5 py-24 sm:px-8 md:py-32"
+            >
+              <div className="mx-auto max-w-[1180px]">
                 <Reveal>
-                  <span className="mono text-[10px] tracking-[0.24em] text-[#f83a23]">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <h2 className="mt-5 text-[40px] uppercase leading-[0.92] tracking-[-0.015em] sm:text-[56px] md:text-[64px]">
+                  <div className="flex items-baseline gap-4">
+                    <span className="mono text-[10px] tracking-[0.24em] text-[#f83a23]">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="mono text-[10px] uppercase tracking-[0.18em] text-paper/35">
+                      {p.kicker}
+                    </span>
+                  </div>
+                  <h2 className="mt-6 max-w-[15ch] text-[40px] uppercase leading-[0.92] tracking-[-0.015em] sm:text-[56px] md:text-[68px]">
                     {p.word}
                   </h2>
-                  <p className="mono mt-5 max-w-[26ch] text-[11px] uppercase leading-relaxed tracking-[0.14em] text-paper/35">
-                    {p.kicker}
-                  </p>
-                </Reveal>
-
-                <Reveal delay={110} className="md:pt-16">
-                  <p className="text-[24px] leading-[1.3] text-paper md:text-[30px]">
+                  <p className="mt-7 max-w-[22ch] text-[26px] leading-[1.2] tracking-[-0.01em] text-paper sm:text-[32px] md:max-w-[24ch] md:text-[38px]">
                     {p.lead}
                   </p>
-                  <p className="mt-6 max-w-[48ch] text-[15px] leading-relaxed text-paper/55">
-                    {p.body}
-                  </p>
-
-                  {/* the specifics, so the big line above has something under it */}
-                  <ul className="mt-10 max-w-[48ch] divide-y divide-paper/[0.08] border-y border-paper/[0.08]">
-                    {p.points.map((pt) => (
-                      <li key={pt.label} className="flex gap-5 py-3.5">
-                        <span className="mono w-[92px] shrink-0 pt-1 text-[10px] uppercase tracking-[0.16em] text-paper/30">
-                          {pt.label}
-                        </span>
-                        <span className="text-[14px] leading-relaxed text-paper/75">
-                          {pt.text}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {/* the aside you would actually say out loud */}
-                  <p className="mt-9 max-w-[42ch] border-l border-[#f83a23]/60 pl-5 text-[17px] leading-relaxed text-paper/90 md:text-[19px]">
-                    {p.aside}
-                  </p>
                 </Reveal>
+
+                <div
+                  className={`mt-14 grid gap-12 md:mt-16 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-start md:gap-20 ${
+                    flip ? "" : ""
+                  }`}
+                >
+                  {/* The sticky element carries no transform of its own: the
+                      reveal lives inside it. A translated ancestor is the
+                      classic way a sticky column quietly stops sticking. */}
+                  <div
+                    className={`flex justify-center md:sticky md:top-[13vh] ${
+                      flip ? "md:order-2" : ""
+                    }`}
+                  >
+                    <Reveal delay={80}>
+                      <Screen />
+                    </Reveal>
+                  </div>
+
+                  <Reveal delay={140} className={flip ? "md:order-1" : ""}>
+                    <p className="max-w-[46ch] text-[16px] leading-relaxed text-paper/70 md:text-[18px]">
+                      {p.body}
+                    </p>
+
+                    {/* the specifics, so the big line above has something to
+                        stand on. Three, never more: a fourth turns an argument
+                        into a spec sheet. */}
+                    <ul className="mt-10 max-w-[46ch] divide-y divide-paper/[0.08] border-y border-paper/[0.08]">
+                      {p.points.map((pt) => (
+                        <li key={pt.label} className="py-4">
+                          <span className="mono block text-[10px] uppercase tracking-[0.16em] text-paper/35">
+                            {pt.label}
+                          </span>
+                          <span className="mt-2 block text-[15px] leading-relaxed text-paper/80">
+                            {pt.text}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {/* the aside you would actually say out loud */}
+                    <p className="mt-9 max-w-[42ch] border-l border-[#f83a23]/60 pl-5 text-[17px] leading-relaxed text-paper/90 md:text-[19px]">
+                      {p.aside}
+                    </p>
+                  </Reveal>
+                </div>
               </div>
-
-              {p.covers && (
-                <Reveal delay={220}>
-                  <ul className="mt-14 flex gap-3 overflow-hidden md:justify-end">
-                    {p.covers.map((src) => (
-                      <li key={src} className="w-[92px] shrink-0 sm:w-[120px]">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={src}
-                          alt=""
-                          loading="lazy"
-                          className="aspect-square w-full object-cover shadow-[0_18px_44px_rgba(0,0,0,0.75)]"
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </Reveal>
-              )}
-            </div>
-          </section>
-        ))}
+            </section>
+          );
+        })}
 
         {/* ------------------------------------------------------- who it is for */}
         <section className="border-t border-paper/[0.07] px-5 py-28 sm:px-8 md:py-40">
@@ -459,61 +481,92 @@ const NOT = [
   "No hay que puntuar los discos del uno al diez.",
 ];
 
+/**
+ * Three pillars, and each one is an argument rather than a feature list.
+ *
+ * The order is the order somebody actually meets the product: the question
+ * that stops you in a shop, the thing you are still looking for, and the
+ * people who have it. Every pillar carries one line you would say out loud,
+ * three specifics under it so the big line has something to stand on, and a
+ * screen of the real app beside it — because a landing that only writes about
+ * a product is asking to be believed rather than looked at.
+ */
+/** which moment of the app argues for which pillar */
+const SCREENS: Record<string, (p: { scale?: number }) => JSX.Element> = {
+  colecciona: ScreenScan,
+  proyecta: ScreenWishlist,
+  comparte: ScreenClub,
+};
+
 const PILLARS = [
   {
     id: "colecciona",
     word: "Colecciona",
-    kicker: "Tu colección, en un sitio y en tu orden",
-    lead: "Escanea el código de barras y el disco ya está dentro.",
-    body: "Entra con su portada, su ficha y un trozo que suena, sin que teclees el título ni lo busques en tres webs. Después lo colocas donde quieras: el turno de noche, los domingos largos, los que no pondrías con gente delante. Tu colección, con tu lógica rara.",
+    kicker: "Del código de barras a tu estantería",
+    lead: "«¿Este ya lo tengo?», respondido en dos segundos.",
+    body:
+      "Es la pregunta que te para de pie en una tienda, y hasta ahora se contestaba de memoria o no se contestaba. Apuntas al código de la contraportada y aparece el disco que tienes en la mano: su año, su país, su sello y su número de catálogo. No el álbum en abstracto — esa prensa.",
     points: [
-      { label: "Escanear", text: "Apuntas con la cámara y sigue abierta: puedes vaciar una balda de una sentada." },
-      { label: "Ordenar", text: "Racks propios y el orden que decidas. Nadie te reordena la colección por detrás." },
-      { label: "Sonar", text: "Cada disco trae un adelanto. Una colección muda es un inventario." },
+      {
+        label: "Escanear",
+        text: "Uno, o la estantería entera de una sentada. Nada se guarda hasta que tú lo dices.",
+      },
+      {
+        label: "La prensa",
+        text: "Formato, sello, catálogo y lo que hay grabado en el surco de salida.",
+      },
+      {
+        label: "Tu orden",
+        text: "Por sello, por año o a mano. Nadie te reordena la colección por detrás.",
+      },
     ],
-    aside: "Y sí: por fin vas a saber si ese disco ya lo tienes. Todos hemos comprado alguno dos veces; casi nadie lo cuenta.",
-    covers: [
-      "/covers/rosalia-lux-35578378.jpg",
-      "/covers/tame-impala-currents-7252111.jpg",
-      "/covers/noga-erez-the-vandalist-31803860.jpg",
-      "/covers/fleetwood-mac-rumours-526351.jpg",
-    ],
+    aside:
+      "Escanear para mirar vale tanto como escanear para quedárselo. Por eso leer un disco y guardarlo son dos botones distintos.",
   },
   {
     id: "proyecta",
     word: "Proyecta",
-    kicker: "Tu lista de deseos, aparte y con enlace",
+    kicker: "Lo que persigues, encima",
     lead: "Una lista de deseos que se puede enseñar.",
-    body: "Lo que persigues vive separado de lo que ya tienes: un disco está en una lista o en la otra, nunca en las dos. Y como tiene enlace propio, la compartes con quien nunca sabe qué regalarte. O la dejas caer en el grupo, sin decir nada. Cada uno con su método.",
+    body:
+      "Lo que buscas vive aparte de lo que ya tienes: un disco está en una o en la otra, nunca en las dos. Lo llevas encima cuando sales de caza, y el día que cae uno, un toque y cambia de sitio.",
     points: [
-      { label: "Separado", text: "Deseos y colección no se mezclan, así que sabes qué te falta de verdad." },
-      { label: "Compartible", text: "Un enlace y ya. Sin capturas de pantalla ni listas en las notas del móvil." },
-      { label: "De un toque", text: "El día que cae en tus manos pasa a la colección, y la lista se queda limpia." },
+      {
+        label: "Ya lo tengo",
+        text: "Un tic sobre la portada y pasa a tu colección. Con deshacer, por si el tic fue el dedo.",
+      },
+      {
+        label: "Con enlace",
+        text: "Se manda entera, en vez de una captura de pantalla la semana de tu cumpleaños.",
+      },
+      {
+        label: "Sin repetir",
+        text: "La app sabe lo que tienes, así que sabe lo que te falta.",
+      },
     ],
-    aside: "Es una carta a los Reyes con URL. Funciona en cumpleaños, en Navidad y en cualquier conversación que empiece por «no sé qué comprarte».",
-    covers: [
-      "/covers/bad-bunny-debi-tirar-mas-fotos-35474179.jpg",
-      "/covers/cypress-hill-black-sunday-12387973.jpg",
-      "/covers/elvis-presley-hits-in-red-10634709.jpg",
-    ],
+    aside: "Nadie ha comprado nunca dos veces el mismo disco a propósito.",
   },
   {
     id: "comparte",
     word: "Comparte",
-    kicker: "Sigue a gente y llévate lo que veas",
-    lead: "Los discos llevan a la gente.",
-    body: "Desde cualquier vinilo ves en qué otras colecciones vive y quién lo tiene. Ahí empieza todo: sigues a quien tenga buen oído, ves lo que va metiendo y te lo llevas a tu rack. Tú publicas las tuyas y alguien hará lo mismo contigo.",
+    kicker: "Los discos llevan a la gente",
+    lead: "Tu colección es la puerta a las demás.",
+    body:
+      "Desde cualquier disco ves quién más lo tiene y en qué racks vive. Sigues a alguien porque tiene buen oído, ves lo que va metiendo y te llevas cosas a tu estantería. Lo que pasa en una tienda cuando miras qué lleva en la mano el de al lado.",
     points: [
-      { label: "El puente", text: "Cada disco enseña las colecciones donde también está. Se llega a la gente por lo que guarda." },
-      { label: "Seguir", text: "Personas y racks. Lo que añaden aparece en tus novedades, sin ordenar por popularidad." },
-      { label: "Robar", text: "Ves un rack que te puede, la sigues y te llevas los discos a la tuya. Está permitido." },
+      {
+        label: "Racks",
+        text: "Agrupa por sello, por género o por un viaje. Cada uno con su propio enlace.",
+      },
+      {
+        label: "Quién lo tiene",
+        text: "Primero los que sigues, después el resto del club.",
+      },
+      {
+        label: "Sin algoritmo",
+        text: "Lo que añaden aparece tal cual, por orden de llegada. Nadie decide por ti qué merece verse.",
+      },
     ],
-    aside: "El mejor algoritmo de recomendación sigue siendo alguien con mejor gusto que tú. Aquí lo llamamos seguir a la gente.",
-    covers: [
-      "/covers/etta-james-at-last-5466884.jpg",
-      "/covers/dire-straits-brothers-in-arms-2462721.jpg",
-      "/covers/various-pulp-fiction-music-from-the-motion-picture-376354.jpg",
-      "/covers/gorillaz-demon-days-36145336.jpg",
-    ],
+    aside: "Aquí no se compite por tener más. Se cotillea, que es otra cosa.",
   },
 ];
