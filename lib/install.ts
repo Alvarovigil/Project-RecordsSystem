@@ -60,12 +60,20 @@ function platformOf(ua: string): Platform {
   return "desktop";
 }
 
+/**
+ * Installed, and nothing else.
+ *
+ * This used to accept `fullscreen` and `minimal-ui` as well, on the theory
+ * that they are all "no browser chrome". They are not the same question.
+ * `display-mode: fullscreen` matches a perfectly ordinary tab whose window is
+ * in fullscreen — F11, or a Mac browser filling the screen — so anybody
+ * reading rackr.club that way was told they had installed the app and handed
+ * the sign-in door instead of the landing. The one honest signal is
+ * `standalone`, plus the legacy flag iOS uses to say the same thing.
+ */
 function isStandalone() {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
-    window.matchMedia("(display-mode: fullscreen)").matches ||
-    window.matchMedia("(display-mode: minimal-ui)").matches ||
-    // iOS says it its own way, and only on the legacy navigator flag
     (window.navigator as Navigator & { standalone?: boolean }).standalone === true
   );
 }
