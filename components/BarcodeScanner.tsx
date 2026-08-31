@@ -5,6 +5,7 @@ import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import type { Vinyl } from "@/lib/types";
 import { DEFAULT_ID, type Collection } from "@/lib/collections";
 import Sheet from "./ui/Sheet";
+import CatalogueSheet from "./CatalogueSheet";
 import { useToast } from "./ui/Toast";
 
 type Match = {
@@ -151,6 +152,15 @@ export default function BarcodeScanner({
   const [scans, setScans] = useState<Scan[]>([]);
   const [flash, setFlash] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
+  /**
+   * A scan opened to be read.
+   *
+   * The most common thing anybody does with a barcode in a shop is ask a
+   * question about the record, not take it home — and until now the tray card
+   * could only be swiped away or committed. The pressing details were the one
+   * thing the scanner fetched and never showed.
+   */
+  const [looking, setLooking] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [naming, setNaming] = useState(false);
@@ -303,6 +313,7 @@ export default function BarcodeScanner({
     setTyping(false);
     setTorchOn(false);
     setEditing(null);
+    setLooking(null);
     setLeaving(false);
     setNaming(false);
     setPicking(false);
@@ -405,6 +416,7 @@ export default function BarcodeScanner({
   if (!open) return null;
 
   const editingScan = scans.find((s) => s.key === editing) ?? null;
+  const lookingScan = scans.find((s) => s.key === looking) ?? null;
 
   /**
    * The destination, as a bubble in the header.
@@ -552,7 +564,7 @@ export default function BarcodeScanner({
               depth={i}
               onDrop={() => drop(s.key)}
               onStageAnyway={() => stageAnyway(s.key)}
-              onEditions={() => setEditing(s.key)}
+              onOpen={() => setLooking(s.key)}
               onManual={() => {
                 onSearchManually(s.code);
                 onClose();
@@ -668,6 +680,57 @@ export default function BarcodeScanner({
         </div>
       </Sheet>
 
+      {/* ----------------------------------------------------------- the record */}
+      {/**
+       * Reading a scan without taking it.
+       *
+       * Nothing in here writes: the scan is already a proposal in the tray and
+       * this is where you find out whether you want it. So the primary slot
+       * does not say "guardar" — it says where the record is standing right
+       * now, which is the honest answer — and the two things you might
+       * actually want are underneath: correct the pressing, or drop it.
+       */}
+      <CatalogueSheet
+        item={
+          lookingScan?.results[lookingScan.pick]
+            ? { ...lookingScan.results[lookingScan.pick], cover_image: undefined }
+            : null
+        }
+        onClose={() => setLooking(null)}
+        targetName={target?.name ?? "tu rack"}
+        action={
+          <div className="flex h-12 w-full items-center justify-center rounded-full bg-fill-subtle text-sub text-content-muted">
+            En la bandeja · se añade al terminar
+          </div>
+        }
+        extra={
+          lookingScan && (
+            <>
+              {lookingScan.results.length > 1 && (
+                <button
+                  onClick={() => {
+                    setEditing(lookingScan.key);
+                    setLooking(null);
+                  }}
+                  className="pressable flex h-12 w-full items-center justify-center rounded-full border border-line-strong text-sub font-medium text-content"
+                >
+                  Otra edición · {lookingScan.results.length - 1} más
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  drop(lookingScan.key);
+                  setLooking(null);
+                }}
+                className="pressable flex h-12 w-full items-center justify-center rounded-full text-sub text-content-muted transition hover:text-content"
+              >
+                Quitar de la bandeja
+              </button>
+            </>
+          )
+        }
+      />
+
       {/* ------------------------------------------------------- the editions */}
       <Sheet
         open={Boolean(editingScan)}
@@ -751,14 +814,14 @@ function ScanCard({
   depth,
   onDrop,
   onStageAnyway,
-  onEditions,
+  onOpen,
   onManual,
 }: {
   scan: Scan;
   depth: number;
   onDrop: () => void;
   onStageAnyway: () => void;
-  onEditions: () => void;
+  onOpen: () => void;
   onManual: () => void;
 }) {
   const { status, results, pick } = scan;
@@ -790,9 +853,10 @@ function ScanCard({
     if (Math.abs(info.offset.x) > 110 || Math.abs(info.velocity.x) > 500) onDrop();
   };
 
-  // Tapping a staged card is how you get at the other pressings — the only
-  // place in the run where the match is still yours to correct.
-  const tappable = status === "ready" && others > 0;
+  // Tapping a staged card opens the record: the pressing it matched, the
+  // other candidates, and the technical sheet. Everything the scanner already
+  // knew and had nowhere to say.
+  const tappable = status === "ready" && Boolean(match);
 
   return (
     <motion.div
@@ -806,7 +870,7 @@ function ScanCard({
       dragSnapToOrigin
       dragElastic={0.5}
       onDragEnd={onDragEnd}
-      onClick={tappable ? onEditions : undefined}
+      onClick={tappable ? onOpen : undefined}
       style={{ transformOrigin: "bottom center" }}
       className={`mb-2 flex touch-pan-y items-center gap-3 rounded-lg px-3 py-2.5 backdrop-blur-2xl last:mb-0 ${
         status === "ready" ? "bg-white/[0.16]" : "bg-white/[0.10]"

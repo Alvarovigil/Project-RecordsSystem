@@ -12,6 +12,7 @@ import BarcodeScanner, { useCanScan } from "@/components/BarcodeScanner";
 import type { Collection } from "@/lib/collections";
 import type { Vinyl } from "@/lib/types";
 import CatalogueNotice from "@/components/ui/CatalogueNotice";
+import CatalogueSheet from "@/components/CatalogueSheet";
 
 /**
  * Adding a record, on a phone.
@@ -70,6 +71,8 @@ export default function MobileSearch({
   const [targetId, setTargetId] = useState(activeCollectionId);
   const [picking, setPicking] = useState(false);
   const [scanning, setScanning] = useState(false);
+  /** a catalogue row opened to be read, not to be taken */
+  const [looking, setLooking] = useState<DiscogsResult | null>(null);
 
   const search = useCatalogueSearch({ query: q, mode, localVinilos, allVinilos });
 
@@ -271,13 +274,22 @@ export default function MobileSearch({
                   const done = Boolean(search.savedIn[`d${r.id}`]);
                   return (
                     <li key={r.id} className="flex items-center gap-3 py-3">
-                      <Thumb src={r.thumb} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-body text-paper">{r.title}</span>
-                        <span className="block truncate text-sub text-content-muted">
-                          {[r.year, r.country, r.format?.join(", ")].filter(Boolean).join(" · ")}
+                      {/* The row reads, the button keeps. Until now the "+"
+                          was the only thing on this line, so the only way to
+                          find out which pressing you were looking at was to
+                          own it first. */}
+                      <button
+                        onClick={() => setLooking(r)}
+                        className="pressable flex min-w-0 flex-1 items-center gap-3 text-left"
+                      >
+                        <Thumb src={r.thumb} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-body text-paper">{r.title}</span>
+                          <span className="block truncate text-sub text-content-muted">
+                            {[r.year, r.country, r.format?.join(", ")].filter(Boolean).join(" · ")}
+                          </span>
                         </span>
-                      </span>
+                      </button>
                       <button
                         onClick={() => void saveCatalogue(r)}
                         disabled={search.adding === r.id || done}
@@ -384,6 +396,18 @@ export default function MobileSearch({
           />
         </div>
       </Sheet>
+
+      <CatalogueSheet
+        item={looking}
+        onClose={() => setLooking(null)}
+        targetName={target?.name ?? "Mi Colección"}
+        saved={Boolean(looking && search.savedIn[`d${looking.id}`])}
+        busy={search.adding === looking?.id}
+        onSave={() => {
+          if (!looking) return;
+          void saveCatalogue(looking);
+        }}
+      />
 
       <BarcodeScanner
         open={scanning}

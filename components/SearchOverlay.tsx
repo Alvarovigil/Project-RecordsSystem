@@ -7,6 +7,7 @@ import type { Vinyl } from "@/lib/types";
 import type { Collection } from "@/lib/collections";
 import { DestinationBar, RowSave } from "./SaveToList";
 import BarcodeScanner, { BarcodeIcon, useCanScan } from "./BarcodeScanner";
+import CatalogueSheet from "./CatalogueSheet";
 import CatalogueNotice from "./ui/CatalogueNotice";
 import { useCatalogueSearch, type DiscogsResult as SearchResult } from "@/hooks/useCatalogueSearch";
 
@@ -73,6 +74,8 @@ export default function SearchOverlay({
   } = useCatalogueSearch({ query: q, mode, localVinilos, allVinilos });
   const [scanning, setScanning] = useState(false);
   const canScan = useCanScan();
+  /** a catalogue row opened to be read, not to be taken */
+  const [looking, setLooking] = useState<SearchResult | null>(null);
 
   const openScanner = () => {
     setMode("vinyls");
@@ -407,7 +410,13 @@ export default function SearchOverlay({
                     cursor === localResults.length + i ? "bg-paper/[0.06]" : ""
                   }`}
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-3 py-3 px-2">
+                  {/* The row reads, the control on the right keeps. Saving
+                      was the only thing this line could do, so the only way to
+                      find out which pressing you had found was to own it. */}
+                  <button
+                    onClick={() => setLooking(r)}
+                    className="flex min-w-0 flex-1 items-center gap-3 px-2 py-3 text-left transition hover:bg-paper/5"
+                  >
                     {r.thumb ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={r.thumb} alt="" className="w-12 h-12 object-cover rounded-sm" />
@@ -422,7 +431,7 @@ export default function SearchOverlay({
                           .join(" · ")}
                       </div>
                     </div>
-                  </div>
+                  </button>
                   <RowSave
                     collections={collections}
                     targetId={targetId}
@@ -448,6 +457,17 @@ export default function SearchOverlay({
           </ul>
         </div>
       </div>
+
+      <CatalogueSheet
+        item={looking}
+        onClose={() => setLooking(null)}
+        targetName={collections.find((c) => c.id === targetId)?.name ?? "Mi Colección"}
+        saved={Boolean(looking && savedIn[`d${looking.id}`])}
+        busy={adding === looking?.id}
+        onSave={() => {
+          if (looking) void add(looking, targetId);
+        }}
+      />
 
       <BarcodeScanner
         open={scanning}

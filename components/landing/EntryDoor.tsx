@@ -76,18 +76,15 @@ export default function EntryDoor({ variant }: { variant: "hero" | "closing" }) 
         </Link>
       </div>
 
+      {/* No demo link any more. It pointed at a sample collection that no
+          longer exists, and a landing that offers a way to look without
+          entering spends its one closing moment on the option nobody
+          converts from. */}
       <div
         style={{ "--door-display": "flex" } as React.CSSProperties}
         className="door-pointer flex-col items-center gap-5 sm:flex-row sm:justify-center"
       >
         <SignInButton />
-        <Link
-          href="/demo"
-          className="group mono flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-paper/45 transition hover:text-paper"
-        >
-          Ver una colección de ejemplo
-          <span className="transition group-hover:translate-x-0.5">→</span>
-        </Link>
       </div>
     </>
   );

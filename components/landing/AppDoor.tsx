@@ -71,15 +71,11 @@ export default function AppDoor() {
             Empezar
           </Link>
         )}
-        {/* Quiet, and never removed: a shelf that lives only on this phone is
-            a real way to use this, and the people most likely to take it are
-            the ones least likely to come back if they are cornered. */}
-        <Link
-          href="/coleccion"
-          className="text-sub text-content-muted underline-offset-4 transition hover:text-paper hover:underline"
-        >
-          Mirar antes de entrar
-        </Link>
+        {/* There was a "mirar antes de entrar" here, into the local backend.
+            It has gone with the demo: an app whose front door offers a way
+            past itself is teaching people that the door is optional, and the
+            thing behind that one was a shelf that lived on this phone alone
+            and quietly diverged from the account they would open later. */}
       </div>
     </main>
   );

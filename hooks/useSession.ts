@@ -68,11 +68,25 @@ export function useSession() {
     };
   }, [supabase, session]);
 
+  /**
+   * Always ask which account.
+   *
+   * Google's default is to reuse whichever session the browser already has,
+   * silently — one tap and you are in, as somebody. That is fine when a person
+   * has one account and quietly wrong when they have two: the phone signs you
+   * into the wrong shelf, and the only visible way out is to sign out of
+   * Google entirely. `prompt=select_account` costs one screen and makes the
+   * choice explicit, which is the correct trade for an app whose whole content
+   * is personal.
+   */
   const signInWithGoogle = useCallback(async () => {
     if (!supabase) return;
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: { prompt: "select_account" },
+      },
     });
   }, [supabase]);
 
