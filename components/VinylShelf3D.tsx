@@ -814,7 +814,20 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       <Canvas
         // wallpaper doesn't earn retina pixels, and this runs every frame
         // behind someone's landing page
-        dpr={ambient ? 1 : [1, 1.5]}
+        /**
+         * The wallpaper gets the same resolution as the shelf it is a picture
+         * of.
+         *
+         * It ran at dpr 1 because it is decoration and decoration should be
+         * cheap — and on a Retina screen that halves the render, which every
+         * part of this scene survives except one: the spine. The printing is
+         * the finest thing here, type set on a strip a few pixels wide, and at
+         * half resolution it dissolves into a smear. The landing was showing
+         * blank cardboard where the app shows the names, which is the one
+         * detail that makes a row of sleeves read as a record collection
+         * rather than as coloured boxes.
+         */
+        dpr={[1, 1.5]}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: rig?.exposure ?? (vertical ? 0.64 : 1.2),
