@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import SignInButton from "@/components/SignInButton";
+import { useSession } from "@/hooks/useSession";
 
 /**
  * The one place the landing asks for anything — and what it asks for depends
@@ -27,6 +28,8 @@ import SignInButton from "@/components/SignInButton";
  * webview, where sending a person to install is a dead end.
  */
 export default function EntryDoor({ variant }: { variant: "hero" | "closing" }) {
+  const { available, signInWithGoogle } = useSession();
+
   if (variant === "hero") {
     return (
       <>
@@ -37,8 +40,18 @@ export default function EntryDoor({ variant }: { variant: "hero" | "closing" }) 
         >
           Instalar la app
         </Link>
-        <Link
-          href="/coleccion"
+        {/**
+         * On a desktop, "Empezar gratis" IS signing in.
+         *
+         * It used to walk straight into the app on the local backend — a shelf
+         * that lived in that browser and quietly diverged from the account the
+         * same person would open later. With the demo gone there is nothing
+         * behind that door worth entering without a name on it, so the first
+         * button and the way in are the same button. The label stays: nobody
+         * ever pressed "Iniciar sesión" out of curiosity.
+         */}
+        <button
+          onClick={available ? signInWithGoogle : undefined}
           style={{ "--door-display": "inline-flex" } as React.CSSProperties}
           // select-none: dragging across a white pill used to leave the page's
           // own selection colour — paper on paper — which looked like the
@@ -46,7 +59,7 @@ export default function EntryDoor({ variant }: { variant: "hero" | "closing" }) 
           className="door-pointer pressable h-9 select-none items-center rounded-full bg-paper px-4 text-[12px] font-medium uppercase tracking-[0.07em] text-ink transition-colors hover:bg-paper/85"
         >
           Empezar gratis
-        </Link>
+        </button>
       </>
     );
   }
