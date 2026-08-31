@@ -29,13 +29,25 @@ export default function AppDoor() {
 
   return (
     <main
-      className="flex min-h-screen-d flex-col bg-surface px-7"
+      className="flex min-h-screen-d flex-col items-center justify-center bg-surface px-7"
       style={{
         paddingTop: "calc(var(--safe-top) + 18px)",
         paddingBottom: "calc(var(--safe-bottom) + 22px)",
       }}
     >
-      <div className="flex flex-1 flex-col items-center justify-center text-center">
+      {/**
+       * One block, centred — not a message floating in the middle with the
+       * button nailed to the floor.
+       *
+       * That was the shape a phone screen usually wants: content up here,
+       * the commitment down where the thumb is. It is the wrong shape for a
+       * screen with four lines on it, because on a tall phone it opens as a
+       * logo, a paragraph, and then a hand's width of nothing — and the one
+       * thing you are meant to do is somewhere past the bottom of what the eye
+       * takes in. A first launch has to answer "what do I press" inside the
+       * first look.
+       */}
+      <div className="flex w-full max-w-[340px] flex-col items-center text-center">
         <span className="relative block">
           <span
             aria-hidden
@@ -54,23 +66,23 @@ export default function AppDoor() {
         <h1 className="mt-8 text-title font-medium leading-tight text-paper">
           Ya está en tu casa
         </h1>
-        <p className="mt-3 max-w-[30ch] text-body leading-relaxed text-content-secondary">
+        <p className="mt-3 text-body leading-relaxed text-content-secondary">
           {SITE_NAME} vive ahora en tu pantalla de inicio. Entra y tu estantería
           te sigue a cualquier sitio donde abras sesión.
         </p>
-      </div>
 
-      <div className="flex flex-col items-center gap-4">
-        {available ? (
-          <GoogleButton />
-        ) : (
-          <Link
-            href="/coleccion"
-            className="pressable flex h-12 w-full items-center justify-center rounded-full bg-paper text-body font-medium text-ink transition-colors hover:bg-paper/85"
-          >
-            Empezar
-          </Link>
-        )}
+        <div className="mt-9 w-full">
+          {available ? (
+            <GoogleButton />
+          ) : (
+            <Link
+              href="/coleccion"
+              className="pressable flex h-12 w-full items-center justify-center rounded-full bg-paper text-body font-medium text-ink transition-colors hover:bg-paper/85"
+            >
+              Empezar
+            </Link>
+          )}
+        </div>
         {/* There was a "mirar antes de entrar" here, into the local backend.
             It has gone with the demo: an app whose front door offers a way
             past itself is teaching people that the door is optional, and the
