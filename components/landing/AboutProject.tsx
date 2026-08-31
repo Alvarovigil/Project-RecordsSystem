@@ -93,10 +93,15 @@ export default function AboutProject() {
                 vinilos.
               </p>
 
+              {/* The question is the premise of the whole thing, so it is the
+                  one sentence in the body at full strength. Everything after
+                  it is an answer to it. */}
               <p className="mt-6 text-[14px] leading-relaxed text-paper/60">
-                Rackr Club empezó con una idea bastante simple: si coleccionar discos es
-                una forma de descubrir música, ¿por qué nuestras colecciones viven
-                aisladas?
+                Todo empezó con una idea bastante simple:{" "}
+                <span className="text-paper">
+                  si coleccionar discos también es una forma de descubrir
+                  música, ¿por qué nuestras colecciones viven aisladas?
+                </span>
               </p>
 
               <p className="mt-5 text-[14px] leading-relaxed text-paper/60">
@@ -104,36 +109,35 @@ export default function AboutProject() {
               </p>
 
               <p className="mt-5 text-[14px] leading-relaxed text-paper/60">
-                Un lugar donde tener tu colección, sí. Pero sobre todo donde meterte en la
-                de otros. Encontrar a alguien porque tenéis quince discos en común.
-                Descubrir qué tiene él que tú no. Acabar escuchando algo que ni siquiera
-                sabías que buscabas.
+                Un lugar donde tener tu colección organizada y siempre a mano,
+                pero sobre todo donde encontrarte con las de otros
+                coleccionistas.
               </p>
 
               <p className="mt-5 text-[14px] leading-relaxed text-paper/60">
-                Sin anuncios. Sin vender tus datos. Sin trucos para que pases aquí media
-                vida. Rackr no necesita más tiempo de pantalla. Necesita mejores discos y
-                más gente dentro.
+                Ver qué tiene alguien con gustos parecidos a los tuyos.
+                Descubrir qué tiene él que tú no. Entrar por un disco, saltar a
+                otro y acabar escuchando algo que ni siquiera sabías que
+                buscabas.
               </p>
 
-              {/* Five words on their own line, in full-strength paper. It is the
-                  turn of the whole text — the point where it stops describing
-                  the project and addresses the reader — so it gets the weight
-                  and the silence around it that a turn deserves. */}
+              <p className="mt-5 text-[14px] leading-relaxed text-paper/60">
+                Porque tu colección puede ser una forma de descubrir las de los
+                demás. Y las de los demás, una forma de seguir construyendo la
+                tuya.
+              </p>
+
+              {/* The line the whole product is named after, on its own and in
+                  full-strength paper. It is the turn of the text — where it
+                  stops explaining itself and states what it is — so it gets
+                  the weight and the silence around it that a turn deserves. */}
               <p className="mt-6 text-[17px] leading-snug text-paper">
-                Y ahí entras tú.
+                Tu colección, más allá de tu estantería.
               </p>
 
               <p className="mt-6 text-[14px] leading-relaxed text-paper/60">
-                Esto no es una empresa ni un producto terminado. Es un proyecto
-                independiente, sin ánimo de lucro, construido por alguien que compra
-                demasiados discos y pensado para todos los que hacemos más o menos lo
-                mismo.
-              </p>
-
-              <p className="mt-5 text-[14px] leading-relaxed text-paper/60">
-                Entra. Sube tu colección. Curiosea. Encuentra fallos. Pide cosas. Propón
-                otras.
+                Rackr es un proyecto independiente que todavía está creciendo.
+                Entra, sube tu colección, curiosea y hazlo un poco más tuyo.
               </p>
 
               {/* Three parallel lines that rhyme. Written as separate lines
@@ -146,11 +150,15 @@ export default function AboutProject() {
               </ul>
 
               {/* A letter is signed, and a signature sits apart from the body.
-                  The address is a real mailto: an email you have to copy by
-                  hand is an invitation nobody accepts. */}
-              <div className="mt-8 border-t border-paper/10 pt-6 text-[14px] leading-relaxed text-paper/60">
-                <p>Atentamente,</p>
-                <p className="mt-1 text-paper">Álvaro</p>
+                  The thanks belong on this side of the rule: it is addressed
+                  to the reader, not part of the description. The address is a
+                  real mailto — an email you have to copy by hand is an
+                  invitation nobody accepts. */}
+              <div className="mt-8 border-t border-paper/10 pt-6">
+                <p className="text-[15px] leading-relaxed text-paper">
+                  Gracias por sumar tu colección a todas las demás.
+                </p>
+                <p className="mt-5 text-[14px] text-paper">Álvaro</p>
                 <a
                   href="mailto:rackr.club@gmail.com"
                   className="mono mt-1 inline-block text-[12px] text-paper/45 underline-offset-4 transition hover:text-paper hover:underline"
