@@ -10,6 +10,18 @@ const nextConfig = {
   transpilePackages: ["three"],
 
   /**
+   * A build can be told to write somewhere else.
+   *
+   * Verifying a change with a production build while `next dev` is running
+   * means both processes writing the same `.next` — and the loser is the dev
+   * server, which ends up serving chunks that no longer exist ("Cannot find
+   * module './1682.js'") or hanging mid-compile with a corrupt webpack cache.
+   * Vercel and `npm run build` are untouched; this only gives a throwaway
+   * verification build somewhere private to go.
+   */
+  distDir: process.env.NEXT_DIST_DIR || ".next",
+
+  /**
    * One canonical origin, always.
    *
    * With www and the apex both serving the app, the same person can be on two
