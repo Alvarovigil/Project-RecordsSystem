@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { coverFor } from "@/lib/cover";
 
@@ -116,8 +116,21 @@ export function Cover({
   const url = src ?? (vinyl ? coverFor(vinyl) : null);
   const [shown, setShown] = useState(false);
 
-  // a new src is a new picture: the old one must not stay faded in over it
-  useEffect(() => setShown(false), [url]);
+  /**
+   * Reset only when the picture actually changes, never on mount.
+   *
+   * `useEffect(() => setShown(false), [url])` looked right and was a flicker
+   * machine: the ref callback marks a cached image as shown during the commit,
+   * and then this effect — which runs afterwards — set it straight back to
+   * false. So every already-cached cover flashed its skeleton once on every
+   * mount, which on a phone is every time you come back to a screen.
+   */
+  const seen = useRef(url);
+  useEffect(() => {
+    if (seen.current === url) return;
+    seen.current = url;
+    setShown(false);
+  }, [url]);
 
   return (
     <span className={`relative block aspect-square w-full overflow-hidden ${className}`}>

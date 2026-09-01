@@ -260,6 +260,23 @@ export default function MobileShelf({
         </div>
       </header>
 
+      {/**
+       * A document with a height, even though nothing here needs one.
+       *
+       * The shelf is a fixed layer: it takes the screen and contributes
+       * nothing to the page's own height, so on this route the document is
+       * effectively zero pixels tall. An installed window on iOS has been seen
+       * laying out against a short viewport when that is true — the tab bar
+       * ends up above the bottom of the screen with a band of black under it,
+       * and the tell is that going to Explorar, whose page *does* have a
+       * height, fixes it for the rest of the session.
+       *
+       * In flow on purpose: a `fixed` spacer would contribute nothing, which
+       * is the mistake this replaces. It is behind everything, cannot be seen
+       * and cannot be scrolled to.
+       */}
+      <div aria-hidden className="pointer-events-none h-screen-d w-px" />
+
       {view === "shelf" ? (
         <div className="fixed inset-0">
           <VinylShelf3D vertical rig={lab ? rig : undefined} vinilos={vinilos} onOpen={onOpen} />

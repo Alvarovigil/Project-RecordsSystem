@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getRepository, type ListWithRecord, type Profile } from "@/lib/data";
 import type { Vinyl } from "@/lib/types";
 import { artistFromCatalogueTitle, artistSlug, matchArtists } from "@/lib/artist";
@@ -199,6 +199,46 @@ export function useCatalogueSearch({
     [allVinilos],
   );
 
+  /**
+   * A face next to an artist, when one is already known.
+   *
+   * Resolving an artist properly costs two Discogs calls, and a list that
+   * updates on every keystroke cannot spend those against a budget of sixty a
+   * minute for the whole application. So this asks the artist route in
+   * cache-only mode: it answers from what has already been looked up and
+   * otherwise says nothing. A portrait therefore appears for anybody whose
+   * page has been opened before — by anyone, since the cache is the server's —
+   * and nobody pays for one who has not.
+   */
+  const [artistPhotos, setArtistPhotos] = useState<Record<string, string>>({});
+  const askedPhotos = useRef(new Set<string>());
+  useEffect(() => {
+    const want = artists
+      .filter((a) => !askedPhotos.current.has(a.slug))
+      .map((a) => ({ slug: a.slug, release: a.records.find((r) => r.discogsId)?.discogsId }))
+      .filter((a): a is { slug: string; release: number } => Boolean(a.release))
+      .slice(0, 4);
+    if (want.length === 0) return;
+    let alive = true;
+    const t = setTimeout(() => {
+      want.forEach(({ slug, release }) => {
+        askedPhotos.current.add(slug);
+        fetch(`/api/discogs/artist?peek=1&release=${release}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (alive && d?.artist?.image) {
+              setArtistPhotos((m) => ({ ...m, [slug]: d.artist.image }));
+            }
+          })
+          .catch(() => {});
+      });
+    }, 260);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [artists]);
+
   const noteSave = useCallback((key: string, record: SaveRecord) => {
     setSavedIn((m) => ({ ...m, [key]: record }));
   }, []);
@@ -215,6 +255,7 @@ export function useCatalogueSearch({
     localResults,
     addable,
     artists,
+    artistPhotos,
     people,
     communityLists,
     loading,

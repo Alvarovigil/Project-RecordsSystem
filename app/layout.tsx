@@ -1,4 +1,5 @@
 import ServiceWorker from "@/components/app/ServiceWorker";
+import ViewportFix from "@/components/app/ViewportFix";
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
@@ -114,6 +115,7 @@ export default function RootLayout({
       <body className="grain">
         {children}
         <ServiceWorker />
+        <ViewportFix />
       </body>
     </html>
   );

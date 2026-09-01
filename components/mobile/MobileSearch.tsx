@@ -256,12 +256,21 @@ export default function MobileSearch({
                       onClick={onClose}
                       className="pressable flex items-center gap-3 py-3"
                     >
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-fill-subtle text-content-muted">
-                        <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden>
-                          <circle cx="10" cy="10" r="7.6" stroke="currentColor" strokeWidth="1.3" />
-                          <circle cx="10" cy="10" r="1.6" fill="currentColor" />
-                        </svg>
-                      </span>
+                      {search.artistPhotos[a.slug] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={search.artistPhotos[a.slug]}
+                          alt=""
+                          className="h-11 w-11 shrink-0 rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-fill-subtle text-content-muted">
+                          <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden>
+                            <circle cx="10" cy="10" r="7.6" stroke="currentColor" strokeWidth="1.3" />
+                            <circle cx="10" cy="10" r="1.6" fill="currentColor" />
+                          </svg>
+                        </span>
+                      )}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-body text-paper">{a.name}</span>
                         <span className="block truncate text-sub text-content-muted">

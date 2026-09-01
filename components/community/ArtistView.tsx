@@ -35,6 +35,7 @@ export default function ArtistView({ slug }: { slug: string }) {
   const router = useRouter();
 
   const [more, setMore] = useState<CatalogueItem[] | null>(null);
+  const [portrait, setPortrait] = useState<{ image: string | null; name: string } | null>(null);
   const [looking, setLooking] = useState<CatalogueItem | null>(null);
   const [open, setOpen] = useState<Vinyl | null>(null);
   const [saving, setSaving] = useState<number | null>(null);
@@ -58,34 +59,61 @@ export default function ArtistView({ slug }: { slug: string }) {
   );
   const mine = findCollection(collections);
 
+  /**
+   * The artist, identified rather than matched.
+   *
+   * This used to ask the catalogue for the *name* and print everything that
+   * came back — which is how a page for Rosalía filled up with a 1970s Spanish
+   * singer's singles. Different people who share a word, and Discogs knows it:
+   * every release names its artist by id.
+   *
+   * So when the shelf already holds one of their records, its id is what gets
+   * sent, and the answer cannot be about somebody else. Only for an artist
+   * whose records you do not have yet does it fall back to the name.
+   */
+  const anchor = group?.records.find((r) => r.discogsId)?.discogsId ?? null;
+
   useEffect(() => {
     if (!name) return;
     let alive = true;
     setMore(null);
-    fetch(`/api/discogs/search?artist=${encodeURIComponent(name)}`)
+    const params = new URLSearchParams({ q: name });
+    if (anchor) params.set("release", String(anchor));
+
+    fetch(`/api/discogs/artist?${params}`)
       .then((r) => r.json())
       .then((d) => {
         if (!alive) return;
-        const owned = new Set(lib.releases.map((v) => v.discogsId));
-        const seen = new Set<string>();
-        const rows: CatalogueItem[] = (d.results ?? [])
-          .filter((r: CatalogueItem) => !owned.has(r.id))
-          // Discogs lists every pressing of every album; on an artist page you
-          // want the records, not the twelve editions of one of them
-          .filter((r: CatalogueItem) => {
-            const key = r.title.toLowerCase().replace(/[^a-z0-9]+/g, "");
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-          })
-          .slice(0, 18);
+        if (d.artist) setPortrait({ image: d.artist.image ?? null, name: d.artist.name });
+
+        /**
+         * What you are missing, which means the albums and not the pressings.
+         *
+         * Matching on the release id alone is not enough: owning a 2019
+         * repress of Motomami should hide Motomami, and those are two
+         * different ids. So a title you already have on the shelf takes the
+         * row out, whichever pressing it is.
+         */
+        const ownedIds = new Set(lib.releases.map((v) => v.discogsId));
+        const ownedTitles = new Set(
+          (group?.records ?? []).map((v) =>
+            v.title.toLowerCase().replace(/[^a-z0-9]+/g, ""),
+          ),
+        );
+        const rows: CatalogueItem[] = (d.releases ?? [])
+          .filter(
+            (r: { id: number; title: string }) =>
+              !ownedIds.has(r.id) &&
+              !ownedTitles.has(r.title.toLowerCase().replace(/[^a-z0-9]+/g, "")),
+          )
+          .slice(0, 24);
         setMore(rows);
       })
       .catch(() => alive && setMore([]));
     return () => {
       alive = false;
     };
-  }, [name, lib.releases]);
+  }, [name, anchor, group, lib.releases]);
 
   const save = async (item: CatalogueItem) => {
     if (!mine) return;
@@ -118,17 +146,43 @@ export default function ArtistView({ slug }: { slug: string }) {
       <header className="pb-9 pt-2">
         <button
           onClick={() => router.back()}
-          className="pressable mb-6 flex items-center gap-2 text-sub text-content-muted transition hover:text-paper"
+          className="pressable mb-7 flex items-center gap-2 text-sub text-content-muted transition hover:text-paper"
         >
           <span aria-hidden>←</span> Atrás
         </button>
-        <p className="text-caption uppercase tracking-label text-content-muted">Artista</p>
-        <h1 className="mt-3 text-display font-medium leading-tight text-paper">{name}</h1>
-        <p className="mt-3 text-sub text-content-muted">
-          {owned.length === 0
-            ? "Todavía no tienes ninguno suyo."
-            : `${owned.length} ${owned.length === 1 ? "disco" : "discos"} en tu colección`}
-        </p>
+
+        {/**
+         * A face, when there is one.
+         *
+         * An artist without a portrait is a heading, and a page of headings is
+         * a directory. The picture comes from the same catalogue as everything
+         * else here and through the same proxy as the sleeves — Discogs
+         * refuses to serve its images to another site.
+         *
+         * When there is no photograph the space is not held open with a grey
+         * circle: the name simply takes the top of the page, which is what it
+         * would have done anyway.
+         */}
+        <div className="flex items-end gap-5">
+          {portrait?.image && (
+            <img
+              src={portrait.image}
+              alt=""
+              className="h-[92px] w-[92px] shrink-0 rounded-full object-cover sm:h-[120px] sm:w-[120px]"
+            />
+          )}
+          <div className="min-w-0">
+            <p className="text-caption uppercase tracking-label text-content-muted">Artista</p>
+            <h1 className="mt-2 text-display font-medium leading-tight text-paper">
+              {portrait?.name || name}
+            </h1>
+            <p className="mt-2 text-sub text-content-muted">
+              {owned.length === 0
+                ? "Todavía no tienes ninguno suyo."
+                : `${owned.length} ${owned.length === 1 ? "disco" : "discos"} en tu colección`}
+            </p>
+          </div>
+        </div>
       </header>
 
       {owned.length > 0 && (

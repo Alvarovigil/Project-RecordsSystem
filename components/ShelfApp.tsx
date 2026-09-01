@@ -164,6 +164,23 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   useEffect(() => {
     if (bootedRef.current || !lib.ready) return;
     bootedRef.current = true;
+
+    /**
+     * The ceremony is for a cold start, not for coming back.
+     *
+     * This waits for the first covers to decode and holds a card over the
+     * shelf for at least 420ms — right the first time somebody opens the app,
+     * and wrong every time after. Navigating to Explorar and back remounts
+     * this component, so the loader played again over records that were
+     * already in memory and already decoded: half a second of curtain between
+     * two taps, which is exactly what made moving around feel like loading
+     * pages. If the library came from the snapshot, the shelf is already
+     * correct — show it.
+     */
+    if (lib.fromCache) {
+      setHydrated(true);
+      return;
+    }
     const started = performance.now();
     let settled = false;
     const reveal = () => {

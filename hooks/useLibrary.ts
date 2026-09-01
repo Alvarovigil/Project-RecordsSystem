@@ -128,6 +128,8 @@ export function useLibrary() {
 
   return {
     ready,
+    /** the first paint came from the snapshot, not from the network */
+    fromCache: Boolean(seed),
     releases,
     lists,
     activeList,

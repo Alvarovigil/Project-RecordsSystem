@@ -62,6 +62,7 @@ export default function SearchOverlay({
   const {
     localResults,
     artists,
+    artistPhotos,
     addable,
     degraded,
     people,
@@ -346,12 +347,21 @@ export default function SearchOverlay({
                       onClick={onClose}
                       className="flex items-center gap-3 px-2 py-3 transition hover:bg-paper/5"
                     >
-                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-paper/[0.06] text-paper/45">
-                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-                          <circle cx="10" cy="10" r="7.6" stroke="currentColor" strokeWidth="1.3" />
-                          <circle cx="10" cy="10" r="1.6" fill="currentColor" />
-                        </svg>
-                      </span>
+                      {artistPhotos[a.slug] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={artistPhotos[a.slug]}
+                          alt=""
+                          className="h-12 w-12 shrink-0 rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-paper/[0.06] text-paper/45">
+                          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+                            <circle cx="10" cy="10" r="7.6" stroke="currentColor" strokeWidth="1.3" />
+                            <circle cx="10" cy="10" r="1.6" fill="currentColor" />
+                          </svg>
+                        </span>
+                      )}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[14px] text-paper/90">{a.name}</span>
                         <span className="block truncate text-[11px] text-paper/45">
