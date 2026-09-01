@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
@@ -22,6 +24,7 @@ import TopNav from "@/components/app/TopNav";
 import { BarcodeIcon, useCanScan } from "@/components/BarcodeScanner";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
+import { artistSlug, cleanArtist } from "@/lib/artist";
 import {
   findCollection,
   findWishlist,
@@ -792,7 +795,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             style={{ right: "calc(50% + var(--cover-half, 21vw) + 32px)" }}
             className="pointer-events-none absolute left-6 top-[42%] -translate-y-1/2 z-10 text-right text-paper/80"
           >
-            <Field label="Artist" value={open.artist} />
+            <Field label="Artist" value={open.artist} href={`/artista/${artistSlug(open.artist)}`} />
             <Field label="Year" value={String(open.year)} />
             <Field label="Genre" value={open.genre} />
           </motion.div>
@@ -1395,11 +1398,24 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value, href }: { label: string; value: string; href?: string }) {
   return (
     <div className="mb-4 last:mb-0">
       <div className="text-[9px] uppercase tracking-[0.22em] text-paper/35">{label}</div>
-      <div className="mt-1 text-[13px] tracking-tight">{value || "—"}</div>
+      {/* The artist is the one field here that leads somewhere, so it is the
+          one field that is a link. The column is `pointer-events-none` as a
+          whole — it must never take clicks meant for the sleeve — so the link
+          switches them back on for itself alone. */}
+      {href && value ? (
+        <Link
+          href={href}
+          className="pointer-events-auto mt-1 inline-block text-[13px] tracking-tight underline-offset-4 transition hover:text-paper hover:underline"
+        >
+          {cleanArtist(value)}
+        </Link>
+      ) : (
+        <div className="mt-1 text-[13px] tracking-tight">{value || "—"}</div>
+      )}
     </div>
   );
 }

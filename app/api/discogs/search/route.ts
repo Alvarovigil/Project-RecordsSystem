@@ -77,7 +77,17 @@ export async function GET(req: NextRequest) {
   if (!token()) {
     return Response.json({ error: "DISCOGS_TOKEN missing" }, { status: 500 });
   }
-  const raw = req.nextUrl.searchParams.get("q")?.trim();
+  /**
+   * An artist page asks a narrower question than the search box does.
+   *
+   * The box fans out into a dozen queries because it does not know whether
+   * you typed a title, a name, or both. `?artist=` knows, so it asks twice —
+   * releases and masters — which matters: Discogs allows sixty requests a
+   * minute for this whole application, and spending twelve of them to answer
+   * "what else did Rosalía put out" would price the feature out of existence.
+   */
+  const artistOnly = req.nextUrl.searchParams.get("artist")?.trim();
+  const raw = artistOnly ?? req.nextUrl.searchParams.get("q")?.trim();
   if (!raw) return Response.json({ results: [] });
 
   /**
@@ -89,7 +99,9 @@ export async function GET(req: NextRequest) {
    * for Rumours should not pay for it.
    */
   const sb = getSupabaseAdminClient();
-  const cacheKey = norm(raw);
+  // a separate cache namespace: the same words asked two different ways are
+  // two different answers
+  const cacheKey = artistOnly ? `artist:${norm(raw)}` : norm(raw);
   if (sb && cacheKey) {
     const { data } = await sb
       .from("discogs_search_cache")
@@ -118,6 +130,12 @@ export async function GET(req: NextRequest) {
   // a strict server-side format filter that was hiding too many edge cases
   // (soundtracks, reissues, etc).
   const queries: Record<string, string>[] = [];
+  if (artistOnly) {
+    for (const v of variants) {
+      queries.push({ artist: v, type: "release" });
+      queries.push({ artist: v, type: "master" });
+    }
+  } else
   for (const v of variants) {
     queries.push({ artist: v, type: "release" });
     queries.push({ release_title: v, type: "release" });

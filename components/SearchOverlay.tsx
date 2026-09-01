@@ -61,6 +61,7 @@ export default function SearchOverlay({
   // same undo bookkeeping. Only the body around it differs.
   const {
     localResults,
+    artists,
     addable,
     degraded,
     people,
@@ -329,6 +330,41 @@ export default function SearchOverlay({
                   Nadie con ese nombre, ninguna lista con ese título.
                 </div>
               )}
+            </>
+          )}
+
+          {/* Artists first when somebody typed a name: the question behind a
+              name is "what else", and that had no row to press until now. */}
+          {mode === "vinyls" && artists.length > 0 && (
+            <>
+              <SectionLabel>Artistas</SectionLabel>
+              <ul className="divide-y divide-paper/10">
+                {artists.map((a) => (
+                  <li key={a.slug}>
+                    <Link
+                      href={`/artista/${a.slug}`}
+                      onClick={onClose}
+                      className="flex items-center gap-3 px-2 py-3 transition hover:bg-paper/5"
+                    >
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-paper/[0.06] text-paper/45">
+                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
+                          <circle cx="10" cy="10" r="7.6" stroke="currentColor" strokeWidth="1.3" />
+                          <circle cx="10" cy="10" r="1.6" fill="currentColor" />
+                        </svg>
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[14px] text-paper/90">{a.name}</span>
+                        <span className="block truncate text-[11px] text-paper/45">
+                          {a.records.length > 0
+                            ? `${a.records.length} ${a.records.length === 1 ? "disco tuyo" : "discos tuyos"}`
+                            : "Ver sus discos"}
+                        </span>
+                      </span>
+                      <span className="text-paper/25">→</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </>
           )}
 

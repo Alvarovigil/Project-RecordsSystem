@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { coverFor } from "@/lib/cover";
 
@@ -90,39 +90,61 @@ export default function Avatar({
   );
 }
 
-/** The record equivalent: a sleeve that never collapses while it loads. */
+/**
+ * The record equivalent: a sleeve that never collapses while it loads.
+ *
+ * The placeholder is the skeleton surface rather than a flat fill, so a grid
+ * that is half-loaded is made of the same material as a grid that is still
+ * loading — which is what stops the second one from reading as a mistake. And
+ * `eager` exists because the covers already on screen should not be lazy:
+ * lazy-loading what is in the viewport is a round trip added on purpose.
+ */
 export function Cover({
   vinyl,
   src,
   alt = "",
   className = "",
+  eager = false,
 }: {
   vinyl?: Parameters<typeof coverFor>[0];
   src?: string | null;
   alt?: string;
   className?: string;
+  /** for the first screenful: skip the lazy round trip */
+  eager?: boolean;
 }) {
   const url = src ?? (vinyl ? coverFor(vinyl) : null);
   const [shown, setShown] = useState(false);
+
+  // a new src is a new picture: the old one must not stay faded in over it
+  useEffect(() => setShown(false), [url]);
+
   return (
-    <span className={`block aspect-square w-full overflow-hidden bg-fill-subtle ${className}`}>
+    <span className={`relative block aspect-square w-full overflow-hidden ${className}`}>
+      <span
+        aria-hidden
+        className={`skeleton absolute inset-0 transition-opacity duration-300 ${
+          shown ? "opacity-0" : "opacity-100"
+        }`}
+      />
       {url && (
         // A cover that snaps in at full opacity the instant its bytes land is
-        // the flicker you see scrolling any image list on the web. The sunken
-        // square underneath is already the right shape and the right colour,
-        // so the picture only has to arrive into it.
+        // the flicker you see scrolling any image list on the web. The square
+        // underneath is already the right shape and the right colour, so the
+        // picture only has to arrive into it.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={url}
           alt={alt}
-          loading="lazy"
+          loading={eager ? "eager" : "lazy"}
           decoding="async"
           onLoad={() => setShown(true)}
+          onError={() => setShown(true)}
           // cached images can be complete before React ever attaches onLoad
           ref={(el) => {
-            if (el?.complete) setShown(true);
+            if (el?.complete && el.naturalWidth > 0) setShown(true);
           }}
-          className={`h-full w-full object-cover transition-opacity duration-base ease-out ${
+          className={`relative h-full w-full object-cover transition-opacity duration-base ease-out ${
             shown ? "opacity-100" : "opacity-0"
           }`}
         />

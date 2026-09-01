@@ -236,6 +236,50 @@ export default function MobileSearch({
             </div>
           )}
 
+          {/**
+           * Artists come before records, and that is the point of them.
+           *
+           * Typing a name used to give you their releases one at a time, so
+           * the question "what else has this person put out" had no row to
+           * press. It is the first thing offered now — above your own records
+           * — because when somebody types a name rather than a title, the
+           * name is what they meant.
+           */}
+          {mode === "vinyls" && search.artists.length > 0 && (
+            <>
+              <Label>Artistas</Label>
+              <ul className="divide-y divide-line">
+                {search.artists.map((a) => (
+                  <li key={a.slug}>
+                    <Link
+                      href={`/artista/${a.slug}`}
+                      onClick={onClose}
+                      className="pressable flex items-center gap-3 py-3"
+                    >
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-fill-subtle text-content-muted">
+                        <svg width="17" height="17" viewBox="0 0 20 20" fill="none" aria-hidden>
+                          <circle cx="10" cy="10" r="7.6" stroke="currentColor" strokeWidth="1.3" />
+                          <circle cx="10" cy="10" r="1.6" fill="currentColor" />
+                        </svg>
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-body text-paper">{a.name}</span>
+                        <span className="block truncate text-sub text-content-muted">
+                          {a.records.length > 0
+                            ? `${a.records.length} ${a.records.length === 1 ? "disco tuyo" : "discos tuyos"}`
+                            : "Ver sus discos"}
+                        </span>
+                      </span>
+                      <span aria-hidden className="shrink-0 text-content-faint">
+                        →
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
           {mode === "vinyls" && search.localResults.length > 0 && (
             <>
               <Label>En tu colección</Label>

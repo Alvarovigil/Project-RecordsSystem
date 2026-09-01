@@ -10,7 +10,7 @@ import Button from "@/components/ui/Button";
 import ListEditSheet from "./ListEditSheet";
 import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
-import Cover from "@/components/ui/Cover";
+import { Cover } from "@/components/ui/Avatar";
 import dynamic from "next/dynamic";
 
 /**

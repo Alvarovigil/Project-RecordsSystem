@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getRepository, type ListWithRecord, type Profile } from "@/lib/data";
 import type { Vinyl } from "@/lib/types";
+import { artistFromCatalogueTitle, artistSlug, matchArtists } from "@/lib/artist";
 
 /**
  * Searching for a record, wherever it happens to be.
@@ -134,6 +135,35 @@ export function useCatalogueSearch({
   const addable = results.filter((r) => !localResults.some((v) => v.discogsId === r.id));
 
   /**
+   * Artists, which this search never offered.
+   *
+   * Typing a name gave you their records one by one and no way to ask the
+   * obvious next question — what else of theirs is there. The rows come from
+   * two places and cost nothing extra: your own library, grouped by name, and
+   * the artist half of the catalogue rows already on screen. Discogs titles
+   * are "Artist - Album", so that half is free; asking Discogs for artists
+   * properly would be another query against a sixty-a-minute budget, for an
+   * answer this one already contains.
+   */
+  const artists = useMemo(() => {
+    if (mode !== "vinyls" || query.trim().length < 2) return [];
+    const own = matchArtists(localVinilos, query.trim(), 4);
+    const seen = new Set(own.map((a) => a.slug));
+    const q = query.trim().toLowerCase();
+    const fromCatalogue: { name: string; slug: string; records: Vinyl[] }[] = [];
+    for (const r of results) {
+      const name = artistFromCatalogueTitle(r.title);
+      if (!name || !name.toLowerCase().includes(q)) continue;
+      const slug = artistSlug(name);
+      if (seen.has(slug)) continue;
+      seen.add(slug);
+      fromCatalogue.push({ name, slug, records: [] });
+      if (own.length + fromCatalogue.length >= 5) break;
+    }
+    return [...own, ...fromCatalogue];
+  }, [mode, query, localVinilos, results]);
+
+  /**
    * Fetch the full release and put it in a list.
    *
    * Returns the vinyl so the caller can say its name in a toast — "Guardado"
@@ -184,6 +214,7 @@ export function useCatalogueSearch({
   return {
     localResults,
     addable,
+    artists,
     people,
     communityLists,
     loading,

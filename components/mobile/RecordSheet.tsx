@@ -14,6 +14,7 @@ import { SITE_URL } from "@/lib/site";
 import { useToast } from "@/components/ui/Toast";
 import { useRepository } from "@/hooks/useRepository";
 import { coverFor } from "@/lib/cover";
+import { artistSlug, cleanArtist } from "@/lib/artist";
 import type { ListWithRecord } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 import { findCollection, findWishlist, isWished, type Collection } from "@/lib/collections";
@@ -401,7 +402,17 @@ export default function RecordSheet({
             <div ref={sentinel} aria-hidden />
 
             <h2 className="mt-7 text-title font-medium leading-tight text-paper">{vinyl.title}</h2>
-            <p className="mt-1.5 text-body text-content-secondary">{vinyl.artist}</p>
+            {/* The artist is a door, not a caption. It is the most obvious
+                thing on this screen to want more of, and until now it was the
+                only proper noun in the app you could not press. */}
+            <Link
+              href={`/artista/${artistSlug(vinyl.artist)}`}
+              onClick={onClose}
+              className="pressable mt-1.5 inline-flex items-center gap-1.5 text-body text-content-secondary underline-offset-4 transition hover:text-paper hover:underline"
+            >
+              {cleanArtist(vinyl.artist)}
+              <span aria-hidden className="text-content-faint">→</span>
+            </Link>
 
             {/* Year, genre and label as chips under the name rather than as a
                 four-cell table. They are how you place a record at a glance —
