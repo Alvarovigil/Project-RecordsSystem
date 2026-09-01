@@ -50,22 +50,10 @@ export default function EmptyState({
   );
 }
 
-/** Loading that holds the shape of what is coming, so nothing jumps. */
-export function Skeleton({ className = "" }: { className?: string }) {
-  return <span className={`block animate-pulse rounded-sm bg-fill ${className}`} aria-hidden />;
-}
-
-/** A row of sleeve-shaped skeletons: the shape almost every list here takes. */
-export function CoverGridSkeleton({ count = 6 }: { count?: number }) {
-  return (
-    <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6" aria-hidden>
-      {Array.from({ length: count }).map((_, i) => (
-        <li key={i}>
-          <Skeleton className="aspect-square w-full" />
-          <Skeleton className="mt-2 h-3 w-4/5" />
-          <Skeleton className="mt-1.5 h-2.5 w-1/2" />
-        </li>
-      ))}
-    </ul>
-  );
-}
+/**
+ * The skeletons live in `components/ui/Skeleton` now, and are re-exported from
+ * here because four screens already import them from this file. There was a
+ * second implementation in this module with a pulse of its own — two
+ * skeletons blinking differently depending on which screen you were on.
+ */
+export { default as Skeleton, CoverGridSkeleton } from "./Skeleton";

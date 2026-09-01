@@ -1,3 +1,4 @@
+import ServiceWorker from "@/components/app/ServiceWorker";
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
@@ -110,7 +111,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={`${sans.variable} ${mono.variable}`}>
-      <body className="grain">{children}</body>
+      <body className="grain">
+        {children}
+        <ServiceWorker />
+      </body>
     </html>
   );
 }

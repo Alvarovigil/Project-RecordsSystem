@@ -621,6 +621,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           onOpenSaved={(l) => void openForeign(l)}
           onRemoveRecordFromList={(listId, vinylId) => handleToggleVinyl(listId, vinylId)}
           onAcquire={handleAcquire}
+          loading={!lib.ready}
           readOnly={readOnly}
           onUnsaveList={(id) => {
             // both lists of kept lists: the phone reads `saved`, the desktop

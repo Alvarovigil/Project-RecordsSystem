@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { resetRepository, setAuthenticated } from "@/lib/data";
+import { clearSnapshots } from "@/lib/data/snapshot";
 import type { Profile } from "@/lib/data/types";
 import { FAKE_SESSION, FAKE_USER } from "@/lib/dev-session";
 import { DEMO_PROFILE } from "@/lib/demo";
@@ -92,6 +93,9 @@ export function useSession() {
 
   const signOut = useCallback(async () => {
     await supabase?.auth.signOut();
+    // the cached library goes with the session: nobody should open this phone
+    // and find the last person's collection painted for a second
+    clearSnapshots();
     setAuthenticated(false);
     resetRepository();
     window.location.href = "/";

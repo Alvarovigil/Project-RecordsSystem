@@ -9,6 +9,8 @@ import MarqueeText from "@/components/MarqueeText";
 import Button from "@/components/ui/Button";
 import ListEditSheet from "./ListEditSheet";
 import EmptyState from "@/components/ui/EmptyState";
+import { SkeletonGrid } from "@/components/ui/Skeleton";
+import Cover from "@/components/ui/Cover";
 import dynamic from "next/dynamic";
 
 /**
@@ -82,6 +84,7 @@ export default function MobileShelf({
   onOpenSaved,
   onRemoveRecordFromList,
   onAcquire,
+  loading = false,
   readOnly = false,
 }: {
   vinilos: Vinyl[];
@@ -113,6 +116,8 @@ export default function MobileShelf({
   onRemoveRecordFromList: (listId: string, vinylId: string) => void;
   /** "ya lo tengo", from the wishlist grid — absent means don't offer it */
   onAcquire?: (v: Vinyl) => void;
+  /** the library has not answered yet: draw the shape of it, not a void */
+  loading?: boolean;
   /** the shelf is showing somebody else's list, so it cannot be edited */
   readOnly?: boolean;
 }) {
@@ -273,6 +278,7 @@ export default function MobileShelf({
           onOpen={onOpen}
           nowPlayingId={nowPlayingId}
           onAcquire={!readOnly && isWishlist ? onAcquire : undefined}
+          loading={loading}
         />
       )}
 
@@ -558,18 +564,36 @@ function CoverGrid({
   onOpen,
   nowPlayingId,
   onAcquire,
+  loading = false,
 }: {
   vinilos: Vinyl[];
   onOpen: (v: Vinyl) => void;
   nowPlayingId?: string;
   /** only ever passed for the wishlist: a tick that means "compré este" */
   onAcquire?: (v: Vinyl) => void;
+  /** the library has not answered yet — draw the shape of it, not a void */
+  loading?: boolean;
 }) {
-  // Only the first screenful is waited for. Gating four hundred covers on each
-  // other would mean waiting for the ones nobody has scrolled to yet; the rest
-  // arrive as you reach them, each into a square that is already the right
-  // shape and colour.
-  const ready = useImagesReady(vinilos.slice(0, 8).map(coverFor));
+  const pad = {
+    paddingTop: "calc(var(--safe-top) + 118px)",
+    paddingBottom: "calc(var(--tabbar-h) + var(--player-h) + 24px)",
+  };
+
+  /**
+   * A skeleton, not an empty state.
+   *
+   * "Este rack está vacío" was shown for every millisecond before the first
+   * answer arrived, which meant a cold start told you your collection was
+   * empty and then filled with it. Saying something false quickly is worse
+   * than saying nothing slowly.
+   */
+  if (loading && vinilos.length === 0) {
+    return (
+      <div data-scrollable className="scroll-y h-screen-d px-4" style={pad}>
+        <SkeletonGrid n={8} />
+      </div>
+    );
+  }
 
   if (vinilos.length === 0) {
     return (
@@ -584,41 +608,22 @@ function CoverGrid({
   }
 
   return (
-    <div
-      data-scrollable
-      className="scroll-y h-screen-d px-4"
-      style={{
-        paddingTop: "calc(var(--safe-top) + 118px)",
-        paddingBottom: "calc(var(--tabbar-h) + var(--player-h) + 24px)",
-      }}
-    >
-      <ul
-        className={`grid grid-cols-2 gap-x-4 gap-y-7 transition-opacity duration-base ease-out ${
-          ready ? "opacity-100" : "opacity-0"
-        }`}
-      >
+    <div data-scrollable className="scroll-y h-screen-d px-4" style={pad}>
+      <ul className="grid grid-cols-2 gap-x-4 gap-y-7">
         {vinilos.map((v, i) => (
           <li key={v.id}>
             <button onClick={() => onOpen(v)} className="pressable block w-full text-left">
               <span className="relative block">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Cover
                   src={coverFor(v)}
-                  alt=""
-                  loading={i < 8 ? "eager" : "lazy"}
-                  className="aspect-square w-full rounded-[3px] object-cover"
+                  eager={i < 6}
+                  className="aspect-square w-full rounded-[3px]"
                 />
                 {/**
                  * Going down the wishlist is the one pass where the same
                  * decision repeats — you got these three, you did not get
                  * those. Opening each record to say so is four taps for a
                  * one-bit answer, so the answer lives on the cover.
-                 *
-                 * On the artwork rather than under it, because a control in
-                 * the caption would sit between the title and the next row
-                 * and turn a grid of pictures into a form. It has to survive
-                 * any sleeve passing behind it, hence the same dark glass the
-                 * shelf's own round buttons use.
                  */}
                 {onAcquire && (
                   <span

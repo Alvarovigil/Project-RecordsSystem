@@ -5,6 +5,8 @@ import type { Vinyl } from "@/lib/types";
 import { type SortMode, DEFAULT_ID, WISHLIST_ID, loadActiveId, saveActiveId } from "@/lib/collections";
 import { type List, type NewListInput } from "@/lib/data";
 import { useRepository } from "./useRepository";
+import { repositoryKey } from "@/lib/data";
+import { readSnapshot, writeSnapshot } from "@/lib/data/snapshot";
 
 /**
  * Your library: records, lists and everything you can do to them.
@@ -14,10 +16,29 @@ import { useRepository } from "./useRepository";
  */
 export function useLibrary() {
   const repo = useRepository();
-  const [releases, setReleases] = useState<Vinyl[]>([]);
-  const [lists, setLists] = useState<List[]>([]);
+
+  /**
+   * Open on what this device already knew, then correct it.
+   *
+   * The initial state used to be empty, so every mount of the shelf — a cold
+   * launch, or simply coming back from Explorar — went blank and waited three
+   * round trips before it could draw a single sleeve. The snapshot is read
+   * synchronously during the first render, which means the collection is on
+   * screen in the same frame the component mounts. See lib/data/snapshot.
+   */
+  const seed = useMemo(() => readSnapshot(repositoryKey()), [repo]);
+
+  const [releases, setReleases] = useState<Vinyl[]>(seed?.releases ?? []);
+  const [lists, setLists] = useState<List[]>(seed?.lists ?? []);
   const [activeListId, setActiveListId] = useState<string>(DEFAULT_ID);
-  const [ready, setReady] = useState(false);
+  /**
+   * `ready` means "there is something to draw", not "the network has spoken".
+   *
+   * A loader shown over data that is already correct is a loader that exists
+   * to describe the transport rather than the content, and it is exactly what
+   * made moving between screens feel like page loads.
+   */
+  const [ready, setReady] = useState(Boolean(seed));
 
   const refresh = useCallback(async () => {
     const [r, l] = await Promise.all([repo.listReleases(), repo.listLists()]);
@@ -35,6 +56,10 @@ export function useLibrary() {
       const saved = loadActiveId();
       setActiveListId(l.some((x) => x.id === saved) ? saved : (l[0]?.id ?? DEFAULT_ID));
       setReady(true);
+      const items = await repo.itemsOfLists(l.map((x) => x.id));
+      if (!alive) return;
+      setItemsByList(items);
+      writeSnapshot(repositoryKey(), { releases: r, lists: l, items, at: Date.now() });
     })();
     return () => {
       alive = false;
@@ -44,8 +69,11 @@ export function useLibrary() {
   const activeList = lists.find((l) => l.id === activeListId) ?? lists[0] ?? null;
 
   /** ids of the records in a list, honouring its sort */
-  const [itemsByList, setItemsByList] = useState<Record<string, string[]>>({});
+  const [itemsByList, setItemsByList] = useState<Record<string, string[]>>(seed?.items ?? {});
   useEffect(() => {
+    // the mount above already fetched these once; this effect exists for the
+    // times the set of lists changes underneath us
+    if (lists.length === 0) return;
     let alive = true;
     (async () => {
       /**
@@ -87,9 +115,13 @@ export function useLibrary() {
     async (fn: () => Promise<unknown>) => {
       await fn();
       const [r, l] = await Promise.all([repo.listReleases(), repo.listLists()]);
+      const items = await repo.itemsOfLists(l.map((x) => x.id));
       setReleases(r);
       setLists(l);
-      setItemsByList(await repo.itemsOfLists(l.map((x) => x.id)));
+      setItemsByList(items);
+      // the snapshot follows every write, so the next cold start opens on what
+      // you actually did rather than on the shelf as it was two sessions ago
+      writeSnapshot(repositoryKey(), { releases: r, lists: l, items, at: Date.now() });
     },
     [repo],
   );
