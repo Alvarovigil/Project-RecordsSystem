@@ -31,6 +31,15 @@ export type Device = {
   isDesktop: boolean;
   /** the app is running installed, without browser chrome around it */
   standalone: boolean;
+  /**
+   * Whether this is a real reading or the server's guess.
+   *
+   * Everything starts as "desktop, fine pointer" and corrects on mount, which
+   * is fine for styling and dangerous for anything that *loads code*: a phone
+   * would fetch the desktop tree on its first render and the phone tree on its
+   * second. Anything that splits a bundle by device has to wait for this.
+   */
+  measured: boolean;
 };
 
 // Breakpoints chosen from the hardware, not from a framework's defaults: a
@@ -46,6 +55,7 @@ const SERVER: Device = {
   isTablet: false,
   isDesktop: true,
   standalone: false,
+  measured: false,
 };
 
 let snapshot: Device = SERVER;
@@ -74,6 +84,7 @@ function measure(): Device {
     isTablet: device === "tablet",
     isDesktop: device === "desktop",
     standalone,
+    measured: true,
   };
 }
 
@@ -82,7 +93,8 @@ function same(a: Device, b: Device) {
     a.device === b.device &&
     a.touch === b.touch &&
     a.hover === b.hover &&
-    a.standalone === b.standalone
+    a.standalone === b.standalone &&
+    a.measured === b.measured
   );
 }
 

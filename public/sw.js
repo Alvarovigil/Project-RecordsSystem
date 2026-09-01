@@ -32,6 +32,16 @@ const PAGES = `rackr-pages-${VERSION}`;   // last-seen documents, for offline
 /** cover art is capped, oldest out first: a big collection is a lot of jpegs */
 const MEDIA_MAX = 400;
 
+/**
+ * Build assets are capped too.
+ *
+ * Hashed filenames mean a deploy never overwrites an entry, it adds new ones —
+ * so without a ceiling this cache grows by the size of the app on every
+ * release and never shrinks. The old entries are harmless and useless: nothing
+ * requests them again.
+ */
+const SHELL_MAX = 120;
+
 self.addEventListener("install", (event) => {
   // nothing is precached on purpose — see the note above
   self.skipWaiting();
@@ -106,7 +116,7 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/auth/")) return;
 
   if (url.pathname.startsWith("/_next/static/")) {
-    event.respondWith(cacheFirst(request, SHELL));
+    event.respondWith(cacheFirst(request, SHELL, SHELL_MAX));
     return;
   }
 

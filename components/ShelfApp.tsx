@@ -7,13 +7,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import type { VinylShelfHandle } from "@/components/VinylShelf3D";
 import MiniVinyl from "@/components/MiniVinyl";
-import VinylGrid from "@/components/VinylGrid";
-import SearchOverlay from "@/components/SearchOverlay";
-import CollectionsOverlay from "@/components/CollectionsOverlay";
 import { RecordSpecsContent } from "@/components/RecordSpecsCard";
-import VinylEditOverlay from "@/components/VinylEditOverlay";
 import CoverGlow from "@/components/CoverGlow";
-import CommunityBridge from "@/components/CommunityBridge";
 import MarqueeText from "@/components/MarqueeText";
 import DemoNotice from "@/components/DemoNotice";
 import { setAuthenticated, type ListWithRecord } from "@/lib/data";
@@ -33,10 +28,7 @@ import {
   type SortMode,
 } from "@/lib/collections";
 import { useDevice } from "@/hooks/useDevice";
-import MobileShelf from "@/components/mobile/MobileShelf";
-import RecordSheet from "@/components/mobile/RecordSheet";
 import Loading from "@/components/ui/Loading";
-import MobileSearch from "@/components/mobile/MobileSearch";
 import { useToast, ToastIcon } from "@/components/ui/Toast";
 import type { SavedList } from "@/lib/data/types";
 import { useSearchParams } from "next/navigation";
@@ -53,6 +45,30 @@ import { useSearchParams } from "next/navigation";
  * `ssr: false` because it needs a WebGL context, which the server does not have.
  */
 const VinylShelf = dynamic(() => import("@/components/VinylShelf3D"), { ssr: false });
+
+/**
+ * Two interfaces, two downloads.
+ *
+ * This component branches on `isPhone` and returns an entirely different tree
+ * on each side — that was the design and it is the right one. What it also did
+ * was ship both trees to everybody: a phone downloaded the 3D shelf, the
+ * command palette, the lists panel, the community bridge and the desktop edit
+ * overlay in order to never render one of them. Splitting them here means each
+ * device pays for the interface it actually gets.
+ *
+ * `ssr: false` on all of them because the branch is decided by a measurement
+ * that only exists in a browser — see the `measured` gate below, which is what
+ * stops a phone from loading the desktop chunk on its first render and the
+ * phone chunk on its second.
+ */
+const VinylGrid = dynamic(() => import("@/components/VinylGrid"), { ssr: false });
+const SearchOverlay = dynamic(() => import("@/components/SearchOverlay"), { ssr: false });
+const CollectionsOverlay = dynamic(() => import("@/components/CollectionsOverlay"), { ssr: false });
+const VinylEditOverlay = dynamic(() => import("@/components/VinylEditOverlay"), { ssr: false });
+const CommunityBridge = dynamic(() => import("@/components/CommunityBridge"), { ssr: false });
+const MobileShelf = dynamic(() => import("@/components/mobile/MobileShelf"), { ssr: false });
+const RecordSheet = dynamic(() => import("@/components/mobile/RecordSheet"), { ssr: false });
+const MobileSearch = dynamic(() => import("@/components/mobile/MobileSearch"), { ssr: false });
 
 /** how much of the window the spec sheet takes when it is open */
 const SPECS_VW = 50;
@@ -561,7 +577,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
 
   // which chrome this session gets; read here because the effect below is
   // desktop-only behaviour, not just desktop-only rendering
-  const { isPhone } = useDevice();
+  const { isPhone, measured } = useDevice();
 
   /**
    * While opened, the side panel follows the centred record.
@@ -592,6 +608,17 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
    * same actions. Deciding here, at the top, is what keeps either version from
    * carrying dead code for the other.
    */
+
+  /**
+   * Nothing is drawn until we know which machine this is.
+   *
+   * `useDevice` answers "desktop" on the server and corrects itself on mount,
+   * which is harmless for styling and expensive here: rendering the desktop
+   * branch for one frame would fetch the desktop chunk on a phone, and then
+   * the phone chunk immediately after. One frame of the app's own ground
+   * colour costs nothing and saves the whole wrong tree.
+   */
+  if (!measured) return <main className="min-h-screen-d bg-ink" />;
 
   if (isPhone) {
     return (
