@@ -685,8 +685,13 @@ export default function ExploreView() {
                 </ResultBlock>
               )}
 
-              {/* a scope with nothing in it still has to say something */}
+              {/* A scope with nothing in it still has to say something — but
+                  not while it is still being fetched. "Aquí no hay resultados"
+                  shown for the second before the answer lands is the same
+                  mistake as an empty shelf on a cold start: saying something
+                  false quickly is worse than saying nothing slowly. */}
               {scope !== "all" &&
+                !loadingAnything &&
                 ((scope === "records" && records.length === 0) ||
                   (scope === "lists" && lists.length === 0) ||
                   (scope === "people" && people.length === 0)) && (
