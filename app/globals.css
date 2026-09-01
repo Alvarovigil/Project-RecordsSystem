@@ -760,3 +760,53 @@ html[data-no-install] .door-pointer { display: var(--door-display, block); }
 @media (prefers-reduced-motion: reduce) {
   .cover-in { opacity: 1; transition: none; }
 }
+
+/* ---------------------------------------------------------------------------
+   The floor under the tab bar. See components/app/TabBar.
+
+   An installed window on iOS has been seen placing `bottom: 0` short of the
+   bottom of the screen at launch, and what shows through is the page's black
+   ground — which reads as the app ending early rather than as a bar that is
+   mispositioned. This paints the bar's own colour from its underside down,
+   far enough to cover any plausible gap. It sits behind the bar's own content
+   and takes no clicks.
+--------------------------------------------------------------------------- */
+.tabbar-floor::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 220px;
+  background: var(--ink);
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Portrait, and only portrait.
+
+   The manifest asks for it and Android obeys; iOS ignores manifest orientation
+   entirely and there is no API a web app can call to lock it. What is left is
+   to make landscape a screen rather than a broken layout: the shelf is a
+   vertical stack you flick with a thumb, the tab bar wants the bottom of a
+   tall screen, and a phone on its side has neither.
+
+   Scoped hard: a coarse pointer AND a short viewport, so a tablet in landscape
+   and a small desktop window are both untouched.
+--------------------------------------------------------------------------- */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 500px) {
+  .rotate-lock {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    padding: 24px;
+    text-align: center;
+    background: var(--surface);
+  }
+}
+.rotate-lock { display: none; }

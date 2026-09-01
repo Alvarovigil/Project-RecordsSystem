@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Page } from "@/components/app/AppShell";
 import { Cover } from "@/components/ui/Avatar";
 import EmptyState from "@/components/ui/EmptyState";
-import { CoverGridSkeleton } from "@/components/ui/Skeleton";
+import { SkeletonCovers } from "@/components/ui/Skeleton";
 import CatalogueSheet, { type CatalogueItem } from "@/components/CatalogueSheet";
 import RecordSheet from "@/components/mobile/RecordSheet";
 import { useLibrary } from "@/hooks/useLibrary";
@@ -160,7 +160,7 @@ export default function ArtistView({ slug }: { slug: string }) {
 
         <div className="mt-6">
           {more === null ? (
-            <CoverGridSkeleton count={12} />
+            <SkeletonCovers n={12} cols="grid-cols-3 sm:grid-cols-4 lg:grid-cols-6" gap="gap-x-4 gap-y-7" />
           ) : more.length === 0 ? (
             <EmptyState
               compact

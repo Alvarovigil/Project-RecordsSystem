@@ -48,7 +48,22 @@ export default function TabBar() {
   return (
     <nav
       aria-label="Principal"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-paper/10 bg-ink/92 backdrop-blur-xl"
+      /**
+       * The bar, and a floor under it.
+       *
+       * `bottom-0` should be enough and on every other platform it is. In an
+       * installed window on iOS the bar has been seen sitting short of the
+       * bottom of the screen at launch — the viewport it is measured against
+       * has not settled — and what shows underneath is a band of black that
+       * looks like the app ended early. `tabbar-floor` paints the bar's own
+       * material from its underside downwards, so a gap that does appear reads
+       * as a slightly taller bar rather than as a hole. It is a cover, not a
+       * cure: it makes a bug that only happens sometimes stop being visible
+       * when it does. The cure was one floor up — the shelf's canvas no longer
+       * measures itself in viewport units inside a box that already knows its
+       * own size.
+       */
+      className="tabbar-floor fixed inset-x-0 bottom-0 z-50 border-t border-paper/10 bg-ink/92 backdrop-blur-xl"
       style={{ paddingBottom: "var(--safe-bottom)" }}
     >
       <ul className="flex items-stretch">

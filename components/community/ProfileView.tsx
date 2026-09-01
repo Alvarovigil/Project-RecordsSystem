@@ -7,7 +7,8 @@ import Avatar, { Cover } from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import Sheet from "@/components/ui/Sheet";
 import { Tabs } from "@/components/ui/Segmented";
-import EmptyState, { CoverGridSkeleton } from "@/components/ui/EmptyState";
+import EmptyState from "@/components/ui/EmptyState";
+import { SkeletonRackGrid } from "@/components/ui/Skeleton";
 import FollowButton from "./FollowButton";
 import PersonRow from "./PersonRow";
 import ListCard from "./ListCard";
@@ -311,7 +312,7 @@ function ListGrid({
   coversOf: (l: ListWithRecord) => string[];
   empty: React.ReactNode;
 }) {
-  if (lists === null) return <CoverGridSkeleton count={6} />;
+  if (lists === null) return <SkeletonRackGrid n={6} />;
   if (lists.length === 0) return <>{empty}</>;
   return (
     <ul className="appear grid grid-cols-2 gap-x-9 gap-y-14 sm:grid-cols-3 lg:grid-cols-4">

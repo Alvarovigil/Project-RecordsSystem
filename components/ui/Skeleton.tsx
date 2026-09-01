@@ -49,7 +49,19 @@ export function SkeletonText({
   );
 }
 
-/** the collection, before it has been read */
+/**
+ * Every skeleton below is the shape of one real screen, and that is the whole
+ * of the discipline here.
+ *
+ * A generic three-column grid standing in for a two-column grid, a horizontal
+ * rail and a list of rows is worse than no skeleton at all: the layout jumps
+ * the moment the answer lands, which is the exact thing a skeleton exists to
+ * prevent. So each of these mirrors its caller's grid — the same columns, the
+ * same gaps, the same aspect, the same two lines of caption underneath — and
+ * when a screen's layout changes, its skeleton is next to it in the diff.
+ */
+
+/** the phone's collection: two columns, title and artist under each sleeve */
 export function SkeletonGrid({ n = 6 }: { n?: number }) {
   return (
     <ul aria-hidden className="grid grid-cols-2 gap-x-4 gap-y-7">
@@ -64,7 +76,87 @@ export function SkeletonGrid({ n = 6 }: { n?: number }) {
   );
 }
 
-/** a stack of rows: lists, people, racks */
+/**
+ * A rack's records, and an artist's: the wider grids, which are not the phone's
+ * two columns and must not pretend to be.
+ */
+export function SkeletonCovers({
+  n = 10,
+  cols = "grid-cols-3 sm:grid-cols-5",
+  gap = "gap-x-4 gap-y-6",
+}: {
+  n?: number;
+  cols?: string;
+  gap?: string;
+}) {
+  return (
+    <ul aria-hidden className={`grid ${cols} ${gap}`}>
+      {Array.from({ length: n }).map((_, i) => (
+        <li key={i}>
+          <Skeleton className="aspect-square w-full" />
+          <SkeletonText className="mt-2.5" w={i % 2 ? "64%" : "82%"} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * A rack card: the crate, its name, whose it is, and the two metrics under it.
+ *
+ * The crate is square — `Crate` pads to 100% of its own width — and the three
+ * lines below it are what `ListCard` prints, in the order it prints them.
+ */
+function RackCardShape() {
+  return (
+    <div>
+      <Skeleton className="aspect-square w-full" radius={3} />
+      <SkeletonText className="mt-3" w="72%" />
+      <SkeletonText className="mt-2" w="48%" />
+      <SkeletonText className="mt-3" w="34%" />
+    </div>
+  );
+}
+
+/** racks in a grid — a profile's own, and the ones it keeps */
+export function SkeletonRackGrid({ n = 6 }: { n?: number }) {
+  return (
+    <ul
+      aria-hidden
+      className="grid grid-cols-2 gap-x-9 gap-y-14 sm:grid-cols-3 lg:grid-cols-4"
+    >
+      {Array.from({ length: n }).map((_, i) => (
+        <li key={i}>
+          <RackCardShape />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Racks in a rail — Explorar.
+ *
+ * Cut off at the right edge like the real one, because that overhang is how
+ * the row says there is more of it. A skeleton that stops neatly inside the
+ * screen teaches the wrong thing for the half-second it is up.
+ */
+export function SkeletonRackRail({ n = 5 }: { n?: number }) {
+  return (
+    <ul
+      aria-hidden
+      className="-mx-5 flex gap-9 overflow-hidden px-5 pb-2 pr-10 sm:-mx-8 sm:px-8 sm:pr-14"
+    >
+      {Array.from({ length: n }).map((_, i) => (
+        <li key={i} className="w-[44vw] shrink-0 sm:w-[200px]">
+          <RackCardShape />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** a stack of rows: lists, people, racks inside the community panel */
 export function SkeletonRows({ n = 4 }: { n?: number }) {
   return (
     <ul aria-hidden className="space-y-3">
@@ -82,22 +174,43 @@ export function SkeletonRows({ n = 4 }: { n?: number }) {
 }
 
 /**
- * A row of sleeve-shaped skeletons: the shape almost every list here takes.
+ * Actividad: a day heading, then entries of a face and a sentence.
  *
- * It lived in EmptyState with a `animate-pulse` of its own, which meant the
- * product had two skeletons that blinked differently depending on which screen
- * you were on. One implementation, one motion.
+ * Two lines for the sentence and sometimes a row of covers under it, which is
+ * what the real entries are made of — an activity feed skeletoned as flat rows
+ * of one line is a different screen wearing the same grey.
+ */
+export function SkeletonActivity({ n = 4 }: { n?: number }) {
+  return (
+    <div aria-hidden>
+      <SkeletonText w="88px" className="mb-5" />
+      <ul className="space-y-7">
+        {Array.from({ length: n }).map((_, i) => (
+          <li key={i} className="flex gap-3.5">
+            <Skeleton className="h-9 w-9 shrink-0" radius={999} />
+            <span className="min-w-0 flex-1">
+              <SkeletonText w={i % 2 ? "78%" : "62%"} />
+              <SkeletonText className="mt-2" w="44%" />
+              {i % 2 === 0 && (
+                <span className="mt-3 flex gap-2">
+                  {[0, 1, 2, 3].map((c) => (
+                    <Skeleton key={c} className="h-12 w-12" />
+                  ))}
+                </span>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * The one that existed before any of these, kept because four screens import
+ * it — and now shaped like what they actually draw rather than like a grid
+ * that belonged to none of them.
  */
 export function CoverGridSkeleton({ count = 6 }: { count?: number }) {
-  return (
-    <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6" aria-hidden>
-      {Array.from({ length: count }).map((_, i) => (
-        <li key={i}>
-          <Skeleton className="aspect-square w-full" radius={3} />
-          <SkeletonText className="mt-2.5" w={i % 2 ? "62%" : "80%"} />
-          <SkeletonText className="mt-1.5" w={i % 3 ? "44%" : "56%"} />
-        </li>
-      ))}
-    </ul>
-  );
+  return <SkeletonCovers n={count} cols="grid-cols-3 sm:grid-cols-4 lg:grid-cols-6" />;
 }

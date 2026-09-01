@@ -806,9 +806,18 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   return (
     <div
       ref={containerRef}
-      className={`relative select-none touch-none ${
-        ambient ? "h-full w-full" : "h-screen w-screen"
-      }`}
+      /**
+       * The parent's box, never the viewport's.
+       *
+       * This was `h-screen w-screen` — 100vh — inside a parent that is already
+       * `fixed inset-0`. Two different answers to the same question, and on
+       * iOS they disagree: in a standalone window `100vh` is resolved against a
+       * viewport that has not always settled at launch, so the canvas came out
+       * taller or shorter than the box holding it and left a band of ground
+       * colour at the foot of the screen. Inheriting the parent cannot be
+       * wrong, because the parent is the thing being filled.
+       */
+      className="relative h-full w-full select-none touch-none"
       style={{ cursor: ambient ? "default" : "grab", pointerEvents: ambient ? "none" : undefined }}
     >
       <Canvas

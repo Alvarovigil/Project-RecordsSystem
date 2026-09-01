@@ -6,7 +6,7 @@ import { Page } from "@/components/app/AppShell";
 import Avatar, { Cover } from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
-import { SkeletonRows } from "@/components/ui/Skeleton";
+import { SkeletonActivity } from "@/components/ui/Skeleton";
 import { useRepository } from "@/hooks/useRepository";
 import { useNotifications } from "@/hooks/useNotifications";
 import { groupActivity, namesOf, type ActivityGroup } from "@/lib/activity";
@@ -95,7 +95,7 @@ export default function ActivityView() {
            is what a page load looks like; the shape of the list arriving is
            what an app looks like. */
         <div className="pt-2">
-          <SkeletonRows n={5} />
+          <SkeletonActivity n={4} />
         </div>
       ) : groups.length === 0 ? (
         <EmptyState

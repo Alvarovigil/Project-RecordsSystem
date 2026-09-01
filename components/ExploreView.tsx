@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Page, Section } from "@/components/app/AppShell";
 import { Cover } from "@/components/ui/Avatar";
-import EmptyState, { CoverGridSkeleton } from "@/components/ui/EmptyState";
+import EmptyState from "@/components/ui/EmptyState";
+import { SkeletonRackRail } from "@/components/ui/Skeleton";
 import CatalogueNotice from "@/components/ui/CatalogueNotice";
 import PersonRow from "@/components/community/PersonRow";
 import PersonCard from "@/components/community/PersonCard";
@@ -413,7 +414,7 @@ export default function ExploreView() {
 
           <Section title="Racks destacados">
             {loading && lists.length === 0 ? (
-              <CoverGridSkeleton count={8} />
+              <SkeletonRackRail n={5} />
             ) : lists.length === 0 ? (
               /* A heading with nothing under it is the worst of both: it does
                  not say "there is nothing here" and it does not say "something

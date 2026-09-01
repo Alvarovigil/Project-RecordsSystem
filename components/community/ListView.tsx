@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Page } from "@/components/app/AppShell";
 import Avatar, { Cover } from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
-import EmptyState, { CoverGridSkeleton } from "@/components/ui/EmptyState";
+import EmptyState from "@/components/ui/EmptyState";
+import { SkeletonCovers } from "@/components/ui/Skeleton";
 import SaveListButton from "./SaveListButton";
 import FollowButton from "./FollowButton";
 import ListMetrics from "./ListMetrics";
@@ -245,7 +246,7 @@ export default function ListView({
 
       <div className="mt-8">
         {items === null ? (
-          <CoverGridSkeleton count={10} />
+          <SkeletonCovers n={10} cols="grid-cols-3 sm:grid-cols-5" />
         ) : items.length === 0 ? (
           <EmptyState
             title={isOwner ? "Este rack todavía está vacío" : "Aquí no hay discos todavía"}

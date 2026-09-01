@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { recordVisit } from "@/lib/nav-history";
 import TopNav from "./TopNav";
 import TabBar from "./TabBar";
+import RotateLock from "./RotateLock";
 import { useDevice } from "@/hooks/useDevice";
 
 /**
@@ -50,6 +51,7 @@ export default function AppShell({
           as their covers decode — so it is left alone. */}
       {ownsHeader ? children : <PageFade key={pathname}>{children}</PageFade>}
       {isPhone && <TabBar />}
+      {isPhone && <RotateLock />}
     </>
   );
 }
