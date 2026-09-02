@@ -543,8 +543,28 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
    * shiny as the laminate they are printed on. Tuned on the device, with
    * ?luces=1.
    */
-  const coverRoughness = rig?.coverRoughness ?? (vertical ? 0 : 0.35);
-  const coverMetalness = vertical ? 0 : 0.05;
+  /**
+   * A sheen on the laminate, and why zero roughness had none.
+   *
+   * The pile was set to a roughness of 0 on the theory that a laminated sleeve
+   * is glossy, and it came out looking matte — which is the opposite of what
+   * the number says and is worth writing down. A perfectly smooth surface has
+   * an infinitely tight specular lobe: lit by two directional lamps and no
+   * environment to reflect, the highlight lands on almost no pixels at all and
+   * you never see it. Roughening it very slightly spreads that lobe into a
+   * soft band of light that actually crosses the cover as the stack turns.
+   *
+   * The reflectance goes up with it. A dielectric in three.js reflects 4% at
+   * normal incidence, which is about right for uncoated paper and low for the
+   * plastic film a sleeve is finished with; a little metalness buys the
+   * difference without touching the diffuse, so the white covers stay printed
+   * rather than blowing out again — that was the original bug here, and it was
+   * the exposure rather than the finish.
+   *
+   * Both stay adjustable on the device with ?luces=1.
+   */
+  const coverRoughness = rig?.coverRoughness ?? (vertical ? 0.14 : 0.35);
+  const coverMetalness = vertical ? 0.05 : 0.05;
   const cardboardRoughness = 0.9;
   // A real LP sleeve is about 5mm across a 315mm face — roughly 1 in 63. This
   // was 1 in 100, thinner than any record ever pressed, which left the spine
