@@ -37,12 +37,32 @@ export default function ViewportFix() {
       (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
     if (!standalone) return;
 
+    /**
+     * A real layout invalidation, not a scroll.
+     *
+     * The first version of this scrolled the document by a pixel and back —
+     * which does nothing at all on a document that has nothing to scroll, and
+     * that was precisely the situation the bug appears in. This makes the page
+     * briefly taller than the screen, forces the browser to lay it out, scrolls
+     * into that pixel and puts everything back. It is the same sequence of
+     * events as walking into Explorar, which is what fixed it by hand.
+     *
+     * The CSS in globals.css keeps a pixel of overflow permanently, so this is
+     * now the belt to that pair of braces: it covers the moment before the
+     * stylesheet has been applied, and the resume path, where the window has
+     * been measured while nobody was looking.
+     */
     const nudge = () => {
-      const y = window.scrollY;
-      window.scrollTo(0, y + 1);
-      window.scrollTo(0, y);
-      // some builds only re-measure on an actual resize event
-      window.dispatchEvent(new Event("resize"));
+      const el = document.documentElement;
+      const before = el.style.minHeight;
+      el.style.minHeight = "calc(100dvh + 2px)";
+      // reading a layout property is what makes the change take effect now
+      void el.offsetHeight;
+      window.scrollTo(0, 1);
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+        el.style.minHeight = before;
+      });
     };
 
     const first = requestAnimationFrame(nudge);

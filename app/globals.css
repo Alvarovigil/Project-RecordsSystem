@@ -387,6 +387,32 @@ html {
   }
 
   /**
+   * One pixel of overflow, and it fixes a bug that took three attempts.
+   *
+   * An installed window on iOS lays out at launch against a viewport shorter
+   * than the screen, and what shows under the tab bar is a band of black that
+   * looks like the app ended early. It persisted across Colección and
+   * Actividad and vanished the instant you opened Explorar — and then stayed
+   * fixed for the rest of the session, on every screen.
+   *
+   * That is the whole diagnosis. Colección is a fixed layer over a page of
+   * exactly 100dvh; Actividad is a short page of exactly 100dvh; both are the
+   * height of the screen and neither has anything to scroll. Explorar is long.
+   * The viewport settles the moment the document has scrollable overflow, and
+   * not before — so the app simply always has some. One pixel is enough, it
+   * cannot be seen, and `overscroll-behavior-y: none` above means it cannot
+   * even be rubber-banded into.
+   *
+   * Why not fix it in JavaScript: the obvious nudge is to scroll the document
+   * and scroll back, and on a document with nothing to scroll that is a no-op
+   * — which is exactly why the first attempt at this changed nothing.
+   */
+  body {
+    min-height: calc(100vh + 1px);
+    min-height: calc(100dvh + 1px);
+  }
+
+  /**
    * Safari zooms the page when a field with text under 16px takes focus, and
    * does not reliably zoom back out. Not a preference — a trap, and the single
    * loudest "this is a web page" moment there is.
