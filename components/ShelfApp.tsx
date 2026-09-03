@@ -45,6 +45,17 @@ import { useSearchParams } from "next/navigation";
  * `ssr: false` because it needs a WebGL context, which the server does not have.
  */
 const VinylShelf = dynamic(() => import("@/components/VinylShelf3D"), { ssr: false });
+const BootScreen = dynamic(() => import("@/components/mobile/BootScreen"), { ssr: false });
+
+/**
+ * Whether this launch has already shown its opening screen.
+ *
+ * Outside React on purpose: it has to survive every mount and unmount of this
+ * component, because the thing it prevents is the loader playing again every
+ * time somebody comes back to their collection from another tab. A ref would
+ * be reset by exactly the remount it exists to ignore.
+ */
+let bootedThisLaunch = false;
 
 /**
  * Two interfaces, two downloads.
@@ -97,7 +108,23 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
    */
   const [foreign, setForeign] = useState<{ list: SavedList; items: Vinyl[] } | null>(null);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const { isPhone, measured } = useDevice();
   const [hydrated, setHydrated] = useState(false);
+  /** the phone's opening screen: once per launch, never on navigation */
+  const [booted, setBooted] = useState(() => bootedThisLaunch);
+  /**
+   * Kept mounted through its own exit.
+   *
+   * Unmounting it the moment the app is ready would be a cut, and the point of
+   * the screen is that the app appears finished — so it dissolves, and only
+   * then leaves the tree.
+   */
+  const [bootVisible, setBootVisible] = useState(() => !bootedThisLaunch);
+  useEffect(() => {
+    if (!booted || !bootVisible) return;
+    const t = setTimeout(() => setBootVisible(false), 760);
+    return () => clearTimeout(t);
+  }, [booted, bootVisible]);
   const [collectionFading, setCollectionFading] = useState(false);
   const [view, setView] = useState<"shelf" | "grid">("shelf");
   /**
@@ -204,6 +231,60 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
       img.src = u;
     });
   }, [lib.ready, vinilos]);
+
+  /**
+   * How long the opening screen stays: until the app is finished, and a beat
+   * longer.
+   *
+   * Four conditions, and the point of all of them is that what appears when it
+   * lifts is a shelf rather than a shelf being built — the library read, the
+   * typefaces loaded so nothing reflows underneath, and the first covers
+   * decoded so the sleeves are printed rather than blank.
+   *
+   * A floor of 900ms because an opening screen that flashes reads as a
+   * stutter, and a ceiling of six seconds because a bad connection must delay
+   * somebody, never trap them: past that the app appears half-built, which is
+   * worse than waiting but far better than a wall.
+   */
+  useEffect(() => {
+    if (!isPhone || booted) return;
+    const started = performance.now();
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(cap);
+      const wait = Math.max(0, 900 - (performance.now() - started));
+      setTimeout(() => {
+        bootedThisLaunch = true;
+        setBooted(true);
+      }, wait);
+    };
+    const cap = setTimeout(finish, 6000);
+
+    if (!lib.ready) return () => clearTimeout(cap);
+
+    const fonts =
+      typeof document !== "undefined" && document.fonts
+        ? document.fonts.ready
+        : Promise.resolve();
+
+    const covers = vinilos.slice(0, 8).map(coverFor);
+    const decoded = Promise.all(
+      covers.map(
+        (u) =>
+          new Promise<void>((res) => {
+            const img = new Image();
+            img.onload = () => res();
+            img.onerror = () => res();
+            img.src = u;
+          }),
+      ),
+    );
+
+    void Promise.all([fonts, decoded]).then(finish);
+    return () => clearTimeout(cap);
+  }, [isPhone, booted, lib.ready, vinilos]);
 
   // The side info must never sit on the cover. The shelf measures how wide the
   // centred sleeve really is (it depends on fov, camera distance and viewport)
@@ -594,7 +675,6 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
 
   // which chrome this session gets; read here because the effect below is
   // desktop-only behaviour, not just desktop-only rendering
-  const { isPhone, measured } = useDevice();
 
   /**
    * While opened, the side panel follows the centred record.
@@ -640,6 +720,10 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   if (isPhone) {
     return (
       <>
+        {/* The app builds behind this and the screen lifts onto a finished
+            shelf. Rendered last so it covers everything, and only until the
+            first launch of the session has settled — see BootScreen. */}
+        {bootVisible && <BootScreen leaving={booted} />}
         <MobileShelf
           vinilos={vinilos}
           allVinilos={allVinilos}
