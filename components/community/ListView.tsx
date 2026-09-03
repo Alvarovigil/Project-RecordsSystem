@@ -134,30 +134,73 @@ export default function ListView({
       )}
 
       {/**
-       * The crate, then the words.
+       * The crate, centred, with the room lit by what is in it.
        *
-       * A list opened cold was a title over a paragraph over a row of chips —
-       * the same header any page anywhere has. But a list IS its records, and
-       * the fastest way to know whether this one is for you is to see three of
-       * them. The crate is the same object the card in Explorar shows, so
-       * arriving here confirms what you clicked instead of replacing it.
+       * This was a left-aligned row: a small crate beside a column of title,
+       * paragraph, chips and buttons — the same header shape as a settings
+       * page. A rack is not a document with an illustration; it is an object
+       * somebody assembled, and the page should open on the object.
+       *
+       * So the crate is the subject, on the centre line, at a size you can
+       * actually see the sleeves in, and everything else is caption under it.
+       * Behind it the covers bleed upward as a wash of their own colour — the
+       * same idea as the light the desktop shelf throws when you open a
+       * record, and the reason a rack of Blue Note reissues and a rack of
+       * hardcore no longer arrive on identical black.
+       *
+       * The measure stays narrow even though the block is centred: centred
+       * text is harder to read line-to-line, so it is only allowed where it is
+       * short.
        */}
-      <header className="mt-5 flex flex-col gap-6 border-b border-line pb-7 sm:flex-row sm:items-end sm:gap-8">
+      <header className="relative mt-2 border-b border-line pb-10 text-center">
+        {/* the wash: three covers, blurred past recognition, as light rather
+            than as an image. Screen so it can only ever brighten the ground. */}
         {items && items.length > 0 && (
-          <span className="w-[168px] shrink-0 sm:w-[196px]">
+          <div
+            aria-hidden
+            /* No negative z-index: that would put it behind the page's own
+               background, which is opaque, and the wash would never be seen.
+               It is absolutely positioned and the content after it is
+               positioned too, so painting order alone puts the light behind
+               the words. */
+            className="pointer-events-none absolute inset-x-0 top-0 h-[280px] overflow-hidden"
+          >
+            <div className="absolute inset-x-[-20%] top-[-30%] flex h-[320px] opacity-45 blur-[64px]">
+              {items.slice(-3).map((v) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={v.id}
+                  src={coverFor(v)}
+                  alt=""
+                  className="h-full flex-1 object-cover"
+                />
+              ))}
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-b from-surface/45 via-surface/70 to-surface" />
+          </div>
+        )}
+
+        <div className="relative">
+        {items && items.length > 0 && (
+          <span className="mx-auto block w-[200px] sm:w-[248px]">
             <Crate covers={items.slice(-3).reverse().map((v) => coverFor(v))} />
           </span>
         )}
 
-        <div className="min-w-0 flex-1">
-        <h1 className="text-display font-medium leading-tight text-paper">{title}</h1>
+        <h1 className="mx-auto mt-7 max-w-[18ch] text-display font-medium leading-tight text-paper">
+          {title}
+        </h1>
+
         {(list?.description || initial?.description) && (
-          <p className="mt-2.5 max-w-[58ch] text-body leading-relaxed text-content-secondary">
+          <p className="mx-auto mt-3.5 max-w-[46ch] text-body leading-relaxed text-content-secondary">
             {list?.description ?? initial?.description}
           </p>
         )}
 
-        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-3">
+        {/* Whose it is, and how big — one line, centred, with the two measures
+            after it. Here they are not a decoration on a card: they are part
+            of what the rack is. */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-3">
           {owner && (
             <Link
               href={`/u/${owner.username}`}
@@ -172,27 +215,19 @@ export default function ListView({
               {owner.displayName}
             </Link>
           )}
+          <span aria-hidden className="text-content-faint">·</span>
           <span className="text-sub text-content-muted">
             {items?.length ?? list?.itemCount ?? 0} discos
           </span>
-          {/* Las dos medidas, en la misma línea que el autor y el tamaño:
-              aquí no son un adorno de la tarjeta, son parte de lo que es la
-              lista. El corazón es el único gesto que se puede dar sin
-              decidir nada — guardarla se decide en el botón de abajo. */}
           {list && (
-            <ListMetrics
-              listId={list.id}
-              saves={list.saves}
-              likes={list.likes}
-              size="md"
-            />
+            <ListMetrics listId={list.id} saves={list.saves} likes={list.likes} size="md" />
           )}
           {list && <CollaboratorFaces listId={list.id} onOpen={() => setSharing(true)} />}
         </div>
 
         {/* The controls, by who you are. Never a disabled button explaining
             what you would be able to do if you were someone else. */}
-        <div className="mt-6 flex flex-wrap gap-2.5">
+        <div className="mt-7 flex flex-wrap justify-center gap-2.5">
           {isOwner ? (
             <>
               <Button variant="secondary" onClick={() => setSharing(true)}>
@@ -235,12 +270,6 @@ export default function ListView({
             )
           )}
         </div>
-        {!isOwner && list?.kind === "collection" && owner && (
-          <p className="mt-3 max-w-[52ch] text-sub leading-relaxed text-content-muted">
-            La colección de alguien no se guarda: es todo lo que tiene y cambia cada vez que compra
-            un disco. Sigue a {owner.displayName} y verás lo que va añadiendo.
-          </p>
-        )}
         </div>
       </header>
 
