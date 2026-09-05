@@ -275,6 +275,11 @@ export default function ArtistView({ slug }: { slug: string }) {
         onTogglePlay={() => {}}
         onAddTo={(listId, v) => void lib.saveToList(v, listId)}
         onRemoveFromActive={(v) => void lib.removeFromList(mine?.id ?? "", v.id)}
+        onRemoveFromList={(listId, v) => void lib.removeFromList(listId, v.id)}
+        coverOf={(id) => {
+          const v = lib.releases.find((x) => x.id === id);
+          return v ? coverFor(v) : null;
+        }}
         onDelete={(v) => void lib.deleteRelease(v.id)}
       />
     </Page>

@@ -8,6 +8,7 @@ import { useDevice } from "@/hooks/useDevice";
 import Avatar from "@/components/ui/Avatar";
 import Confirm from "@/components/ui/Confirm";
 import RecordSpecsCard from "@/components/RecordSpecsCard";
+import SaveSheet from "./SaveSheet";
 import Card from "@/components/ui/Card";
 import ShareSheet from "@/components/ShareSheet";
 import { SITE_URL } from "@/lib/site";
@@ -147,6 +148,8 @@ export default function RecordSheet({
   onAddTo,
   onRemoveFromActive,
   onDelete,
+  onRemoveFromList,
+  coverOf,
   canEdit = true,
 }: {
   vinyl: Vinyl | null;
@@ -167,6 +170,10 @@ export default function RecordSheet({
    * own lists — is exactly the same act wherever you found the record, which
    * is the point of this sheet being one sheet.
    */
+  /** take it out of one particular rack — the save sheet needs this */
+  onRemoveFromList?: (listId: string, v: Vinyl) => void;
+  /** resolves a record id to a cover, so a rack can show what is inside it */
+  coverOf?: (vinylId: string) => string | null;
   canEdit?: boolean;
 }) {
   const repo = useRepository();
@@ -175,6 +182,7 @@ export default function RecordSheet({
   const [picking, setPicking] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   /**
    * Whether the artwork has scrolled out of the way.
    *
@@ -212,6 +220,8 @@ export default function RecordSheet({
   if (!vinyl) return null;
 
   const wished = isWished(collections, vinyl.id);
+  /** how many of your racks hold this record — printed on the save control */
+  const savedIn = collections.filter((c) => c.vinylIds.includes(vinyl.id)).length;
   const mine = findCollection(collections);
   const wishlist = findWishlist(collections);
 
@@ -507,10 +517,15 @@ export default function RecordSheet({
                       ? `Escuchar ${vinyl.title}`
                       : "Este disco no tiene fragmento"
                 }
-                className="pressable flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-paper text-ink shadow-[0_8px_24px_rgba(0,0,0,0.45)] disabled:opacity-30 disabled:shadow-none"
+                /* The same 44px as the controls beside it. It was 56 to carry
+                   the hierarchy on its own; the save control next to it now
+                   says what it is in words, so the row has a shape without
+                   needing one button to shout. Filled is still what marks it
+                   as the thing to press. */
+                className="pressable flex h-tap w-tap shrink-0 items-center justify-center rounded-full bg-paper text-ink disabled:opacity-30"
               >
                 {playing ? (
-                  <svg width="17" height="17" viewBox="0 0 14 14" aria-hidden>
+                  <svg width="15" height="15" viewBox="0 0 14 14" aria-hidden>
                     <rect x="3" y="2" width="3" height="10" rx="0.6" fill="currentColor" />
                     <rect x="8" y="2" width="3" height="10" rx="0.6" fill="currentColor" />
                   </svg>
@@ -518,20 +533,57 @@ export default function RecordSheet({
                   /* nudged right by a hair: a triangle centred on its bounding
                      box looks off-centre inside a circle, which is why every
                      play button ever drawn is offset */
-                  <svg width="18" height="18" viewBox="0 0 14 14" aria-hidden className="translate-x-[1px]">
+                  <svg width="16" height="16" viewBox="0 0 14 14" aria-hidden className="translate-x-[1px]">
                     <path d="M3 1.8 L12 7 L3 12.2 Z" fill="currentColor" />
                   </svg>
                 )}
               </button>
 
-              <IconButton label="Guardar en un rack" onClick={() => setPicking(true)}>
-                <path
-                  d="M4.5 2.5h7a.5.5 0 0 1 .5.5v10.2L8 10.8l-4 2.4V3a.5.5 0 0 1 .5-.5Z"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinejoin="round"
-                />
-              </IconButton>
+              {/**
+               * The save control says what it knows.
+               *
+               * It was a bookmark glyph and nothing else, which asks you to
+               * press it to find out whether you have already pressed it. The
+               * answer was one tap away and there was no reason not to print
+               * it: a record is either somewhere or it is not, and if it is,
+               * how many places is the next thing anybody wants.
+               *
+               * It takes the width left over, so the row reads as one action
+               * with two shortcuts beside it rather than as four equal icons.
+               */}
+              <button
+                onClick={() => setPicking(true)}
+                aria-label={
+                  savedIn === 0
+                    ? "Guardar en un rack"
+                    : `Guardado en ${savedIn} ${savedIn === 1 ? "rack" : "racks"}. Cambiar.`
+                }
+                className={`pressable flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full px-4 text-sub font-medium transition-colors ${
+                  savedIn === 0
+                    ? "border border-line-strong text-content hover:border-line-focus"
+                    : "bg-fill text-paper hover:bg-fill-strong"
+                }`}
+              >
+                {/* A crate, not a bookmark. A bookmark is what you put in a
+                    book you are coming back to; this app keeps records in
+                    boxes, and it is the object every other screen already
+                    draws — the crate in Explorar, the one on a rack's page. */}
+                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0">
+                  <path
+                    d="M2.6 4.4h10.8l-.85 8.5a.7.7 0 0 1-.7.6H4.15a.7.7 0 0 1-.7-.6L2.6 4.4Z"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M6.3 7.1h3.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+                <span className="truncate">
+                  {savedIn === 0
+                    ? "Guardar"
+                    : `En ${savedIn} ${savedIn === 1 ? "rack" : "racks"}`}
+                </span>
+              </button>
+
               <IconButton label="Compartir" onClick={() => setSharing(true)}>
                 <path
                   d="M8 10.5V2.6 M5 5.4 L8 2.4 L11 5.4"
@@ -547,6 +599,28 @@ export default function RecordSheet({
                   strokeLinecap="round"
                 />
               </IconButton>
+
+              {/**
+               * Everything else, behind three dots.
+               *
+               * The screen used to end in a card holding "Quitar de esta
+               * lista" and "Borrar de mi colección" — two administrative
+               * sentences under the tracklist, one of them destructive, both
+               * of them the last thing you read about a record you had opened
+               * to look at. Nobody opens a sleeve in order to delete it.
+               *
+               * A menu is the honest place for them: present, one press away,
+               * and not part of the page. It is also where anything else that
+               * is not listening, keeping or sharing will go, so the screen
+               * stops growing a new row every time the app learns a verb.
+               */}
+              {canEdit && (
+                <IconButton label="Más opciones" onClick={() => setMenuOpen(true)}>
+                  <circle cx="8" cy="3.4" r="1.25" fill="currentColor" />
+                  <circle cx="8" cy="8" r="1.25" fill="currentColor" />
+                  <circle cx="8" cy="12.6" r="1.25" fill="currentColor" />
+                </IconButton>
+              )}
             </div>
 
             {/* --------------------------------------------------- lo tengo */}
@@ -686,36 +760,54 @@ export default function RecordSheet({
                 </Card>
               )}
 
-              {/* The two ways of removing something, worded apart on purpose:
-                  "Quitar de esta lista" is reversible bookkeeping, "Borrar de
-                  mi colección" is not. A single "Eliminar" meaning either one
-                  is how people lose records. Last on the screen, in the quiet
-                  type, because nobody opens a record in order to delete it. */}
-              {canEdit && (
-                <Card padded={false}>
-                  <button
-                    onClick={() => {
-                      // the shelf's handler confirms this one, with its undo
-                      onRemoveFromActive(vinyl);
-                      onClose();
-                    }}
-                    className="pressable w-full px-5 py-2.5 text-left text-sub text-content-secondary"
-                  >
-                    Quitar de esta lista
-                  </button>
-                  <button
-                    onClick={() => setDeleting(true)}
-                    className="pressable w-full px-5 py-2.5 text-left text-sub text-[#ff6b57]"
-                  >
-                    Borrar de mi colección
-                  </button>
-                </Card>
-              )}
             </div>
           </div>
         </div>
 
       </Panel>
+
+      {/* The secondary verbs. Destructive last and in the danger colour, with
+          a rule above it, because a menu where everything looks the same is a
+          menu where the wrong row gets pressed. */}
+      <Sheet
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title={vinyl.title}
+        subtitle={cleanArtist(vinyl.artist)}
+        size="auto"
+        width={380}
+      >
+        <div className="py-1">
+          <SheetRow
+            label="Guardar en un rack"
+            onClick={() => {
+              setMenuOpen(false);
+              setPicking(true);
+            }}
+          />
+          <SheetRow
+            label="Compartir"
+            onClick={() => {
+              setMenuOpen(false);
+              setSharing(true);
+            }}
+          />
+          <SheetRow
+            label="Ver a este artista"
+            href={`/artista/${artistSlug(vinyl.artist)}`}
+            onClick={onClose}
+          />
+          <div className="my-1.5 h-px bg-line" />
+          <SheetRow
+            label="Borrar de mi colección"
+            danger
+            onClick={() => {
+              setMenuOpen(false);
+              setDeleting(true);
+            }}
+          />
+        </div>
+      </Sheet>
 
       {/* Sharing: its own sheet on top, so the record is still there behind
           it when the share is cancelled — which it often is. */}
@@ -730,43 +822,40 @@ export default function RecordSheet({
         filename={`${vinyl.id}.png`}
       />
 
-      {/* saving into a list: its own sheet, so the record stays behind it */}
-      <Sheet
+      {/**
+       * Where it lives, and everywhere it could — see SaveSheet.
+       *
+       * This used to be a menu of rack names with a tick beside the ones that
+       * already held the record, and pressing one of those did nothing you
+       * could see. It answered "which rack shall I add this to" and left the
+       * two questions somebody actually opens it with — where is this, and
+       * take it out of there — unanswerable.
+       */}
+      <SaveSheet
         open={picking}
         onClose={() => {
           setPicking(false);
           setAcquiring(false);
         }}
-        title={acquiring ? "Lo tengo, ¿en qué rack?" : "Guardar en"}
-        size="auto"
-        width={380}
-      >
-        <div className="py-1">
-          {collections
-            .filter((c) => !acquiring || c.id !== wishlist?.id)
-            .map((c) => {
-            const has = c.vinylIds.includes(vinyl.id);
-            return (
-              <SheetRow
-                key={c.id}
-                label={c.name}
-                detail={has ? "✓" : `${c.vinylIds.length}`}
-                onClick={() => {
-                  setPicking(false);
-                  if (acquiring) {
-                    setAcquiring(false);
-                    return acquire(c.id);
-                  }
-                  onAddTo(c.id, vinyl);
-                  toast.show(has ? `Ya estaba en ${c.name}` : `Guardado en ${c.name}`, {
-                    media: { src: coverFor(vinyl) },
-                  });
-                }}
-              />
-            );
-          })}
-        </div>
-      </Sheet>
+        vinyl={vinyl}
+        collections={acquiring ? collections.filter((c) => c.id !== wishlist?.id) : collections}
+        coverOf={coverOf}
+        onAdd={(listId) => {
+          setPicking(false);
+          if (acquiring) {
+            setAcquiring(false);
+            return acquire(listId);
+          }
+          const name = collections.find((c) => c.id === listId)?.name ?? "tu rack";
+          onAddTo(listId, vinyl);
+          toast.show(`Guardado en ${name}`, { media: { src: coverFor(vinyl) } });
+        }}
+        onRemove={(listId) => {
+          const name = collections.find((c) => c.id === listId)?.name ?? "ese rack";
+          onRemoveFromList?.(listId, vinyl);
+          toast.show(`Fuera de ${name}`, { media: { src: coverFor(vinyl) } });
+        }}
+      />
 
       <Confirm
         open={deleting}

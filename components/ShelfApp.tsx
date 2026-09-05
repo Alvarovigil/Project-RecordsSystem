@@ -773,6 +773,12 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           onTogglePlay={(v) => (nowPlaying?.id === v.id ? audio.toggleCurrent() : playPreview(v))}
           onAddTo={(listId, v) => handleSaveToList(v, listId)}
           onRemoveFromActive={(v) => handleRemoveVinylFromActive(v.id)}
+          onRemoveFromList={(listId, v) => handleToggleVinyl(listId, v.id)}
+          // the save sheet draws each rack with a record from inside it
+          coverOf={(id) => {
+            const v = allVinilos.find((x) => x.id === id);
+            return v ? coverFor(v) : null;
+          }}
           onDelete={(v) => handleDeleteVinylPermanently(v.id)}
         />
 
