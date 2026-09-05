@@ -9,6 +9,8 @@ import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonRackRail } from "@/components/ui/Skeleton";
 import CatalogueNotice from "@/components/ui/CatalogueNotice";
 import WantedRail, { type WantedRow } from "@/components/explore/WantedRail";
+import FromOthersRail from "@/components/explore/FromOthersRail";
+import PulseRail from "@/components/explore/PulseRail";
 import CatalogueSheet, { type CatalogueItem } from "@/components/CatalogueSheet";
 import PersonRow from "@/components/community/PersonRow";
 import PersonCard from "@/components/community/PersonCard";
@@ -20,7 +22,7 @@ import { useLibrary } from "@/hooks/useLibrary";
 import { useCatalogueSearch } from "@/hooks/useCatalogueSearch";
 import { useToast } from "@/components/ui/Toast";
 import { coverFor } from "@/lib/cover";
-import type { ListWithRecord, SuggestedProfile } from "@/lib/data/types";
+import type { ActivityEvent, ListWithRecord, SuggestedProfile } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 
 /**
@@ -122,6 +124,9 @@ export default function ExploreView() {
     return best && best[1] >= 2 ? best[0] : null;
   }, [lib.releases]);
 
+  /** lo que ya está en tu estantería, por id de disco */
+  const ownedIds = useMemo(() => new Set(lib.releases.map((v) => v.id)), [lib.releases]);
+
   const ownedDiscogsIds = useMemo(
     () => new Set(lib.releases.map((v) => v.discogsId).filter(Boolean) as number[]),
     [lib.releases],
@@ -161,6 +166,8 @@ export default function ExploreView() {
 
   /** el disco del catálogo que se está mirando, si hay alguno */
   const [looking, setLooking] = useState<CatalogueItem | null>(null);
+  /* el pulso de la comunidad: lo que alguien acaba de colocar en su estantería */
+  const [pulse, setPulse] = useState<ActivityEvent[] | null>(null);
 
   /** guardar desde la esquina de la portada, sin abrir nada */
   const saveRow = async (r: (typeof addable)[number]) => {
@@ -188,6 +195,10 @@ export default function ExploreView() {
 
     if (!q) {
       setLoading(true);
+      repo
+        .activity()
+        .then((e) => setPulse(e.filter((x) => !x.mine)))
+        .catch(() => setPulse([]));
       Promise.all([repo.popularLists(), repo.suggestedProfiles()])
         .then(([l, p]) => {
           if (!alive) return;
@@ -481,6 +492,34 @@ export default function ExploreView() {
             </Section>
           )}
 
+          {/**
+           * El orden de esta pantalla es el orden de lo que promete la
+           * aplicación.
+           *
+           * Empezaba por una lista de los discos más deseados del año: un dato
+           * de mercado, correcto y de nadie, que podría estar en cualquier
+           * aplicación de discos. Rackr existe para lo contrario — para que las
+           * colecciones dejen de estar aisladas —, así que arriba va la gente:
+           * lo que alguien acaba de colocar en su estantería, y lo que hay en
+           * las estanterías de otros que no está en la tuya. Las tendencias
+           * siguen ahí, abajo, que es donde responden a «¿y qué más hay?».
+           */}
+          {pulse !== null && pulse.length > 0 && (
+            <Section title="Ahora mismo">
+              <PulseRail events={pulse} />
+            </Section>
+          )}
+
+          {lists.length > 0 && (
+            <Section title="En sus estanterías, no en la tuya">
+              <FromOthersRail
+                lists={lists}
+                ownedIds={ownedIds}
+                onOpen={(f) => setOpenRecord(f.vinyl)}
+              />
+            </Section>
+          )}
+
           <Section title="Racks destacados">
             {loading && lists.length === 0 ? (
               <SkeletonRackRail n={5} />
@@ -524,15 +563,32 @@ export default function ExploreView() {
             )}
           </Section>
 
+          <Section title="Usuarios que coleccionan">
+            {/* The same rail as the crates above, for the same reason: this is
+                something to skim past, not a directory to work through. And
+                the cards are shelves rather than faces — see PersonCard. */}
+            <ul className="rail rail-page flex gap-4 pb-2 sm:gap-5">
+              {people.slice(0, 12).map((p) => (
+                <li
+                  key={p.id}
+                  className="w-[46vw] shrink-0 snap-start sm:w-[196px] lg:w-[212px]"
+                >
+                  <PersonCard profile={p} />
+                </li>
+              ))}
+            </ul>
+          </Section>
+
           {/**
-           * The two rails Discogs makes possible, under the club rather than
-           * over it.
+           * Las dos listas del catálogo, debajo del club y no encima.
            *
-           * Explorar is about the people here first — what they have made and
-           * who they are — and a chart of the world's most wanted records
-           * would swamp that if it opened the page. Underneath, it is the
-           * answer to "and what else is there", which on a quiet week is the
-           * whole reason somebody scrolled this far.
+           * Explorar es primero la gente que hay aquí: lo que acaban de colocar,
+           * lo que tienen y tú no, sus cajones y quiénes son. Una lista de lo
+           * más deseado del mundo es correcta y no es de nadie — si abriera la
+           * pantalla, la aplicación diría que va de discos cuando va de
+           * colecciones. Al final, en cambio, responde a «¿y qué más hay?»,
+           * que en una semana tranquila es justo por lo que alguien ha
+           * llegado hasta aquí abajo.
            */}
           <WantedRail
             title="En tendencia"
@@ -565,21 +621,6 @@ export default function ExploreView() {
             />
           )}
 
-          <Section title="Usuarios que coleccionan">
-            {/* The same rail as the crates above, for the same reason: this is
-                something to skim past, not a directory to work through. And
-                the cards are shelves rather than faces — see PersonCard. */}
-            <ul className="rail rail-page flex gap-4 pb-2 sm:gap-5">
-              {people.slice(0, 12).map((p) => (
-                <li
-                  key={p.id}
-                  className="w-[46vw] shrink-0 snap-start sm:w-[196px] lg:w-[212px]"
-                >
-                  <PersonCard profile={p} />
-                </li>
-              ))}
-            </ul>
-          </Section>
         </>
       )}
 
