@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
-import { AnimatePresence, motion } from "framer-motion";
-import { useDevice } from "@/hooks/useDevice";
 import Avatar from "@/components/ui/Avatar";
 import Confirm from "@/components/ui/Confirm";
 import RecordSpecsCard from "@/components/RecordSpecsCard";
@@ -14,6 +12,10 @@ import {
   RecordGround,
   RecordHero,
 } from "@/components/record/RecordHero";
+import RecordScreen, {
+  RecordTopBar,
+  useScrolledPast,
+} from "@/components/record/RecordScreen";
 import SaveSheet from "./SaveSheet";
 import Tracklist from "./Tracklist";
 import Card from "@/components/ui/Card";
@@ -28,84 +30,6 @@ import { artistSlug, cleanArtist } from "@/lib/artist";
 import type { FriendWithRecord, ListWithRecord } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 import { findCollection, findWishlist, isWished, type Collection } from "@/lib/collections";
-
-/**
- * The surface a record lives on.
- *
- * A phone gets a screen — fixed, full bleed, one scroller, no gesture of its
- * own. A desktop gets the app's dialog, because there the shelf around it is
- * the context and taking the whole window away would be theft.
- */
-function Panel({
-  open,
-  onClose,
-  children,
-}: {
-  open: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  const { isPhone } = useDevice();
-
-  if (!isPhone) {
-    return (
-      <Sheet open={open} onClose={onClose} size="tall" bare>
-        {/**
-         * The dialog is a fixed box with its overflow hidden, so the body has
-         * to do its own scrolling — otherwise anything past 78vh is simply
-         * not reachable, which is what was happening to the end of a long
-         * tracklist and to this card the moment it opened.
-         */}
-        <div className="scroll-y min-h-0 flex-1 overflow-y-auto">{children}</div>
-      </Sheet>
-    );
-  }
-
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          role="dialog"
-          aria-modal="true"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 16 }}
-          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          /* Below the app's dialog layer (70), not above it: this is a
-             screen, and everything opened from it — guardar, compartir, el
-             confirmar de borrar — is a sheet that has to land on top. At 80 it
-             covered them, so pressing Guardar on a phone appeared to do
-             nothing at all. */
-          /**
-           * The frame and the scroller are two elements on purpose.
-           *
-           * They were one, with the safe-area insets as padding on the
-           * scrolling box — and padding on a scroller holds nothing back:
-           * content travels up through it and paints in the region the inset
-           * existed to keep clear. On an iPhone that means the catalogue
-           * number of whatever you were reading sliding out from behind the
-           * clock and the island. The inset belongs to the frame, which does
-           * not scroll; the scroller lives inside it and is clipped by it.
-           */
-          /**
-           * Black, not the lifted grey.
-           *
-           * `--surface-raised` is #101010 — a step up from the app's ground so
-           * that a panel over a page reads as being on top of it. This screen
-           * is not on top of anything: it takes the whole display, and the
-           * subject is a square of printed artwork. Any grey behind that is a
-           * value competing with the cover, and it is exactly what the wash
-           * was fading into and giving away.
-           */
-          className="fixed inset-0 z-[60] bg-ink"
-          style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }}
-        >
-          <div className="scroll-y h-full overflow-y-auto">{children}</div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
 
 /**
  * A record, on a phone.
@@ -177,32 +101,9 @@ export default function RecordSheet({
   const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [toWishlist, setToWishlist] = useState(false);
-  /**
-   * Whether the artwork has scrolled out of the way.
-   *
-   * Read from an observer on a sentinel rather than from scroll offsets: the
-   * sheet is dragged as well as scrolled, and a number compared against a
-   * threshold flickers at exactly the moment a finger is holding it still.
-   */
-  const [scrolled, setScrolled] = useState(false);
-  const sentinel = useRef<HTMLDivElement>(null);
+  const { sentinel, scrolled } = useScrolledPast(Boolean(vinyl));
   /** the picker is doing double duty: "guardar en" and "lo tengo, ¿en qué rack?" */
   const [acquiring, setAcquiring] = useState(false);
-
-  useEffect(() => {
-    const el = sentinel.current;
-    if (!vinyl || !el) return;
-    // A band rather than a line: with a single threshold, holding the sheet
-    // still at exactly the crossing point leaves it deciding twice a frame.
-    const io = new IntersectionObserver(
-      ([e]) => setScrolled(e.boundingClientRect.top < 0 ? true : e.isIntersecting ? false : true),
-      // matches the header's height: the bar arrives exactly when the sentinel
-      // passes under it, and 56 was the old 14-unit bar
-      { rootMargin: "-64px 0px 0px 0px", threshold: [0, 1] },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [vinyl]);
 
   useEffect(() => {
     if (!vinyl) return;
@@ -285,107 +186,33 @@ export default function RecordSheet({
        * is a button in the corner rather than a gesture that competes with
        * reading a tracklist.
        */}
-      <Panel open={Boolean(vinyl)} onClose={onClose}>
-        {/**
-         * One header, always the same height.
-         *
-         * It was two: a transparent strip with the back button, and a bar that
-         * hung *below* it on `top-full` — which is why there was a band of
-         * page above the title and the play button, with content sliding
-         * through it. Hanging it below was itself a fix, for a flicker loop
-         * the bar caused when it grew inside the flow and pushed the sentinel
-         * back into view.
-         *
-         * Both problems go away by giving the header a fixed height from the
-         * start. Nothing grows, so nothing oscillates, and nothing hangs
-         * underneath: the record's name and its play button arrive in the
-         * space the back button was already occupying, and the background
-         * fades in under them.
-         */}
-        <div className="sticky top-0 z-30 h-16">
-          {/**
-           * The same bar as the player at the foot of the app.
-           *
-           * There were two designs for one object: down there a square sleeve
-           * with the artist set in mono capitals and an outlined circle for
-           * play; up here a rounded thumbnail, sentence case and a filled
-           * circle. Both were fine and together they said the app was built by
-           * two people. This is the player's design, with a back button on the
-           * left and pinned to the top instead of the bottom — which is the
-           * whole of the difference, and the only part of it that is a
-           * difference in *job*.
-           *
-           * It keeps its own glass rather than the player's flat ink, because
-           * a bar at the top of a record has that record's artwork moving
-           * underneath it and a solid one would be a lid.
-           */}
-          <div
-            className={`absolute inset-0 transition-opacity duration-base ease-out ${
-              scrolled ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <div className="absolute inset-0 bg-ink/88 backdrop-blur-2xl" />
-            <div className="absolute inset-x-0 bottom-0 h-px bg-line" />
-          </div>
-
-          <div className="relative flex h-16 items-center gap-3 px-4">
+      <RecordScreen open={Boolean(vinyl)} onClose={onClose}>
+        <RecordTopBar
+          onClose={onClose}
+          cover={coverFor(vinyl)}
+          title={vinyl.title}
+          artist={cleanArtist(vinyl.artist)}
+          scrolled={scrolled}
+          trailing={
             <button
-              onClick={onClose}
-              aria-label="Cerrar"
-              className="pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-paper/[0.10] text-paper backdrop-blur-xl transition-colors hover:bg-paper/20"
+              onClick={() => onTogglePlay(vinyl)}
+              disabled={!vinyl.previewUrl}
+              aria-label={playing ? "Pausar" : `Escuchar ${vinyl.title}`}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-paper/25 text-paper transition hover:border-paper/60 disabled:opacity-30"
             >
-              <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden>
-                <path
-                  d="M11.5 3.5 L5.5 9 L11.5 14.5"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              {playing ? (
+                <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden>
+                  <rect x="3" y="2" width="3" height="10" fill="currentColor" />
+                  <rect x="8" y="2" width="3" height="10" fill="currentColor" />
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden className="translate-x-[1px]">
+                  <path d="M3 2 L12 7 L3 12 Z" fill="currentColor" />
+                </svg>
+              )}
             </button>
-
-            {/* Once the artwork has scrolled away, the title and the transport
-                come with you. Reading a tracklist and having to scroll back up
-                to press play is the whole reason people close these. */}
-            <div
-              className={`flex min-w-0 flex-1 items-center gap-3 transition-[opacity,transform] duration-base ease-out ${
-                scrolled
-                  ? "translate-y-0 opacity-100"
-                  : "pointer-events-none translate-y-1.5 opacity-0"
-              }`}
-            >
-              {/* square and unrounded, like the player's: a sleeve is square */}
-              <span className="h-10 w-10 shrink-0 overflow-hidden bg-paper/[0.06]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={coverFor(vinyl)} alt="" className="h-full w-full object-cover" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] text-paper">{vinyl.title}</span>
-                <span className="mono block truncate text-[10px] uppercase tracking-[0.16em] text-paper/40">
-                  {cleanArtist(vinyl.artist)}
-                </span>
-              </span>
-              <button
-                onClick={() => onTogglePlay(vinyl)}
-                disabled={!vinyl.previewUrl}
-                aria-label={playing ? "Pausar" : `Escuchar ${vinyl.title}`}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-paper/25 text-paper transition hover:border-paper/60 disabled:opacity-30"
-              >
-                {playing ? (
-                  <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden>
-                    <rect x="3" y="2" width="3" height="10" fill="currentColor" />
-                    <rect x="8" y="2" width="3" height="10" fill="currentColor" />
-                  </svg>
-                ) : (
-                  <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden className="translate-x-[1px]">
-                    <path d="M3 2 L12 7 L3 12 Z" fill="currentColor" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+          }
+        />
 
         <div className="relative -mt-16 pb-10">
           {/* The sleeve behind the sleeve. It costs nothing — the image is
@@ -661,7 +488,7 @@ export default function RecordSheet({
           </div>
         </div>
 
-      </Panel>
+      </RecordScreen>
 
       {/**
        * The secondary verbs, and only the ones that are not already on screen.

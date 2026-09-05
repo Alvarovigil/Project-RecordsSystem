@@ -101,7 +101,10 @@ export async function GET(req: NextRequest) {
   const sb = getSupabaseAdminClient();
   // a separate cache namespace: the same words asked two different ways are
   // two different answers
-  const cacheKey = artistOnly ? `artist:${norm(raw)}` : norm(raw);
+  /* La versión va en la clave: las filas guardadas se filtraron con la regla
+     blanda anterior, y sin cambiar la clave los VHS seguirían saliendo de la
+     caché durante días. */
+  const cacheKey = artistOnly ? `artist:v2:${norm(raw)}` : `v2:${norm(raw)}`;
   if (sb && cacheKey) {
     const { data } = await sb
       .from("discogs_search_cache")
@@ -186,17 +189,30 @@ export async function GET(req: NextRequest) {
   }
   const merged = Array.from(byKey.values());
 
-  // Soft post-filter: drop ONLY releases that explicitly mention a non-vinyl
-  // format AND don't ALSO mention vinyl. Releases with empty/odd format
-  // strings stay (Discogs has lots of these). Masters always stay.
-  const isVinylFmt = (r: DiscogsResult) =>
-    (r.format ?? []).some((f) => /vinyl|lp|7"|10"|12"/i.test(f));
-  const isExplicitlyNonVinyl = (r: DiscogsResult) => {
-    const fmts = r.format ?? [];
-    if (fmts.length === 0) return false; // no info → keep
-    return fmts.some((f) => /\bcd\b|cassette|file|flac|mp3|\btape\b|dvd|stream/i.test(f)) && !isVinylFmt(r);
-  };
-  const vinylOnly = merged.filter((r) => r.type === "master" || !isExplicitlyNonVinyl(r));
+  /**
+   * Esto es una aplicación de vinilos, así que lo que no es un vinilo no sale.
+   *
+   * El filtro era blando: dejaba pasar cualquier resultado sin formato y —
+   * peor — cualquier «master», que es donde el catálogo agrupa todas las
+   * ediciones de un disco. Un master de un recopilatorio que solo salió en CD
+   * es un master, así que pasaba; y como el VHS ni siquiera estaba en la lista
+   * de formatos descartados, buscar un grupo español devolvía cintas de vídeo.
+   *
+   * La regla ahora es al revés y es una sola: si el catálogo dice de qué
+   * formato es, tiene que ser un disco. Solo cuando no dice nada se le concede
+   * el beneficio de la duda, porque hay fichas antiguas sin ese campo y una
+   * ficha incompleta no es lo mismo que un CD.
+   *
+   * Se nombran los soportes que sí son discos — 7", 10", 12", shellac, flexi,
+   * acetato — porque la palabra «Vinyl» falta en unas cuantas fichas viejas
+   * que sí lo son.
+   */
+  const isRecord = (r: DiscogsResult) =>
+    (r.format ?? []).some((f) =>
+      /vinyl|\blp\b|7"|10"|12"|shellac|flexi|acetate/i.test(f),
+    );
+  const vinylOnly = merged.filter((r) => (r.format ?? []).length === 0 || isRecord(r));
+  const isVinylFmt = isRecord;
 
   const scored = vinylOnly.map((r) => {
     const title = norm(r.title ?? "");

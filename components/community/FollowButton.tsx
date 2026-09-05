@@ -41,10 +41,14 @@ export default function FollowButton({
    * For rows: a list of people is a column of names, and a column of buttons
    * beside it makes the buttons the loudest thing on a screen whose subject is
    * the people. As an icon the control gets out of the way and the row can
-   * spend its width on the name — but it only works where the two states are
-   * unmistakable, which is why the followed one is a tick and not a second
-   * person-shape. The word is still there for a screen reader, and it is still
-   * the label everywhere the button is the point of the screen.
+   * spend its width on the name.
+   *
+   * Una silueta con un signo, y no un signo suelto. Un «+» y una palomita son
+   * los iconos de añadir y de hecho: valen para cualquier cosa, y sobre una
+   * tarjeta cuyo tema es una persona lo que leen es «marcado». Con la silueta
+   * detrás, el mismo par de signos dice de qué va — se sigue a alguien, y se
+   * le sigue ya. La palabra sigue estando para quien lee con la voz, y sigue
+   * siendo la etiqueta allí donde el botón es el asunto de la pantalla.
    */
   icon?: boolean;
 }) {
@@ -99,19 +103,19 @@ export default function FollowButton({
         >
           {following ? (
             hover && hovering ? (
-              // the same shape the hover state says in words elsewhere: leaving
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-                <path d="M3 3 L11 11 M11 3 L3 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              // la misma forma que el estado de hover dice con palabras en otros sitios: irse
+              <PersonGlyph>
+                <path d="M10.4 10.4 L13.6 13.6 M13.6 10.4 L10.4 13.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </PersonGlyph>
             ) : (
-              <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden>
-                <path d="M2.5 7.4 L5.4 10.2 L11.5 3.9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <PersonGlyph>
+                <path d="M10.1 12.1 L11.4 13.4 L14 10.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </PersonGlyph>
             )
           ) : (
-            <svg width="15" height="15" viewBox="0 0 14 14" fill="none" aria-hidden>
-              <path d="M7 2.6 V11.4 M2.6 7 H11.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            </svg>
+            <PersonGlyph>
+              <path d="M12 10.1 V13.9 M10.1 12 H13.9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </PersonGlyph>
           )}
         </button>
 
@@ -170,5 +174,29 @@ export function FollowsYouBadge({ profileId }: { profileId: string }) {
     <span className="shrink-0 whitespace-nowrap rounded-sm bg-fill px-1.5 py-0.5 text-micro font-medium uppercase tracking-label text-content-muted">
       Te sigue
     </span>
+  );
+}
+
+/**
+ * Una persona, y a su lado lo que le pasa: un signo más, una palomita, un aspa.
+ *
+ * La silueta es la misma en los tres estados y solo cambia el signo, que es lo
+ * que hace que el botón se lea de un vistazo sin haber visto el anterior: la
+ * figura dice de qué trata y el signo dice en qué punto está. El hombro se
+ * recorta por la derecha para que el signo tenga sitio propio y no se apoye
+ * encima de la cabeza.
+ */
+function PersonGlyph({ children }: { children: React.ReactNode }) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <circle cx="6.6" cy="5.4" r="2.6" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M1.9 13.4c0-2.6 2.1-4.2 4.7-4.2 1 0 1.9.2 2.7.7"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      {children}
+    </svg>
   );
 }

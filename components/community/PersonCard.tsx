@@ -100,8 +100,28 @@ export default function PersonCard({ profile }: { profile: SuggestedProfile }) {
         className="absolute inset-x-0 bottom-0 h-[58%] bg-gradient-to-t from-ink via-ink/85 to-transparent"
       />
 
-      <div className="absolute inset-x-0 bottom-0 flex items-end gap-2.5 p-3">
-        <Link href={`/u/${profile.username}`} className="group pressable min-w-0 flex-1">
+      {/**
+       * Toda la tarjeta entra al perfil.
+       *
+       * El enlace estaba solo en el nombre, así que la mitad de la tarjeta —
+       * las tres fundas, que son la razón por la que alguien se fija en ella —
+       * no hacía nada al pulsarla. Una tarjeta que se ve entera como un objeto
+       * y responde solo en una esquina se siente rota antes de que nadie sepa
+       * decir por qué.
+       *
+       * El enlace es una capa sobre la tarjeta y el botón de seguir va por
+       * encima de ella: así el destino es uno solo, sin anidar un botón dentro
+       * de un enlace, que no es HTML válido y en el móvil se lleva el gesto la
+       * mitad de las veces.
+       */}
+      <Link
+        href={`/u/${profile.username}`}
+        aria-label={`Ver el perfil de ${profile.displayName}`}
+        className="absolute inset-0 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-line-focus"
+      />
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end gap-2.5 p-3">
+        <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <Avatar
               name={profile.displayName}
@@ -123,14 +143,16 @@ export default function PersonCard({ profile }: { profile: SuggestedProfile }) {
               <span className="block truncate text-caption text-content-muted">{reason}</span>
             </span>
           </span>
-        </Link>
+        </span>
 
+        <span className="pointer-events-auto relative z-20">
         <FollowButton
           icon
           profileId={profile.id}
           displayName={profile.displayName}
           size="sm"
-        />
+          />
+        </span>
       </div>
     </div>
   );

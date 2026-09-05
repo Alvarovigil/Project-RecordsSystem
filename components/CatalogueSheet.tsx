@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import Sheet from "@/components/ui/Sheet";
 import RecordSpecsCard from "@/components/RecordSpecsCard";
 import { CrateIcon, RecordGround, RecordHero } from "@/components/record/RecordHero";
+import RecordScreen, {
+  RecordTopBar,
+  useScrolledPast,
+} from "@/components/record/RecordScreen";
 import { artistFromCatalogueTitle, artistSlug } from "@/lib/artist";
 
 /**
@@ -76,6 +79,7 @@ export default function CatalogueSheet({
   // open by default, but still closable: a panel that cannot be folded is a
   // panel the reader is not allowed to finish with
   const [specs, setSpecs] = useState(true);
+  const { sentinel, scrolled } = useScrolledPast(Boolean(item));
 
   /* El catálogo entrega «Artista - Álbum» en un solo campo. Partirlo es lo que
      permite que esta pantalla tenga el mismo pie que la de un disco tuyo, con
@@ -86,13 +90,21 @@ export default function CatalogueSheet({
   const cover = item?.cover_image ?? item?.thumb ?? "/sleeve-vacio.jpg";
 
   return (
-    <Sheet open={Boolean(item)} onClose={onClose} size="tall" width={460} bare>
+    <RecordScreen open={Boolean(item)} onClose={onClose}>
       {item && (
-        <div className="scroll-y min-h-0 flex-1 overflow-y-auto">
-          <div className="relative pb-10">
+        <>
+          <RecordTopBar
+            onClose={onClose}
+            cover={cover}
+            title={album}
+            artist={artist}
+            scrolled={scrolled}
+          />
+
+          <div className="relative -mt-16 pb-10">
             <RecordGround cover={cover} />
 
-            <div className="relative mx-auto w-full max-w-[440px] px-5 pt-8">
+            <div className="relative mx-auto w-full max-w-[440px] px-5 pt-16">
               <RecordHero
                 cover={cover}
                 title={album}
@@ -100,6 +112,7 @@ export default function CatalogueSheet({
                 artistHref={artist ? `/artista/${artistSlug(artist)}` : null}
                 facts={[item.year, item.genre, item.label, item.country]}
                 onNavigate={onClose}
+                sentinel={sentinel}
               />
 
               {/* La misma fila de acciones que en un disco tuyo, con lo que
@@ -133,9 +146,9 @@ export default function CatalogueSheet({
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
-    </Sheet>
+    </RecordScreen>
   );
 }
 
