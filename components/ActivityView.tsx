@@ -10,6 +10,7 @@ import { SkeletonActivity } from "@/components/ui/Skeleton";
 import { useRepository } from "@/hooks/useRepository";
 import { useNotifications } from "@/hooks/useNotifications";
 import { groupActivity, namesOf, type ActivityGroup } from "@/lib/activity";
+import Invites from "@/components/activity/Invites";
 import type { ActivityEvent } from "@/lib/data/types";
 
 /**
@@ -33,6 +34,17 @@ export default function ActivityView() {
   const repo = useRepository();
   const notif = useNotifications();
   const [events, setEvents] = useState<ActivityEvent[] | null>(null);
+  /**
+   * Un filtro, porque cuarenta cosas no se leen seguidas.
+   *
+   * Con seis entradas el río funciona solo. Con cuarenta, quien entra viene a
+   * por una de tres cosas — qué discos han entrado, qué está pasando con mis
+   * racks, o quién se ha movido — y hacerle recorrer las otras dos es lo que
+   * convierte una pantalla social en una que se deja de abrir. «Sobre ti» es
+   * el cuarto, y es el que la mayoría abre primero: lo que implica a alguien
+   * es lo que le trae.
+   */
+  const [lens, setLens] = useState<"todo" | "mine" | "records" | "racks">("todo");
 
   useEffect(() => {
     repo
@@ -50,7 +62,22 @@ export default function ActivityView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const groups = groupActivity(events ?? []);
+  const all = groupActivity(events ?? []);
+  const groups = all.filter((g) =>
+    lens === "todo"
+      ? true
+      : lens === "mine"
+        ? g.mine
+        : lens === "records"
+          ? g.kind === "added"
+          : g.kind !== "added",
+  );
+  const counts = {
+    todo: all.length,
+    mine: all.filter((g) => g.mine).length,
+    records: all.filter((g) => g.kind === "added").length,
+    racks: all.filter((g) => g.kind !== "added").length,
+  };
   const invites = (notif.items ?? []).filter((n) => n.actionable && n.kind === "invite");
 
   return (
@@ -59,34 +86,42 @@ export default function ActivityView() {
           are; repeating it here would cost the top of the screen to tell you
           something you pressed a button to do. The first day label does the
           orienting instead, and it is information rather than a title. */}
-      {invites.length > 0 && (
-        <ul className="mb-9 space-y-3">
-          {invites.map((n) => (
-            <li
-              key={n.id}
-              className="flex flex-wrap items-center gap-x-3 gap-y-3 border border-line bg-fill-subtle/40 px-4 py-3.5"
+      <Invites invites={invites} onRespond={(id, ok) => void notif.respond(id, ok)} />
+
+      {/* Las cuatro maneras de mirar lo mismo. Sale cuando hay bastante que
+          mirar: por debajo de ocho grupos, filtrar es más trabajo que leer. */}
+      {all.length >= 8 && (
+        <div className="rail -mx-5 mb-6 flex gap-2 px-5 sm:mx-0 sm:px-0">
+          {(
+            [
+              ["todo", "Todo"],
+              ["mine", "Sobre ti"],
+              ["records", "Discos"],
+              ["racks", "Racks y gente"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => setLens(value)}
+              disabled={counts[value] === 0}
+              className={`pressable shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sub transition-colors disabled:opacity-35 ${
+                lens === value
+                  ? "bg-paper text-ink"
+                  : "bg-fill text-content-secondary hover:bg-fill-strong"
+              }`}
             >
-              <Avatar
-                name={n.actor.displayName}
-                handle={n.actor.username}
-                src={n.actor.avatarUrl}
-                size="sm"
-              />
-              <p className="min-w-0 flex-1 text-sub leading-snug text-content-secondary">
-                <span className="font-medium text-paper">{n.actor.displayName}</span> te invita a
-                editar <span className="font-medium text-paper">{n.listTitle}</span>
-              </p>
-              <div className="flex shrink-0 gap-2">
-                <Button size="sm" variant="primary" onClick={() => void notif.respond(n.id, true)}>
-                  Aceptar
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => void notif.respond(n.id, false)}>
-                  Rechazar
-                </Button>
-              </div>
-            </li>
+              {label}
+              {counts[value] > 0 && (
+                <span
+                  className={`ml-1.5 text-caption ${lens === value ? "text-ink/50" : "text-content-faint"}`}
+                  style={{ fontVariantNumeric: "tabular-nums" }}
+                >
+                  {counts[value]}
+                </span>
+              )}
+            </button>
           ))}
-        </ul>
+        </div>
       )}
 
       {events === null ? (
@@ -152,10 +187,32 @@ function Row({ group: g }: { group: ActivityGroup }) {
   const extra = g.releases.length - SHOWN;
 
   return (
-    <div className="group/row flex items-center gap-4 rounded-md px-3 py-3.5 transition-colors hover:bg-fill-subtle">
+    <div
+      className={`group/row flex items-center gap-3 rounded-md px-3 py-3.5 transition-colors hover:bg-fill-subtle sm:gap-4 ${
+        g.mine ? "bg-fill-subtle/60" : ""
+      }`}
+    >
+      {/**
+       * Una portada delante, también en el teléfono.
+       *
+       * La columna de carátulas se escondía por debajo de `sm`, así que en el
+       * móvil — donde vive esta aplicación — el río era una columna de frases
+       * grises. Una portada se reconoce sin leer: es lo que hace que esto
+       * parezca una estantería y no un registro de auditoría.
+       */}
+      {g.releases[0]?.cover && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={g.releases[0].cover}
+          alt=""
+          loading="lazy"
+          className="h-11 w-11 shrink-0 rounded-sm object-cover sm:hidden"
+        />
+      )}
+
       {/* the faces: one, or a small stack when several people did the same
           thing to the same object */}
-      <div className="flex shrink-0 -space-x-2">
+      <div className={`hidden shrink-0 -space-x-2 sm:flex ${g.releases[0]?.cover ? "" : "!flex"}`}>
         {g.actors.slice(0, 3).map((a) => (
           <Link key={a.id} href={`/u/${a.username}`} className="pressable">
             <span className="block rounded-full ring-2 ring-surface">
