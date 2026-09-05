@@ -1526,11 +1526,15 @@ function Sleeve({
      */
     const focus = focusRef.current;
     const wanted = focus === null || focus === listIndex ? 1 : 0;
-    dimRef.current += (wanted - dimRef.current) * 0.16;
+    // Slower than it was: at 0.16 a frame the record arrived in a quarter of a
+    // second, which on something this large reads as a snap rather than as a
+    // movement. Half that is around half a second — long enough to be watched,
+    // short enough that nobody is waiting for it.
+    dimRef.current += (wanted - dimRef.current) * 0.075;
     if (Math.abs(wanted - dimRef.current) < 0.004) dimRef.current = wanted;
 
     const wantPose = focus !== null && focus === listIndex ? 1 : 0;
-    poseRef.current += (wantPose - poseRef.current) * 0.16;
+    poseRef.current += (wantPose - poseRef.current) * 0.075;
     if (Math.abs(wantPose - poseRef.current) < 0.004) poseRef.current = wantPose;
 
     const reveal = revealRef.current * dimRef.current;
@@ -1692,10 +1696,21 @@ function Sleeve({
       const t = EASINGS.easeInOutCubic(poseRef.current);
       TMP_FWD.set(0, 0, -1).applyQuaternion(cam.quaternion);
       TMP_UP.set(0, 1, 0).applyQuaternion(cam.quaternion);
-      // 9.6: a little nearer than the pile sits, so the record reads as picked
-      // up. 1.15 up the view axis puts it in the top third, where the screen
-      // that follows leaves its room.
-      TMP_POS.copy(cam.position).addScaledVector(TMP_FWD, 9.6).addScaledVector(TMP_UP, 1.15);
+      /**
+       * Framed, not bled.
+       *
+       * A fixed 9.6 put the sleeve nearer the lens than the pile sits, so it
+       * filled the width and ran off both edges — a record cropped by the
+       * screen reads as a background image rather than as an object being
+       * held up. Both numbers are relative to the camera's own distance
+       * instead: 1.22 of it leaves a margin down each side on any screen
+       * shape, and raising it by an eighth of that distance puts it in the top
+       * third, which is where the screen underneath leaves its room.
+       */
+      const dist = cam.position.length() * 1.22;
+      TMP_POS.copy(cam.position)
+        .addScaledVector(TMP_FWD, dist)
+        .addScaledVector(TMP_UP, dist * 0.115);
       const parent = meshGroupRef.current.parent;
       if (parent) parent.worldToLocal(TMP_POS);
       meshGroupRef.current.position.lerp(TMP_POS, t);
