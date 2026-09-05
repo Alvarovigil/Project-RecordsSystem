@@ -14,6 +14,7 @@ import { useLibrary } from "@/hooks/useLibrary";
 import { useToast } from "@/components/ui/Toast";
 import { coverFor } from "@/lib/cover";
 import { artistSlug, cleanArtist, findArtist } from "@/lib/artist";
+import { getArtist } from "@/lib/artist-cache";
 import { findCollection, findWishlist, resolveCollections } from "@/lib/collections";
 import type { Vinyl } from "@/lib/types";
 
@@ -97,17 +98,12 @@ export default function ArtistView({ slug }: { slug: string }) {
     let alive = true;
     setCatalogue(null);
     setPortrait(null);
-    const params = new URLSearchParams({ q: name });
-    if (anchor) params.set("release", String(anchor));
 
-    fetch(`/api/discogs/artist?${params}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (!alive) return;
-        if (d.artist) setPortrait({ image: d.artist.image ?? null, name: d.artist.name });
-        setCatalogue((d.releases ?? []).slice(0, 40));
-      })
-      .catch(() => alive && setCatalogue([]));
+    getArtist(name, anchor).then((d) => {
+      if (!alive) return;
+      if (d.artist) setPortrait({ image: d.artist.image ?? null, name: d.artist.name });
+      setCatalogue(d.releases);
+    });
     return () => {
       alive = false;
     };

@@ -27,6 +27,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useRepository } from "@/hooks/useRepository";
 import { coverFor } from "@/lib/cover";
 import { artistSlug, cleanArtist } from "@/lib/artist";
+import { warmArtist } from "@/lib/artist-cache";
 import type { FriendWithRecord, ListWithRecord } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 import { findCollection, findWishlist, isWished, type Collection } from "@/lib/collections";
@@ -117,6 +118,13 @@ export default function RecordSheet({
   useEffect(() => {
     if (vinyl && pickOnOpen) setPicking(true);
   }, [vinyl?.id, pickOnOpen]);
+
+  /* Mientras se mira un disco, su artista se va pidiendo por detrás: el enlace
+     está ahí y hay bastantes posibilidades de que se pulse. Si se pulsa, no
+     queda nada que esperar; si no, ha costado una consulta ya cacheada. */
+  useEffect(() => {
+    if (vinyl?.artist) warmArtist(cleanArtist(vinyl.artist), vinyl.discogsId ?? null);
+  }, [vinyl?.artist, vinyl?.discogsId]);
 
   useEffect(() => {
     if (!vinyl) return;
