@@ -780,6 +780,9 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             return v ? coverFor(v) : null;
           }}
           onDelete={(v) => handleDeleteVinylPermanently(v.id)}
+          nowPlayingId={nowPlaying?.id}
+          // a track is played as a record of its own: same player, new src
+          onPlayTrack={(track) => playPreview(track)}
         />
 
         <MobileSearch

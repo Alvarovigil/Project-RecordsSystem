@@ -9,6 +9,7 @@ import Avatar from "@/components/ui/Avatar";
 import Confirm from "@/components/ui/Confirm";
 import RecordSpecsCard from "@/components/RecordSpecsCard";
 import SaveSheet from "./SaveSheet";
+import Tracklist from "./Tracklist";
 import Card from "@/components/ui/Card";
 import ShareSheet from "@/components/ShareSheet";
 import { SITE_URL } from "@/lib/site";
@@ -150,6 +151,8 @@ export default function RecordSheet({
   onDelete,
   onRemoveFromList,
   coverOf,
+  nowPlayingId,
+  onPlayTrack,
   canEdit = true,
 }: {
   vinyl: Vinyl | null;
@@ -174,6 +177,10 @@ export default function RecordSheet({
   onRemoveFromList?: (listId: string, v: Vinyl) => void;
   /** resolves a record id to a cover, so a rack can show what is inside it */
   coverOf?: (vinylId: string) => string | null;
+  /** which record — or which track of it — is sounding right now */
+  nowPlayingId?: string;
+  /** play one track: a synthetic record, so the player learns nothing new */
+  onPlayTrack?: (v: Vinyl) => void;
   canEdit?: boolean;
 }) {
   const repo = useRepository();
@@ -265,24 +272,10 @@ export default function RecordSheet({
   };
 
   /**
-   * Tracks grouped by the side they are printed on.
-   *
-   * Discogs writes positions as "A1", "B3", sometimes "1" and sometimes
-   * nothing at all — so the side is the leading letter when there is one, and
-   * everything else falls into a single unlabelled group rather than inventing
-   * a side that the pressing does not have.
+   * Sides and containers used to be worked out here. Both moved: the tracklist
+   * knows about discs and sides now (it has to, to page between them), and
+   * where a record is kept is answered by the save control and its sheet.
    */
-  const sides = Object.entries(
-    vinyl.tracklist.reduce<Record<string, typeof vinyl.tracklist>>((acc, t) => {
-      const side = /^[A-Z]/.test(t.position ?? "") ? t.position![0] : "?";
-      (acc[side] ??= []).push(t);
-      return acc;
-    }, {}),
-  ).sort(([a], [b]) => a.localeCompare(b));
-
-  const inLists = collections.filter(
-    (c) => c.id !== activeListId && c.vinylIds.includes(vinyl.id),
-  );
 
   return (
     <>
@@ -725,59 +718,18 @@ export default function RecordSheet({
             )}
 
             <div className="mt-7 space-y-2.5">
-              {/* Where it already lives, so "guardar" never means "otra vez".
-                  Its own card and its own line, because it is the answer to a
-                  question the button above is about to ask. */}
-              {inLists.length > 0 && (
-                <Card title="Ya está en">
-                  <ul className="flex flex-wrap gap-1.5">
-                    {inLists.map((c) => (
-                      <li
-                        key={c.id}
-                        className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary"
-                      >
-                        {c.name}
-                      </li>
-                    ))}
-                  </ul>
-                </Card>
-              )}
-
-              {/* By side, because that is how the object works: you do not play
-                  a record from track 1 to track 12, you play a side and then
-                  get up and turn it over. */}
-              {sides.length > 0 && (
-                <Card title="Canciones" padded={false}>
-                  {sides.map(([side, tracks], si) => (
-                    <div key={side} className={si > 0 ? "mt-5" : ""}>
-                      {side !== "?" && (
-                        <h4 className="flex items-baseline gap-2 px-5 text-caption uppercase tracking-label text-content-faint">
-                          Cara {side}
-                          <span>{tracks.length}</span>
-                        </h4>
-                      )}
-                      <ol className={side !== "?" ? "mt-1.5" : ""}>
-                        {tracks.map((t, i) => (
-                          <li
-                            key={i}
-                            className="flex items-baseline gap-3 px-5 py-2.5 text-sub"
-                          >
-                            <span className="mono w-5 shrink-0 text-caption text-content-faint">
-                              {t.position?.replace(/^[A-Z]/, "") || i + 1}
-                            </span>
-                            <span className="min-w-0 flex-1 truncate text-paper">{t.title}</span>
-                            {t.duration && (
-                              <span className="mono shrink-0 text-caption text-content-faint">
-                                {t.duration}
-                              </span>
-                            )}
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  ))}
-                </Card>
-              )}
+              {/* "Ya está en" used to sit here as a card of pills. The save
+                  control says it now — "En 2 racks" — and the sheet behind it
+                  shows which, so the card was the same answer given twice, the
+                  second time without a way to act on it. */}
+              {/* One disc at a time, its sides under it, and the titles
+                  playable — see Tracklist. */}
+              <Tracklist
+                vinyl={vinyl}
+                nowPlayingId={nowPlayingId}
+                playing={playing}
+                onPlayTrack={onPlayTrack ?? (() => {})}
+              />
 
               {/* Folded away under the songs, which is where the question
                   belongs in time: you decide to listen, you decide to keep it,
