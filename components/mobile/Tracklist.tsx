@@ -74,11 +74,14 @@ export default function Tracklist({
   vinyl,
   nowPlayingId,
   playing,
+  loading = false,
   onPlayTrack,
 }: {
   vinyl: Vinyl;
   nowPlayingId?: string;
   playing: boolean;
+  /** el fragmento pedido todavía no suena: el botón lo dice, no se queda mudo */
+  loading?: boolean;
   /** a synthetic record for one track, so the player needs to know nothing new */
   onPlayTrack: (v: Vinyl) => void;
 }) {
@@ -90,17 +93,25 @@ export default function Tracklist({
   const [at, setAt] = useState(0);
   useEffect(() => setAt(0), [vinyl.id]);
 
-  const [previews, setPreviews] = useState<Record<string, string>>({});
+  /**
+   * `null` mientras se buscan, `{}` cuando no hay ninguno.
+   *
+   * La diferencia importa en pantalla: mientras no se sabe, una canción no
+   * puede parecer que no se puede escuchar — se enseña el hueco del botón y ya.
+   * Dar por muerta una lista que todavía está cargando es la manera más rápida
+   * de que nadie vuelva a intentarlo.
+   */
+  const [previews, setPreviews] = useState<Record<string, string> | null>(null);
   useEffect(() => {
     if (!vinyl.artist || !vinyl.title) return;
     let alive = true;
-    setPreviews({});
+    setPreviews(null);
     const q = new URLSearchParams({ artist: vinyl.artist, album: vinyl.title });
     if (vinyl.discogsId) q.set("id", String(vinyl.discogsId));
     fetch(`/api/preview/album?${q}`)
       .then((r) => r.json())
       .then((d) => alive && setPreviews(d.tracks ?? {}))
-      .catch(() => {});
+      .catch(() => alive && setPreviews({}));
     return () => {
       alive = false;
     };
@@ -112,12 +123,20 @@ export default function Tracklist({
   const many = discs.length > 1;
   const onThisDisc = parsed.filter((p) => p.disc === disc);
   const sides = Array.from(new Set(onThisDisc.map((p) => p.side).filter(Boolean)));
+  const playableCount = previews
+    ? onThisDisc.filter((p) => previews[norm(p.track.title)]).length
+    : 0;
 
   return (
     <Card padded={false}>
       <header className="flex items-center justify-between gap-3 px-5 pb-1">
         <h3 className="text-body font-medium text-paper">
           {many ? `Vinilo ${at + 1} de ${discs.length}` : "Canciones"}
+          {playableCount > 0 && (
+            <span className="ml-2 text-caption font-normal text-content-faint">
+              {playableCount} para escuchar
+            </span>
+          )}
         </h3>
         {many && (
           <div className="flex items-center gap-1">
@@ -128,6 +147,12 @@ export default function Tracklist({
               onClick={() => setAt((n) => n + 1)}
             />
           </div>
+        )}
+        {/* Qué se puede escuchar aquí, dicho una vez. Sin esto, una lista sin
+            fragmentos y una lista que todavía está cargando se ven igual: doce
+            títulos que no responden. */}
+        {previews !== null && playableCount === 0 && (
+          <p className="mt-1 px-0 text-caption text-content-faint">Sin fragmentos para este disco</p>
         )}
       </header>
 
@@ -144,32 +169,32 @@ export default function Tracklist({
               )}
               <ol>
                 {rows.map(({ track, index }) => {
-                  const preview = previews[norm(track.title)];
+                  const preview = previews?.[norm(track.title)];
                   const id = `${vinyl.id}#${index}`;
                   const current = nowPlayingId === id;
+                  const playable = Boolean(preview);
+                  const press = () =>
+                    preview &&
+                    onPlayTrack({ ...vinyl, id, title: track.title, previewUrl: preview });
+
                   return (
                     <li key={index}>
                       <button
-                        disabled={!preview}
-                        onClick={() =>
-                          preview &&
-                          onPlayTrack({
-                            ...vinyl,
-                            id,
-                            title: track.title,
-                            previewUrl: preview,
-                          })
+                        disabled={!playable}
+                        onClick={press}
+                        aria-label={
+                          current && playing ? `Pausar ${track.title}` : `Escuchar ${track.title}`
                         }
-                        className={`flex w-full items-center gap-3 px-5 py-2.5 text-left text-sub transition-colors ${
-                          preview ? "pressable hover:bg-fill-subtle" : "cursor-default"
+                        className={`group/track flex w-full items-center gap-3 px-5 py-2.5 text-left text-sub transition-colors ${
+                          current ? "bg-fill-subtle" : playable ? "pressable hover:bg-fill-subtle" : "cursor-default"
                         }`}
                       >
-                        {/* The number becomes the meter while it sounds: one
-                            column, two states, and no control appearing to
-                            push the title sideways. */}
+                        {/* El número se convierte en el medidor mientras suena:
+                            una columna, dos estados, y ningún control que
+                            aparezca empujando el título de lado. */}
                         <span className="mono flex w-5 shrink-0 justify-center text-caption text-content-faint">
                           {current ? (
-                            <span aria-label="Sonando" className="flex h-3 items-end gap-[2px]">
+                            <span aria-hidden className="flex h-3 items-end gap-[2px]">
                               {[0, 1, 2].map((b) => (
                                 <span
                                   key={b}
@@ -185,18 +210,66 @@ export default function Tracklist({
                             trackNumber(track.position ?? "", index + 1)
                           )}
                         </span>
+
                         <span
                           className={`min-w-0 flex-1 truncate ${
-                            current ? "text-accent" : preview ? "text-paper" : "text-content-secondary"
+                            current ? "text-accent" : playable ? "text-paper" : "text-content-muted"
                           }`}
                         >
                           {track.title}
                         </span>
+
                         {track.duration && (
                           <span className="mono shrink-0 text-caption text-content-faint">
                             {track.duration}
                           </span>
                         )}
+
+                        {/**
+                         * El play, visible.
+                         *
+                         * La fila entera se podía pulsar y nada lo decía: una
+                         * lista de títulos idéntica a la de cualquier ficha de
+                         * catálogo, en la que había que adivinar que ahí
+                         * pasaba algo. Un triángulo en un círculo lo dice sin
+                         * palabras, y ocupa su columna siempre — también en
+                         * las canciones sin fragmento y mientras se buscan —
+                         * para que ningún título se mueva de sitio cuando
+                         * aparece.
+                         *
+                         * En el ratón basta con que se encienda al pasar por
+                         * encima; con un dedo no hay «por encima», así que en
+                         * pantalla táctil está siempre puesto.
+                         */}
+                        <span
+                          aria-hidden
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition ${
+                            current
+                              ? "bg-paper text-ink"
+                              : playable
+                                ? "bg-fill text-paper opacity-100 sm:opacity-0 sm:group-hover/track:opacity-100"
+                                : "opacity-0"
+                          }`}
+                        >
+                          {current && loading ? (
+                            <span className="h-3.5 w-3.5 animate-spin rounded-full border-[1.5px] border-current border-t-transparent" />
+                          ) : current && playing ? (
+                            <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden>
+                              <rect x="3" y="2" width="3" height="10" rx="0.6" fill="currentColor" />
+                              <rect x="8" y="2" width="3" height="10" rx="0.6" fill="currentColor" />
+                            </svg>
+                          ) : (
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 14 14"
+                              aria-hidden
+                              className="translate-x-[1px]"
+                            >
+                              <path d="M3 1.8 L12 7 L3 12.2 Z" fill="currentColor" />
+                            </svg>
+                          )}
+                        </span>
                       </button>
                     </li>
                   );

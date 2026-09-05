@@ -63,6 +63,8 @@ export default function RecordSheet({
   coverOf,
   onCreateList,
   nowPlayingId,
+  playLoading = false,
+  anyPlaying = false,
   onPlayTrack,
   canEdit = true,
   pickOnOpen = false,
@@ -93,6 +95,17 @@ export default function RecordSheet({
   onCreateList?: (name: string) => Promise<string> | string;
   /** which record — or which track of it — is sounding right now */
   nowPlayingId?: string;
+  /** el fragmento pedido aún se está abriendo */
+  playLoading?: boolean;
+  /**
+   * Si suena algo, sea lo que sea.
+   *
+   * `playing` dice si suena *este disco*, y un tema suelto no es este disco —
+   * es un disco sintético con su propio id. Con esa bandera el medidor de la
+   * canción que estaba sonando no se movía nunca. La lista necesita las dos
+   * cosas: qué suena (`nowPlayingId`) y si está sonando o en pausa.
+   */
+  anyPlaying?: boolean;
   /** play one track: a synthetic record, so the player learns nothing new */
   onPlayTrack?: (v: Vinyl) => void;
   canEdit?: boolean;
@@ -544,7 +557,8 @@ export default function RecordSheet({
               <Tracklist
                 vinyl={vinyl}
                 nowPlayingId={nowPlayingId}
-                playing={playing}
+                playing={anyPlaying}
+                loading={playLoading}
                 onPlayTrack={onPlayTrack ?? (() => {})}
               />
 

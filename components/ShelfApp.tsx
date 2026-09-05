@@ -796,8 +796,13 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           onDelete={(v) => handleDeleteVinylPermanently(v.id)}
           pickOnOpen={pickOnOpen}
           nowPlayingId={nowPlaying?.id}
-          // a track is played as a record of its own: same player, new src
-          onPlayTrack={(track) => playPreview(track)}
+          playLoading={loadingPreview}
+          anyPlaying={playing}
+          /* Un tema se reproduce como si fuera un disco: mismo reproductor,
+             otra fuente. Y `toggle` y no `play`, porque volver a pulsar el
+             que ya suena es pausarlo — con `play` se rebobinaba, que es la
+             respuesta a una pregunta que nadie había hecho. */
+          onPlayTrack={(track) => audio.toggle(track)}
         />
 
         <MobileSearch
