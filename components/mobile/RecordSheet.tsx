@@ -357,36 +357,35 @@ export default function RecordSheet({
         </div>
 
         <div className="relative -mt-14 pb-10">
-          {/* The cover's own colour, thrown behind the top of the screen and
-              faded out. It costs nothing — the image is already downloaded —
-              and it is what stops a black page with a square in the middle
-              from looking like a file browser. */}
+          {/* The sleeve behind the sleeve. It costs nothing — the image is
+              already downloaded — and it is what stops a black page with a
+              square in the middle from looking like a file browser. */}
           <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-16 h-[78svh] overflow-hidden">
             {/**
-             * Loud, and measured against the screen rather than in pixels.
+             * The cover itself, softened and taken to black.
              *
-             * This started at 30% of a 520px box, which on a dark sleeve
-             * produced nothing at all. The colour of the cover is the only
-             * thing that makes this screen belong to *this* record instead of
-             * to the template, so it is worth spending real light on: 80%, a
-             * good deal more saturated, blown up further so the corners of the
-             * artwork never show as corners, and reaching most of the way down
-             * the display.
+             * It was a light: blown up 1.7×, saturated past the artwork's own
+             * colours and blurred until nothing of the image survived — a
+             * coloured glow that happened to have been made from the sleeve.
+             * This is the sleeve. Enough blur that it is a ground and never
+             * competes with the record printed sharply on top of it, and no
+             * saturation of its own, so the colour on screen is the colour of
+             * the cover rather than a version of it.
              *
-             * The blur is what keeps it from ever being a picture, and the
-             * gradient is what keeps it from ending in a horizontal line — the
-             * one thing it must not do.
+             * The gradient is the other half: it holds the artwork through the
+             * top of the screen and is fully black well before the words, so
+             * everything under the title is read on the app's own ground. And
+             * it must never end in a visible line, which is the whole reason
+             * it goes all the way to black inside its own box rather than
+             * stopping at the edge of it.
              */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={coverFor(vinyl)}
               alt=""
-              className="h-full w-full scale-[1.7] object-cover opacity-80 blur-3xl saturate-[1.7]"
+              className="h-full w-full scale-125 object-cover blur-2xl"
             />
-            {/* Holds its colour through the top half and then goes to black
-                fast, so the title and everything under it are read on the app's
-                own ground rather than on a bright sleeve. */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/45 via-[56%] to-ink" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/55 via-[42%] to-ink" />
           </div>
 
           {/* The wash starts at the very top of the screen — the column it
