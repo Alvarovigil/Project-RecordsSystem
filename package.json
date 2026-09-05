@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3345",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "fetch:discogs": "tsx scripts/fetch-discogs.ts"
+    "fetch:discogs": "tsx scripts/fetch-discogs.ts",
+    "dev:lan": "next dev -H 0.0.0.0 -p 3345"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",

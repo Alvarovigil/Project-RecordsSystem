@@ -540,6 +540,26 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   const loadingPreview = audio.loading;
   const playPreview = audio.play;
   const shelfRef = useRef<VinylShelfHandle>(null);
+  /**
+   * The phone's shelf, so the record screen can be a continuation of it.
+   *
+   * Opening a record used to lay a panel with a picture of the sleeve over a
+   * 3D scene that still held the real one, two feet behind it. Now the tap
+   * tells the shelf to open that sleeve — it clears the others, brings it to
+   * the centre and turns it to face you, which it already knew how to do — and
+   * the screen that follows leaves the top of itself empty so that what you
+   * are looking at is the object rather than a photograph of it.
+   */
+  const phoneShelfRef = useRef<VinylShelfHandle>(null);
+  /**
+   * Whether the open record has the 3D shelf behind it.
+   *
+   * Only true when it was opened *from* the shelf: in the grid view the
+   * canvas is not mounted, and a record opened from search or from somebody
+   * else's rack has nothing behind it either. Those get the flat screen, which
+   * is the one that was there before.
+   */
+  const [openStage, setOpenStage] = useState<"shelf" | "flat">("flat");
 
   // a record picked in the grid opens once the shelf has mounted
   const pendingOpenRef = useRef<string | null>(null);
@@ -734,7 +754,13 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           savedLists={saved}
           nowPlayingId={nowPlaying?.id}
           isPlaying={playing}
-          onOpen={setOpen}
+          onOpen={(v) => {
+            const on3d = Boolean(phoneShelfRef.current);
+            const idx = vinilos.findIndex((x) => x.id === v.id);
+            if (on3d && idx >= 0) phoneShelfRef.current?.open(idx);
+            setOpenStage(on3d ? "shelf" : "flat");
+            setOpen(v);
+          }}
           onActivate={handleActivateCollection}
           onSearch={() => openSearch()}
           onPlay={(v) => (nowPlaying?.id === v.id ? audio.toggleCurrent() : playPreview(v))}
@@ -753,6 +779,8 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           onRemoveRecordFromList={(listId, vinylId) => handleToggleVinyl(listId, vinylId)}
           onAcquire={handleAcquire}
           loading={!lib.ready}
+          shelfHandle={phoneShelfRef}
+          recordOpen={Boolean(open)}
           readOnly={readOnly}
           onUnsaveList={(id) => {
             // both lists of kept lists: the phone reads `saved`, the desktop
@@ -766,7 +794,13 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
 
         <RecordSheet
           vinyl={open}
-          onClose={() => setOpen(null)}
+          stage={openStage}
+          onClose={() => {
+            // the sleeve goes back into the pile before the screen leaves, so
+            // the two movements read as one
+            phoneShelfRef.current?.close();
+            setOpen(null);
+          }}
           collections={resolvedCollections}
           activeListId={activeCollectionId}
           playing={playing && nowPlaying?.id === open?.id}

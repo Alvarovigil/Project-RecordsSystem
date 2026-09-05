@@ -34,6 +34,7 @@ import type { Collection } from "@/lib/collections";
 import type { ListVisibility, SavedList } from "@/lib/data/types";
 import type { SortMode } from "@/lib/collections";
 import type { Vinyl } from "@/lib/types";
+import type { VinylShelfHandle } from "@/components/VinylShelf3D";
 
 /**
  * The crate, on a phone.
@@ -85,6 +86,8 @@ export default function MobileShelf({
   onRemoveRecordFromList,
   onAcquire,
   loading = false,
+  shelfHandle,
+  recordOpen = false,
   readOnly = false,
 }: {
   vinilos: Vinyl[];
@@ -118,6 +121,13 @@ export default function MobileShelf({
   onAcquire?: (v: Vinyl) => void;
   /** the library has not answered yet: draw the shape of it, not a void */
   loading?: boolean;
+  /**
+   * The 3D shelf's own controls, handed up so the record screen can be a
+   * continuation of this one rather than a picture laid over it.
+   */
+  shelfHandle?: { current: VinylShelfHandle | null };
+  /** a record is open: the shelf is the subject, so its chrome gets out */
+  recordOpen?: boolean;
   /** the shelf is showing somebody else's list, so it cannot be edited */
   readOnly?: boolean;
 }) {
@@ -200,8 +210,14 @@ export default function MobileShelf({
   return (
     <div className="relative min-h-screen-d bg-surface">
       {/* ------------------------------------------------------- the chrome */}
+      {/* The chrome steps aside while a record is open: from that moment the
+          shelf is not a place you are browsing, it is the object you are
+          looking at, and the rack switcher and the search button belong to
+          the browsing. */}
       <header
-        className="fixed inset-x-0 top-0 z-40 px-3"
+        className={`fixed inset-x-0 top-0 z-40 px-3 transition-opacity duration-300 ${
+          recordOpen ? "pointer-events-none opacity-0" : "opacity-100"
+        }`}
         style={{ paddingTop: "calc(var(--safe-top) + 10px)" }}
       >
         <div className="flex items-center gap-2">
@@ -262,7 +278,13 @@ export default function MobileShelf({
 
       {view === "shelf" ? (
         <div className="fixed inset-0">
-          <VinylShelf3D vertical rig={lab ? rig : undefined} vinilos={vinilos} onOpen={onOpen} />
+          <VinylShelf3D
+            vertical
+            handleRef={shelfHandle}
+            rig={lab ? rig : undefined}
+            vinilos={vinilos}
+            onOpen={onOpen}
+          />
           {/* The records go into the dark rather than off an edge. It also
               gives the controls up there something to sit on: white type over
               a bright sleeve is unreadable exactly when a bright sleeve
