@@ -209,6 +209,24 @@ export default function ArtistView({ slug }: { slug: string }) {
   const owned = group?.records ?? [];
 
   /**
+   * El género, del disco que sea: primero de los tuyos, y si no, del catálogo.
+   *
+   * El que más se repite y no el primero que aparece — una ficha suelta mal
+   * etiquetada no puede decidir de qué va un artista entero.
+   */
+  const genre = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const g of [...owned.map((v) => v.genre), ...(catalogue ?? []).map((r) => r.genre)]) {
+      const clean = (g ?? "").split(",")[0]?.trim();
+      if (clean) counts.set(clean, (counts.get(clean) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  }, [owned, catalogue]);
+
+  /** cuántos suyos se conocen en total: los tuyos más los que te faltan */
+  const total = owned.length + (more?.length ?? 0);
+
+  /**
    * Una sola puerta de carga para toda la pantalla.
    *
    * Esta página se montaba a trozos delante de quien la abría: primero el
@@ -361,18 +379,28 @@ export default function ArtistView({ slug }: { slug: string }) {
               {portrait?.name || name}
             </h1>
 
+            {/**
+             * Dos datos, y los dos dicen algo.
+             *
+             * «Artista» era una etiqueta que repetía lo que ya se ve — hay una
+             * cara y un nombre encima —, y «4 discos tuyos» junto a «24 por
+             * descubrir» son dos mitades de la misma cuenta puestas a
+             * competir. Un género sitúa a quien no lo conoce, y una fracción
+             * dice de un vistazo por dónde vas: 4 de 28 es una respuesta, 4 y
+             * 24 son dos números que hay que sumar.
+             */}
             <ul className="mt-4 flex flex-wrap justify-center gap-1.5">
-              <li className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary">
-                Artista
-              </li>
-              {owned.length > 0 && (
+              {genre && (
                 <li className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary">
-                  {owned.length} {owned.length === 1 ? "disco tuyo" : "discos tuyos"}
+                  {genre}
                 </li>
               )}
-              {more !== null && more.length > 0 && (
+              {total > 0 && (
                 <li className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary">
-                  {more.length} por descubrir
+                  <span style={{ fontVariantNumeric: "tabular-nums" }}>
+                    {owned.length}/{total}
+                  </span>{" "}
+                  discos
                 </li>
               )}
             </ul>
