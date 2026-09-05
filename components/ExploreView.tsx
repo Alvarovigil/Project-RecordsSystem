@@ -487,7 +487,7 @@ export default function ExploreView() {
               // screen, and the row looked mis-indented against the heading
               // above it. scroll-pl teaches the snap where the content
               // actually begins.
-              <ul className="rail -mx-5 flex snap-x snap-mandatory scroll-pl-5 gap-9 px-5 pb-2 pr-10 sm:-mx-8 sm:scroll-pl-8 sm:px-8 sm:pr-14">
+              <ul className="rail rail-page flex gap-9 pb-2">
                 {lists.slice(0, 12).map((l) => (
                   <li
                     key={l.id}
@@ -545,7 +545,7 @@ export default function ExploreView() {
             {/* The same rail as the crates above, for the same reason: this is
                 something to skim past, not a directory to work through. And
                 the cards are shelves rather than faces — see PersonCard. */}
-            <ul className="rail -mx-5 flex snap-x snap-mandatory scroll-pl-5 gap-4 px-5 pb-2 pr-10 sm:-mx-8 sm:scroll-pl-8 sm:gap-5 sm:px-8 sm:pr-14">
+            <ul className="rail rail-page flex gap-4 pb-2 sm:gap-5">
               {people.slice(0, 12).map((p) => (
                 <li
                   key={p.id}

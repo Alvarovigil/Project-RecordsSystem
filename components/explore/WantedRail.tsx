@@ -81,7 +81,7 @@ export default function WantedRail({
 
       {/* The same rail as the racks above it: this is something to skim past,
           and it bleeds off the right edge so the row says there is more. */}
-      <ul className="rail -mx-5 mt-4 flex snap-x snap-mandatory scroll-pl-5 gap-4 px-5 pb-2 pr-10 sm:-mx-8 sm:scroll-pl-8 sm:px-8 sm:pr-14">
+      <ul className="rail rail-page mt-4 flex gap-4 pb-2">
         {rows === null
           ? Array.from({ length: 6 }).map((_, i) => (
               <li key={i} className="w-[38vw] shrink-0 sm:w-[168px]">

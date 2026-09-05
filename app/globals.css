@@ -457,6 +457,39 @@ html {
   display: none;
 }
 
+/**
+ * Un carrusel con los márgenes de la página, siempre.
+ *
+ * Un carril sale de borde a borde — esa es la mitad de la gracia: la pieza
+ * cortada por la derecha dice que hay más — pero empieza donde empieza todo lo
+ * demás, alineado con el título que tiene encima. Escrito a mano, esto eran
+ * siete utilidades por carril y cada uno con las suyas: uno sin `scroll-pl`,
+ * que al deslizar pega la primera pieza al borde; otro sin el respiro de la
+ * derecha, que corta la última a ras.
+ *
+ * `--rail-pad` es el margen lateral de la página. La sangría negativa lo saca
+ * del contenedor, el relleno lo devuelve, y `scroll-padding` hace que el
+ * imantado respete ese mismo margen en lugar de ignorarlo.
+ */
+.rail-page {
+  --rail-pad: 1.25rem;
+  margin-left: calc(-1 * var(--rail-pad));
+  margin-right: calc(-1 * var(--rail-pad));
+  padding-left: var(--rail-pad);
+  /* un respiro mayor por la derecha: lo que asoma cortado es lo que dice que
+     el carril sigue, y a ras del borde no se lee como cortado sino como
+     terminado */
+  padding-right: calc(var(--rail-pad) * 2);
+  scroll-padding-left: var(--rail-pad);
+  scroll-snap-type: x mandatory;
+}
+
+@media (min-width: 640px) {
+  .rail-page {
+    --rail-pad: 2rem;
+  }
+}
+
 /* Full height that survives the browser's disappearing toolbar. 100vh on iOS
    is measured against the LARGEST viewport, so a 100vh element is always a
    toolbar taller than the screen. */

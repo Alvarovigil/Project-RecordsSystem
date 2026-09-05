@@ -439,7 +439,7 @@ export default function ArtistView({ slug }: { slug: string }) {
            */
           <section className="pb-10">
             <SectionTitle>En tu colección</SectionTitle>
-            <ul className="rail -mx-5 mt-4 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-5 pb-1 sm:-mx-8 sm:px-8">
+            <ul className="rail rail-page mt-4 flex gap-3.5 pb-1">
               {owned.map((v, i) => (
                 <li key={v.id} className="w-[136px] shrink-0 snap-start sm:w-[160px]">
                   <button onClick={() => setOpen(v)} className="pressable block w-full text-left">

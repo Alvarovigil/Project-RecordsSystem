@@ -431,7 +431,7 @@ export default function RecordSheet({
               {(friends.length > 0 || elsewhere.length > 0) && (
                 <Card title="Quién más lo tiene" padded={false}>
                   {friends.length > 0 && (
-                    <ul className="rail flex gap-4 px-5 pb-1 pr-8">
+                    <ul className="rail flex gap-4 px-5 pb-1 pr-10" style={{ scrollPaddingLeft: "1.25rem" }}>
                       {friends.slice(0, 10).map((f) => (
                         <li key={f.user.id} className="w-[76px] shrink-0">
                           <Link
