@@ -1,14 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { Cover } from "@/components/ui/Avatar";
 import { coverFor } from "@/lib/cover";
-import { artistSlug, cleanArtist } from "@/lib/artist";
-import type { Portrait } from "@/lib/collection-portrait";
+import { cleanArtist } from "@/lib/artist";
 import type { Vinyl } from "@/lib/types";
 
 /**
- * Tres discos, en grande, antes que ningún número.
+ * Tus tres: los discos con los que alguien decide presentarse.
+ *
+ * Los elige la persona, no un algoritmo. La aplicación sabe perfectamente
+ * cuáles coloca más veces y eso es un dato interesante, pero no es lo mismo:
+ * uno describe una estantería y el otro presenta a alguien. Y «los que más
+ * colocas» tampoco se entendía — hacía falta conocer el funcionamiento interno
+ * de la aplicación para leer el titular de una sección.
  *
  * Un perfil se abría con «38 discos · 6 racks · 12 seguidores», que es la ficha
  * de un inventario. Nadie decide seguir a alguien por su inventario: se decide
@@ -21,18 +25,62 @@ import type { Vinyl } from "@/lib/types";
 export function Standouts({
   records,
   onOpen,
-  title,
+  mine,
+  onEdit,
 }: {
   records: Vinyl[];
   onOpen: (v: Vinyl) => void;
-  title: string;
+  mine: boolean;
+  /** solo en el tuyo: cambiar con qué te presentas */
+  onEdit?: () => void;
 }) {
-  if (records.length === 0) return null;
+  if (records.length === 0)
+    return mine && onEdit ? (
+      /* Un hueco que invita, y no una sección que no existe: los tres discos
+         son lo primero que ve quien entra a tu perfil, y no tenerlos elegidos
+         es la única cosa de esta pantalla que merece pedirse. */
+      <section className="pb-10">
+        <button
+          onClick={onEdit}
+          className="pressable flex w-full items-center gap-3 rounded-[14px] border border-dashed border-line-strong px-4 py-5 text-left transition-colors hover:border-line-focus"
+        >
+          <span className="flex shrink-0 gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <span key={i} className="h-9 w-9 rounded-[3px] border border-dashed border-line-strong" />
+            ))}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-body text-paper">Elige tus tres</span>
+            <span className="block text-caption text-content-muted">
+              Los discos con los que quieres presentarte.
+            </span>
+          </span>
+        </button>
+      </section>
+    ) : null;
 
   return (
     <section className="pb-10">
-      <h2 className="text-caption uppercase tracking-label text-content-muted">{title}</h2>
-      <ul className="mt-3.5 grid grid-cols-3 gap-3 sm:gap-5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-heading font-medium leading-tight text-paper">
+          {mine ? "Tus tres" : "Sus tres"}
+        </h2>
+        {mine && onEdit && (
+          <button
+            onClick={onEdit}
+            className="pressable text-caption uppercase tracking-label text-content-faint transition-colors hover:text-paper"
+          >
+            Cambiar
+          </button>
+        )}
+      </div>
+      <p className="mt-1.5 text-sub text-content-muted">
+        {mine
+          ? "Con lo que te presentas, elegido por ti."
+          : "Con lo que se presenta, elegidos por quien los tiene."}
+      </p>
+
+      <ul className="mt-4 grid grid-cols-3 gap-3 sm:gap-5">
         {records.map((v, i) => (
           <li key={v.id}>
             <button onClick={() => onOpen(v)} className="pressable block w-full text-left">
@@ -48,54 +96,6 @@ export function Standouts({
                 {cleanArtist(v.artist)}
               </span>
             </button>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-/**
- * El retrato, en frases y no en tabla.
- *
- * «Rock · 1978 · Island · UK» son cuatro celdas de una base de datos. «Sobre
- * todo rock, y casi todo de los setenta» es alguien. Cada dato que existe se
- * dice en una tarjeta, y el que no llega al umbral no aparece: media pantalla
- * de guiones es peor que media pantalla vacía.
- */
-export function PortraitCard({
-  portrait,
-  records,
-  mine,
-}: {
-  portrait: Portrait;
-  records: number;
-  /** tu estantería o la suya: la pantalla habla de alguien, y sabe de quién */
-  mine: boolean;
-}) {
-  const facts: { k: string; v: string; note?: string }[] = [];
-  if (portrait.genre)
-    facts.push({ k: "Sobre todo", v: portrait.genre.name, note: `${portrait.genre.share}% de la estantería` });
-  if (portrait.decade)
-    facts.push({ k: mine ? "Tu década" : "Su década", v: portrait.decade.label, note: `${portrait.decade.count} discos` });
-  if (portrait.label)
-    facts.push({ k: "Sello que repite", v: portrait.label.name, note: `${portrait.label.count} veces` });
-  if (portrait.span)
-    facts.push({ k: "De", v: `${portrait.span.from} a ${portrait.span.to}`, note: `${records} discos` });
-
-  if (facts.length === 0) return null;
-
-  return (
-    <section className="pb-10">
-      <h2 className="text-caption uppercase tracking-label text-content-muted">
-        {mine ? "Cómo suena tu estantería" : "Cómo suena su estantería"}
-      </h2>
-      <ul className="mt-3.5 grid grid-cols-2 gap-2.5">
-        {facts.map((f) => (
-          <li key={f.k} className="rounded-[14px] bg-fill-subtle px-4 py-3.5">
-            <p className="text-micro uppercase tracking-label text-content-faint">{f.k}</p>
-            <p className="mt-1.5 truncate text-body leading-snug text-paper">{f.v}</p>
-            {f.note && <p className="mt-0.5 truncate text-caption text-content-muted">{f.note}</p>}
           </li>
         ))}
       </ul>
@@ -140,49 +140,6 @@ export function InCommon({
                 {v.title}
               </span>
             </button>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-/**
- * Los artistas que más se repiten, como puertas.
- *
- * Tres discos del mismo artista en una estantería no son tres discos: son un
- * artista. Y un artista es una página de esta aplicación, así que la lista de
- * los que más aparecen es, literalmente, un pasillo desde la colección de
- * alguien hacia el resto del catálogo.
- */
-export function Regulars({ records }: { records: Vinyl[] }) {
-  const tally = new Map<string, number>();
-  for (const r of records) {
-    const name = cleanArtist(r.artist);
-    if (name) tally.set(name, (tally.get(name) ?? 0) + 1);
-  }
-  const regulars = [...tally.entries()]
-    .filter(([, n]) => n >= 2)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
-
-  if (regulars.length === 0) return null;
-
-  return (
-    <section className="pb-10">
-      <h2 className="text-caption uppercase tracking-label text-content-muted">Los de casa</h2>
-      <ul className="mt-3.5 flex flex-wrap gap-2">
-        {regulars.map(([name, n]) => (
-          <li key={name}>
-            <Link
-              href={`/artista/${artistSlug(name)}`}
-              className="pressable flex items-center gap-2 rounded-full bg-fill px-3.5 py-1.5 text-sub text-content-secondary transition-colors hover:bg-fill-strong hover:text-paper"
-            >
-              {name}
-              <span className="text-caption text-content-faint" style={{ fontVariantNumeric: "tabular-nums" }}>
-                {n}
-              </span>
-            </Link>
           </li>
         ))}
       </ul>

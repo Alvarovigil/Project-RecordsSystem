@@ -45,6 +45,70 @@ function decadeLabel(start: number) {
   return start < 2000 ? `los ${String(start).slice(2)}` : `los ${start}`;
 }
 
+/**
+ * El reparto por géneros y por décadas, para dibujarlo.
+ *
+ * Un dato suelto — «sobre todo rock» — es una etiqueta. El reparto entero es
+ * una forma: se ve de un vistazo si alguien es monotemático o si tiene tres
+ * mundos, y eso no hay manera de decirlo con una frase sin escribir un
+ * párrafo. Devuelve porcentajes ya calculados porque quien lo pinta no tiene
+ * por qué saber dividir.
+ */
+export type Slice = { name: string; count: number; share: number };
+
+export function distribution(
+  values: (string | null | undefined)[],
+  max = 5,
+): Slice[] {
+  const tally = new Map<string, number>();
+  let total = 0;
+  for (const raw of values) {
+    const v = (raw ?? "").split(",")[0]?.trim();
+    if (!v) continue;
+    tally.set(v, (tally.get(v) ?? 0) + 1);
+    total += 1;
+  }
+  if (total === 0) return [];
+  return [...tally.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, max)
+    .map(([name, count]) => ({ name, count, share: Math.round((count / total) * 100) }));
+}
+
+/**
+ * Las décadas, todas y en orden, incluidas las vacías.
+ *
+ * Sin los huecos no es un histograma, es un ranking: «los 70, los 90, los 60»
+ * no dice que haya un agujero en los ochenta, y ese agujero es información
+ * sobre alguien. Se dibujan de la primera a la última que tiene algo.
+ */
+export function decades(records: { year?: number | null }[]) {
+  const years = records
+    .map((r) => r.year)
+    .filter((y): y is number => typeof y === "number" && y > 1900);
+  if (years.length < 3) return [];
+  const from = Math.floor(Math.min(...years) / 10) * 10;
+  const to = Math.floor(Math.max(...years) / 10) * 10;
+  const out: { decade: number; count: number }[] = [];
+  for (let d = from; d <= to; d += 10)
+    out.push({ decade: d, count: years.filter((y) => y >= d && y < d + 10).length });
+  return out;
+}
+
+/** los artistas que más se repiten, que es de quién no se baja alguien */
+export function topArtists(records: { artist: string }[], max = 6) {
+  const tally = new Map<string, number>();
+  for (const r of records) {
+    const a = (r.artist ?? "").trim();
+    if (a) tally.set(a, (tally.get(a) ?? 0) + 1);
+  }
+  return [...tally.entries()]
+    .filter(([, n]) => n >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, max)
+    .map(([name, count]) => ({ name, count }));
+}
+
 export function portraitOf(records: Vinyl[]): Portrait {
   const n = records.length;
   // Por debajo de cinco discos no hay retrato que hacer, hay una anécdota.

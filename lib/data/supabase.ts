@@ -734,6 +734,31 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       return toProfile(data);
     },
 
+    async picksOf(profileId) {
+      const { data } = await sb
+        .from("profile_picks")
+        .select("release_id, position")
+        .eq("user_id", profileId)
+        .order("position");
+      return ((data ?? []) as { release_id: string }[]).map((r) => r.release_id);
+    },
+
+    async setPicks(releaseIds) {
+      const userId = await requireUser();
+      // Se reescriben enteras: son tres, el orden es parte del dato, y
+      // reconciliar tres filas por posición es más código que borrarlas.
+      await sb.from("profile_picks").delete().eq("user_id", userId);
+      const rows = releaseIds.slice(0, 3).map((release_id, position) => ({
+        user_id: userId,
+        release_id,
+        position,
+      }));
+      if (rows.length) {
+        const { error } = await sb.from("profile_picks").insert(rows);
+        if (error) throw new Error(error.message);
+      }
+    },
+
     async isUsernameAvailable(username) {
       const clean = username.trim().toLowerCase();
       if (!/^[a-z0-9_]{3,24}$/.test(clean)) return false;

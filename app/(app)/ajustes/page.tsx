@@ -1,156 +1,209 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { Page } from "@/components/app/AppShell";
+import Avatar from "@/components/ui/Avatar";
+import EditProfileSheet from "@/components/community/EditProfileSheet";
+import Confirm from "@/components/ui/Confirm";
 import { useSession } from "@/hooks/useSession";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useInstall } from "@/hooks/useInstall";
+import type { Profile } from "@/lib/data/types";
 
-const HANDLE_RULE = /^[a-z0-9_]{3,24}$/;
-
-/** Your account: who you are, and how to leave. */
+/**
+ * Ajustes: la cuenta, no la persona.
+ *
+ * Esta pantalla y «Editar perfil» pedían lo mismo — nombre, usuario y bio — en
+ * dos sitios distintos: una hoja en el perfil y un formulario aquí. Dos
+ * formularios para un dato son dos sitios donde arreglarlo y uno donde
+ * olvidarse de hacerlo, y ya habían empezado a separarse (aquí no se podía
+ * cambiar la foto).
+ *
+ * Así que el perfil se edita en un solo sitio, y desde aquí se llega a él. Lo
+ * que queda es lo que de verdad es de la cuenta y no de la persona: con qué
+ * has entrado, en qué dispositivo estás, y la puerta de salida.
+ */
 export default function SettingsPage() {
   const { available, loading, user, profile, signInWithGoogle, signOut } = useSession();
-  const supabase = getSupabaseBrowserClient();
-  const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
-  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [error, setError] = useState<string | null>(null);
+  const { standalone } = useInstall();
+  const [editing, setEditing] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [me, setMe] = useState<Profile | null>(null);
 
-  useEffect(() => {
-    if (!profile) return;
-    setUsername(profile.username);
-    setDisplayName(profile.displayName);
-    setBio(profile.bio ?? "");
-  }, [profile]);
-
-  const save = async () => {
-    const handle = username.trim().toLowerCase();
-    if (!HANDLE_RULE.test(handle)) {
-      setError("De 3 a 24 caracteres: letras, números o guion bajo.");
-      setState("error");
-      return;
-    }
-    setState("saving");
-    setError(null);
-    const { error } = await supabase!
-      .from("profiles")
-      .update({ username: handle, display_name: displayName.trim(), bio: bio.trim() })
-      .eq("id", user!.id);
-    if (error) {
-      setError(error.code === "23505" ? "Ese nombre ya está cogido." : "No se ha podido guardar.");
-      setState("error");
-      return;
-    }
-    setState("saved");
-    setTimeout(() => setState("idle"), 2000);
-  };
+  const shown = me ?? profile;
 
   return (
-    <main className="min-h-screen-d bg-surface pb-chrome text-paper">
-      <div className="mx-auto w-full max-w-[560px] px-6 py-16">
-        <h1 className="mt-2 text-[26px] leading-tight">Ajustes</h1>
+    <Page width={560}>
+      <h1 className="text-display font-medium text-paper">Ajustes</h1>
 
-        {!available ? (
-          <p className="mt-8 text-[13px] text-paper/45">
-            Sin base de datos configurada, tu colección vive solo en este navegador.
+      {!available ? (
+        <p className="mt-8 text-sub text-content-muted">
+          Sin base de datos configurada, tu colección vive solo en este navegador.
+        </p>
+      ) : loading ? null : !user ? (
+        <div className="mt-8">
+          <p className="text-body text-content-secondary">
+            Entra para guardar tu colección y que otros puedan verla.
           </p>
-        ) : loading ? null : !user ? (
-          <div className="mt-8">
-            <p className="text-[14px] text-paper/60">
-              Entra para guardar tu colección y que otros puedan verla.
-            </p>
-            <button
-              onClick={signInWithGoogle}
-              className="mt-5 bg-paper px-5 py-2 text-[13px] text-ink transition hover:bg-paper/85"
-            >
-              Entrar con Google
-            </button>
-          </div>
-        ) : (
-          <>
-            <section className="mt-10">
-              <h2 className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">Perfil</h2>
-
-              <Field label="Usuario">
-                <div className="flex items-center gap-1">
-                  <span className="text-[15px] text-paper/30">@</span>
-                  <input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                    className="w-full bg-transparent py-1.5 text-[15px] text-paper outline-none"
-                  />
-                </div>
-              </Field>
-
-              <Field label="Nombre visible">
-                <input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full bg-transparent py-1.5 text-[15px] text-paper outline-none"
-                />
-              </Field>
-
-              <Field label="Bio">
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  rows={3}
-                  placeholder="Qué coleccionas, y por qué"
-                  className="w-full resize-none bg-transparent py-1.5 text-[15px] text-paper outline-none placeholder:text-paper/25"
-                />
-              </Field>
-
-              {error && <p className="mt-3 text-[12px] text-red-400">{error}</p>}
-
-              <div className="mt-6 flex items-center gap-4">
-                <button
-                  onClick={save}
-                  disabled={state === "saving"}
-                  className="bg-paper px-5 py-2 text-[13px] text-ink transition hover:bg-paper/85 disabled:opacity-40"
-                >
-                  {state === "saving" ? "Guardando…" : "Guardar"}
-                </button>
-                {state === "saved" && (
-                  <span className="mono text-[10px] uppercase tracking-[0.18em] text-paper/40">
-                    Guardado
-                  </span>
-                )}
-                <Link
-                  href={`/u/${profile?.username ?? ""}`}
-                  className="mono text-[10px] uppercase tracking-[0.18em] text-paper/40 transition hover:text-paper"
-                >
-                  Ver mi perfil →
-                </Link>
+          <button
+            onClick={signInWithGoogle}
+            className="pressable mt-5 flex h-12 items-center justify-center rounded-full bg-paper px-6 text-sub font-medium text-ink"
+          >
+            Entrar con Google
+          </button>
+        </div>
+      ) : (
+        <>
+          {/**
+           * Tú, tal y como se te ve.
+           *
+           * Una tarjeta con la cara, el nombre y el usuario antes que ninguna
+           * opción: lo que se ajusta aquí es una cuenta que pertenece a
+           * alguien, y enseñar a ese alguien es lo que evita la duda de «¿de
+           * qué cuenta son estos ajustes?» cuando se tienen dos.
+           */}
+          {shown && (
+            <div className="mt-7 flex items-center gap-4 rounded-[14px] bg-fill-subtle p-4">
+              <Avatar
+                name={shown.displayName}
+                handle={shown.username}
+                src={shown.avatarUrl}
+                size="lg"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-body font-medium text-paper">{shown.displayName}</p>
+                <p className="mono truncate text-sub text-content-muted">@{shown.username}</p>
               </div>
-            </section>
-
-            <section className="mt-14 border-t border-paper/[0.08] pt-8">
-              <h2 className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">Cuenta</h2>
-              <p className="mt-3 text-[13px] text-paper/45">
-                Entraste con Google como {user.email}.
-              </p>
               <button
-                onClick={() => void signOut()}
-                className="mt-5 border border-paper/25 px-4 py-2 text-[13px] text-paper/70 transition hover:border-paper/60 hover:text-paper"
+                onClick={() => setEditing(true)}
+                className="pressable shrink-0 rounded-full bg-fill px-4 py-2 text-sub text-paper transition-colors hover:bg-fill-strong"
               >
-                Cerrar sesión
+                Editar
               </button>
-            </section>
-          </>
-        )}
-      </div>
-    </main>
+            </div>
+          )}
+
+          <Group title="Tu perfil">
+            <Row href={`/u/${shown?.username ?? ""}`} label="Ver mi perfil" note="Como lo ve todo el mundo" />
+            <Row onClick={() => setEditing(true)} label="Nombre, usuario y foto" note="Y tu bio" />
+          </Group>
+
+          <Group title="La aplicación">
+            <Row
+              label="Cómo se está usando"
+              note={standalone ? "Instalada en este dispositivo" : "En el navegador"}
+              muted
+            />
+            {!standalone && (
+              <Row href="/instalar" label="Instalar la app" note="Pantalla completa y arranque directo" />
+            )}
+            <Row href="/#sobre" label="Sobre el proyecto" note="Por qué existe Rackr" />
+          </Group>
+
+          <Group title="Cuenta">
+            <Row label="Correo" note={user.email ?? "—"} muted />
+            <Row onClick={() => setLeaving(true)} label="Cerrar sesión" danger />
+          </Group>
+
+          {shown && (
+            <EditProfileSheet
+              open={editing}
+              onClose={() => setEditing(false)}
+              profile={shown}
+              onSaved={setMe}
+            />
+          )}
+
+          {/* Cerrar sesión en un teléfono es un botón al que se llega sin
+              querer, y volver a entrar cuesta un viaje al selector de cuentas
+              de Google. Una pregunta corta es más barata que ese viaje. */}
+          <Confirm
+            open={leaving}
+            onClose={() => setLeaving(false)}
+            title="¿Cerrar sesión?"
+            body="Tu colección se queda guardada. Para volver a verla tendrás que entrar otra vez con Google."
+            confirmLabel="Cerrar sesión"
+            onConfirm={() => void signOut()}
+          />
+        </>
+      )}
+    </Page>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+/** un bloque de ajustes: título pequeño y una tarjeta con sus filas dentro */
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <label className="mt-6 block">
-      <span className="mono block text-[10px] uppercase tracking-[0.2em] text-paper/40">
-        {label}
+    <section className="mt-9">
+      <h2 className="text-caption uppercase tracking-label text-content-muted">{title}</h2>
+      <ul className="mt-3 overflow-hidden rounded-[14px] bg-fill-subtle">{children}</ul>
+    </section>
+  );
+}
+
+/**
+ * Una fila de ajustes.
+ *
+ * Tres formas y una sola maquetación: un enlace, un botón y un dato que solo
+ * se lee. Se distinguen por si tienen flecha, no por cómo están escritas —
+ * cuando cada fila se maqueta por su cuenta acaban con tres alturas distintas
+ * en la misma tarjeta.
+ */
+function Row({
+  label,
+  note,
+  href,
+  onClick,
+  danger = false,
+  muted = false,
+}: {
+  label: string;
+  note?: string;
+  href?: string;
+  onClick?: () => void;
+  danger?: boolean;
+  muted?: boolean;
+}) {
+  const inner = (
+    <>
+      <span className="min-w-0 flex-1">
+        <span className={`block truncate text-body ${danger ? "text-[#ff6b57]" : "text-content"}`}>
+          {label}
+        </span>
+        {note && <span className="block truncate text-caption text-content-muted">{note}</span>}
       </span>
-      <div className="mt-1 border-b border-paper/15 focus-within:border-paper/60">{children}</div>
-    </label>
+      {!muted && (
+        <span aria-hidden className="shrink-0 text-content-faint">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path
+              d="M5 2.5 L9.5 7 L5 11.5"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      )}
+    </>
+  );
+
+  const cls =
+    "flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors border-b border-line last:border-b-0";
+
+  return (
+    <li className="last:border-b-0">
+      {href ? (
+        <Link href={href} className={`pressable hover:bg-fill ${cls}`}>
+          {inner}
+        </Link>
+      ) : onClick ? (
+        <button onClick={onClick} className={`pressable hover:bg-fill ${cls}`}>
+          {inner}
+        </button>
+      ) : (
+        <div className={cls}>{inner}</div>
+      )}
+    </li>
   );
 }

@@ -67,6 +67,8 @@ import {
 } from "./local-community";
 
 const RELEASES_KEY = "vinilos.releases.v1";
+/** los tres discos con los que te presentas, sin cuenta */
+const PICKS_KEY = "vinilos.picks.v1";
 // Without an account you are borrowing the preview's identity: a collector who
 // already has lists, friends and taste. See lib/demo.ts.
 const BASE_PROFILE: Profile = DEMO_PROFILE;
@@ -719,6 +721,26 @@ export function createLocalRepository(): LibraryRepository {
     async updateProfile(patch: ProfilePatch) {
       saveProfileOverrides(patch);
       return localProfile();
+    },
+
+    async picksOf(profileId) {
+      /* Sin cuenta solo hay una persona aquí, así que las elecciones de
+         cualquier otra son las que trae la comunidad de ejemplo: ninguna. */
+      if (profileId !== BASE_PROFILE.id) return [];
+      try {
+        const raw = localStorage.getItem(PICKS_KEY);
+        return raw ? (JSON.parse(raw) as string[]) : [];
+      } catch {
+        return [];
+      }
+    },
+
+    async setPicks(releaseIds) {
+      try {
+        localStorage.setItem(PICKS_KEY, JSON.stringify(releaseIds.slice(0, 3)));
+      } catch {
+        /* sin sitio en el navegador: la elección no se guarda, y ya está */
+      }
     },
 
     async isUsernameAvailable(username) {

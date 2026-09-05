@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Page } from "@/components/app/AppShell";
-import Avatar from "@/components/ui/Avatar";
+import Link from "next/link";
+import Avatar, { Cover } from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import Sheet from "@/components/ui/Sheet";
 import EmptyState from "@/components/ui/EmptyState";
-import { SkeletonRackGrid } from "@/components/ui/Skeleton";
+import { SkeletonCovers, SkeletonRackGrid } from "@/components/ui/Skeleton";
 import FollowButton from "./FollowButton";
 import PersonRow from "./PersonRow";
 import ListCard from "./ListCard";
@@ -15,8 +17,11 @@ import { useRepository } from "@/hooks/useRepository";
 import { useRelationship } from "@/hooks/useRelationship";
 import type { ListWithRecord, Profile, ProfileStats, SavedList } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
-import { portraitOf, standoutsOf } from "@/lib/collection-portrait";
-import { InCommon, PortraitCard, Regulars, Standouts } from "./ProfileShowcase";
+import { standoutsOf } from "@/lib/collection-portrait";
+import { InCommon, Standouts } from "./ProfileShowcase";
+import ProfileCharts from "./ProfileCharts";
+import PickThreeSheet from "./PickThreeSheet";
+import { cleanArtist } from "@/lib/artist";
 import RecordSheet from "@/components/mobile/RecordSheet";
 import { coverFor } from "@/lib/cover";
 import Loading from "@/components/ui/Loading";
@@ -53,6 +58,7 @@ export default function ProfileView({
   initialProfile?: Profile | null;
 }) {
   const repo = useRepository();
+  const router = useRouter();
   const { rel } = useRelationship(profileId);
   const [profile, setProfile] = useState<Profile | null>(initialProfile ?? null);
   const [stats, setStats] = useState<ProfileStats | null>(null);
@@ -152,11 +158,34 @@ export default function ProfileView({
     };
   }, [listKey, repo, isYou, releases, lists]);
 
-  const portrait = useMemo(() => portraitOf(theirs ?? []), [theirs]);
+  /**
+   * Los tres elegidos, con red de seguridad.
+   *
+   * Si alguien no ha elegido ninguno todavía, se enseñan los que más ha
+   * colocado — un perfil sin nada arriba es un perfil que no presenta a nadie,
+   * y la adivinanza es razonable mientras no haya decisión. En el tuyo no: ahí
+   * el hueco es una invitación a elegir, porque es lo único de esta pantalla
+   * que merece pedirse.
+   */
+  const [picks, setPicks] = useState<string[]>([]);
+  useEffect(() => {
+    repo
+      .picksOf(profileId)
+      .then(setPicks)
+      .catch(() => setPicks([]));
+  }, [repo, profileId]);
+
   const standouts = useMemo(
     () => standoutsOf(theirs ?? [], timesFiled),
     [theirs, timesFiled],
   );
+  const picked = useMemo(() => {
+    const chosen = picks
+      .map((id) => (theirs ?? []).find((v) => v.id === id))
+      .filter((v): v is Vinyl => Boolean(v));
+    if (chosen.length > 0) return chosen;
+    return isYou ? [] : standouts;
+  }, [picks, theirs, standouts, isYou]);
 
   /** lo que tenéis los dos, que es la razón de que esta pantalla exista */
   const [mineIds, setMineIds] = useState<Set<string> | null>(null);
@@ -177,6 +206,9 @@ export default function ProfileView({
   const latest = useMemo(() => (theirs ?? []).slice(-12).reverse(), [theirs]);
 
   const [openRecord, setOpenRecord] = useState<Vinyl | null>(null);
+  const [tab, setTab] = useState<"perfil" | "coleccion" | "racks">("perfil");
+  const [picking, setPicking] = useState(false);
+
 
   /**
    * El fondo lo pone su propia estantería.
@@ -203,7 +235,30 @@ export default function ProfileView({
         className="relative -mx-5 mb-8 pb-2 sm:-mx-6"
         style={{ marginTop: "calc(-1 * max(1.5rem, var(--safe-top)))" }}
       >
-        <div className="relative h-[34svh] max-h-[300px] w-full overflow-hidden">
+        {/* La vuelta atrás, como en la ficha de un disco y en la de un
+            artista: en el perfil de otra persona has entrado desde algún sitio
+            y tiene que haber salida. En el tuyo no — es una pestaña, no un
+            destino al que se llega. */}
+        {!isYou && (
+          <button
+            onClick={() => router.back()}
+            aria-label="Atrás"
+            className="pressable absolute left-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
+            style={{ top: "calc(max(1.5rem, var(--safe-top)) + 0.25rem)" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden>
+              <path
+                d="M11.5 3.5 L5.5 9 L11.5 14.5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        )}
+
+        <div className="relative h-[26svh] max-h-[230px] w-full overflow-hidden">
           {backdrop ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -229,8 +284,8 @@ export default function ProfileView({
           />
         </div>
 
-        <div className="relative -mt-24 px-5 text-center sm:px-6">
-          <div className="mx-auto w-[104px]">
+        <div className="relative -mt-[86px] px-5 text-center sm:px-6">
+          <div className="mx-auto w-[132px]">
             <Avatar
               name={profile?.displayName ?? "?"}
               handle={profile?.username}
@@ -239,7 +294,7 @@ export default function ProfileView({
             />
           </div>
 
-          <h1 className="mt-4 flex items-center justify-center gap-2 text-title font-medium text-paper">
+          <h1 className="mt-3.5 flex items-center justify-center gap-2 text-title font-medium text-paper">
             <span className="truncate">{profile?.displayName ?? "…"}</span>
             {profile?.verified && (
               <span className="shrink-0 text-accent">
@@ -267,15 +322,40 @@ export default function ProfileView({
             <Stat n={stats?.following} label="siguiendo" onClick={() => setPeople("following")} />
           </div>
 
+          {/**
+           * Un solo botón en el tuyo.
+           *
+           * «Editar perfil» y «Ajustes» abrían dos sitios que pedían lo mismo:
+           * nombre, usuario y bio, en una hoja y en una página. Dos formularios
+           * para un dato es dos sitios donde arreglarlo y uno donde olvidarse.
+           * Aquí se edita el perfil; Ajustes se queda con lo que es de la
+           * cuenta y no de la persona — la sesión, el correo, la aplicación —
+           * y se llega desde allí.
+           */}
           <div className="mx-auto mt-5 flex max-w-[420px] gap-2.5">
             {isYou ? (
               <>
                 <Button variant="secondary" block onClick={() => setEditing(true)}>
                   Editar perfil
                 </Button>
-                <Button variant="secondary" block href="/ajustes">
-                  Ajustes
-                </Button>
+                {/* Los ajustes ya no repiten el perfil, así que dejan de ser un
+                    segundo botón con el mismo peso: son la rueda de al lado, y
+                    en el teléfono esta es su única puerta. */}
+                <Link
+                  href="/ajustes"
+                  aria-label="Ajustes"
+                  className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-fill text-content transition-colors hover:bg-fill-strong"
+                >
+                  <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
+                    <circle cx="9" cy="9" r="2.6" stroke="currentColor" strokeWidth="1.4" />
+                    <path
+                      d="M9 1.8v1.6M9 14.6v1.6M16.2 9h-1.6M3.4 9H1.8M14.1 3.9l-1.1 1.1M5 13l-1.1 1.1M14.1 14.1L13 13M5 5 3.9 3.9"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </Link>
               </>
             ) : (
               <FollowButton
@@ -289,70 +369,133 @@ export default function ProfileView({
       </header>
 
       {/**
-       * Dos caras de la misma pantalla, y la diferencia es a quién le habla.
+       * Tres pestañas, y son tres preguntas distintas.
        *
-       * A quien visita se le enseña una vitrina: tres discos, qué tenéis en
-       * común, cómo suena esa estantería, de quién no se baja nunca. Todo eso
-       * responde a la única pregunta que trae a alguien aquí — «¿me interesa
-       * esta persona?» — y ninguna de esas respuestas es un número.
+       * «¿Quién es esta persona?» se responde con lo que ha elegido y con la
+       * forma de lo que tiene; «¿qué tiene?» con todos sus discos; «¿cómo lo
+       * ordena?» con sus cajones. Antes estaba todo en una columna y había que
+       * bajar tres pantallas para llegar a lo tercero, que en un perfil ajeno
+       * es justo lo que más se busca.
        *
-       * A ti se te enseña un panel: el retrato de lo que has reunido, lo
-       * último que entró y tus racks. Tú ya sabes lo que tienes; lo que no
-       * sabes es qué forma tiene, y eso es lo que esta pantalla puede darte
-       * que ninguna otra da.
-       *
-       * Lo que desaparece de las dos: las pestañas Racks / Discos / Guardadas.
-       * Eran tres nombres para una sola cosa — tu colección — y obligaban a
-       * elegir una antes de enseñar nada.
+       * La diferencia entre tu perfil y el de otro no son las pestañas: son
+       * las mismas tres. Lo que cambia es lo que hay dentro — a ti se te
+       * ofrece cambiar tus tres y a un visitante se le enseña primero lo que
+       * tenéis en común, porque es lo que convierte a un desconocido en
+       * alguien a quien seguir.
        */}
-      {!isYou && shared.length > 0 && (
-        <InCommon records={shared} onOpen={setOpenRecord} />
+      <div className="rail -mx-5 mb-7 flex gap-2 px-5 sm:mx-0 sm:px-0">
+        {(
+          [
+            ["perfil", "Perfil"],
+            ["coleccion", "Colección", stats?.records],
+            ["racks", "Racks", stats?.lists],
+          ] as const
+        ).map(([value, label, count]) => (
+          <button
+            key={value}
+            onClick={() => setTab(value)}
+            className={`pressable shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sub transition-colors ${
+              tab === value ? "bg-paper text-ink" : "bg-fill text-content-secondary hover:bg-fill-strong"
+            }`}
+          >
+            {label}
+            {typeof count === "number" && count > 0 && (
+              <span
+                className={`ml-1.5 text-caption ${tab === value ? "text-ink/50" : "text-content-faint"}`}
+                style={{ fontVariantNumeric: "tabular-nums" }}
+              >
+                {count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {tab === "perfil" && (
+        <>
+          {!isYou && shared.length > 0 && <InCommon records={shared} onOpen={setOpenRecord} />}
+
+          <Standouts
+            records={picked}
+            onOpen={setOpenRecord}
+            mine={isYou}
+            onEdit={isYou ? () => setPicking(true) : undefined}
+          />
+
+          <ProfileCharts records={theirs ?? []} mine={isYou} />
+
+          {latest.length > 0 && (
+            <section className="pb-10">
+              <h2 className="text-heading font-medium leading-tight text-paper">
+                {isYou ? "Últimas adquisiciones" : "Lo último que ha entrado"}
+              </h2>
+              <ul className="rail rail-page mt-4 flex gap-3 pb-2">
+                {latest.map((v) => (
+                  <li key={v.id} className="w-[112px] shrink-0 snap-start">
+                    <button
+                      onClick={() => setOpenRecord(v)}
+                      className="pressable block w-full text-left"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={coverFor(v)}
+                        alt=""
+                        loading="lazy"
+                        className="aspect-square w-full rounded-[3px] object-cover"
+                      />
+                      <span className="mt-2 block truncate text-caption text-content-secondary">
+                        {v.title}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </>
       )}
 
-      <Standouts
-        records={standouts}
-        onOpen={setOpenRecord}
-        title={isYou ? "Los que más colocas" : "Los que más coloca"}
-      />
-
-      <PortraitCard portrait={portrait} records={(theirs ?? []).length} mine={isYou} />
-
-      <Regulars records={theirs ?? []} />
-
-      {isYou && latest.length > 0 && (
-        <section className="pb-10">
-          <h2 className="text-caption uppercase tracking-label text-content-muted">
-            Lo último que entró
-          </h2>
-          <ul className="rail rail-page mt-3.5 flex gap-3 pb-2">
-            {latest.map((v) => (
-              <li key={v.id} className="w-[112px] shrink-0 snap-start">
-                <button
-                  onClick={() => setOpenRecord(v)}
-                  className="pressable block w-full text-left"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={coverFor(v)}
-                    alt=""
-                    loading="lazy"
-                    className="aspect-square w-full rounded-[3px] object-cover"
-                  />
-                  <span className="mt-2 block truncate text-caption text-content-secondary">
-                    {v.title}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+      {tab === "coleccion" && (
+        <section className="pb-12">
+          {theirs === null ? (
+            <SkeletonCovers n={12} cols="grid-cols-3 sm:grid-cols-5" gap="gap-3" />
+          ) : theirs.length === 0 ? (
+            <EmptyState
+              title={isYou ? "Tu colección está vacía" : "Todavía no ha enseñado ningún disco"}
+              body={
+                isYou
+                  ? "Busca un disco por título, artista o código de barras y quedará guardado aquí."
+                  : "Cuando publique un rack, sus discos aparecerán en esta pestaña."
+              }
+              action={
+                isYou
+                  ? { label: "Buscar discos", href: "/explorar?buscar=1" }
+                  : { label: "Explorar colecciones", href: "/explorar" }
+              }
+            />
+          ) : (
+            <ul className="grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-6">
+              {theirs.map((v, i) => (
+                <li key={v.id}>
+                  <button
+                    onClick={() => setOpenRecord(v)}
+                    className="pressable block w-full text-left"
+                  >
+                    <Cover src={coverFor(v)} eager={i < 9} className="aspect-square w-full rounded-[3px]" />
+                    <span className="mt-2 block truncate text-caption text-paper">{v.title}</span>
+                    <span className="block truncate text-caption text-content-muted">
+                      {cleanArtist(v.artist)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 
-      <section className="pb-10">
-        <h2 className="text-caption uppercase tracking-label text-content-muted">
-          {isYou ? "Tus racks" : "Sus racks"}
-        </h2>
-        <div className="mt-4">
+      {tab === "racks" && (
+        <section className="pb-12">
           <ListGrid
             lists={lists}
             mine={isYou}
@@ -373,21 +516,34 @@ export default function ProfileView({
               )
             }
           />
-        </div>
-      </section>
 
-      {/* Los racks de otra gente que has guardado son tuyos de otra manera —
-          los usas, no los has hecho — así que van al final y con su nombre
-          puesto, en vez de disputarle una pestaña a los tuyos. */}
-      {isYou && saved.length > 0 && (
-        <section className="pb-10">
-          <h2 className="text-caption uppercase tracking-label text-content-muted">
-            Guardados de otra gente
-          </h2>
-          <div className="mt-4">
-            <ListGrid lists={saved} mine={false} coversOf={coversOf} empty={null} />
-          </div>
+          {/* Los racks de otra gente que has guardado son tuyos de otra manera
+              — los usas, no los has hecho — así que van al final y con su
+              nombre puesto. */}
+          {isYou && saved.length > 0 && (
+            <div className="mt-12">
+              <h2 className="text-caption uppercase tracking-label text-content-muted">
+                Guardados de otra gente
+              </h2>
+              <div className="mt-4">
+                <ListGrid lists={saved} mine={false} coversOf={coversOf} empty={null} />
+              </div>
+            </div>
+          )}
         </section>
+      )}
+
+      {isYou && (
+        <PickThreeSheet
+          open={picking}
+          onClose={() => setPicking(false)}
+          records={theirs ?? []}
+          current={picks}
+          onSave={async (ids) => {
+            setPicks(ids);
+            await repo.setPicks(ids).catch(() => {});
+          }}
+        />
       )}
 
       <RecordSheet

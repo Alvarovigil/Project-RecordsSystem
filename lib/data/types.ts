@@ -291,6 +291,18 @@ export interface LibraryRepository {
   profileStats(profileId: string): Promise<ProfileStats>;
   /** edit your own profile; returns the saved result, not the request */
   updateProfile(patch: ProfilePatch): Promise<Profile>;
+
+  /**
+   * Los tres discos con los que alguien se presenta.
+   *
+   * Elegidos y no calculados. La aplicación puede adivinar cuáles son los que
+   * más colocas, y esa adivinanza es interesante, pero no es lo mismo que
+   * decidir con qué te presentas: lo primero describe una estantería y lo
+   * segundo a una persona. El orden importa — el primero es el que se ve
+   * entero en las tarjetas — así que se guarda como lista ordenada.
+   */
+  picksOf(profileId: string): Promise<string[]>;
+  setPicks(releaseIds: string[]): Promise<void>;
   /** is this handle free? the answer has to arrive while you're still typing */
   isUsernameAvailable(username: string): Promise<boolean>;
 
