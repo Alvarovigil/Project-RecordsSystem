@@ -457,36 +457,52 @@ export default function RecordSheet({
 
             <div ref={sentinel} aria-hidden />
 
-            <h2 className="mt-7 text-title font-medium leading-tight text-paper">{vinyl.title}</h2>
-            {/* The artist is a door, not a caption. It is the most obvious
-                thing on this screen to want more of, and until now it was the
-                only proper noun in the app you could not press. */}
-            <Link
-              href={`/artista/${artistSlug(vinyl.artist)}`}
-              onClick={onClose}
-              className="pressable mt-1.5 inline-flex items-center gap-1.5 text-body text-content-secondary underline-offset-4 transition hover:text-paper hover:underline"
-            >
-              {cleanArtist(vinyl.artist)}
-              <span aria-hidden className="text-content-faint">→</span>
-            </Link>
+            {/**
+             * The caption, centred under a centred sleeve.
+             *
+             * Left-aligned it read as the start of a document — a heading with
+             * a body under it — while the object it names sits in the middle
+             * of the screen. Centred, the name belongs to the record above it
+             * rather than to the page.
+             *
+             * The chips come with it: they are the same block, and a centred
+             * title over a left-aligned row of facts is two decisions where
+             * there should be one.
+             */}
+            <div className="text-center">
+              <h2 className="mt-7 text-title font-medium leading-tight text-paper">
+                {vinyl.title}
+              </h2>
+              {/* The artist is a door, not a caption. No arrow beside it: the
+                  underline on press already says it leads somewhere, and an
+                  arrow after a centred name pulls the whole line off centre by
+                  its own width. */}
+              <Link
+                href={`/artista/${artistSlug(vinyl.artist)}`}
+                onClick={onClose}
+                className="pressable mt-1.5 inline-block text-body text-content-secondary underline-offset-4 transition hover:text-paper hover:underline"
+              >
+                {cleanArtist(vinyl.artist)}
+              </Link>
 
-            {/* Year, genre and label as chips under the name rather than as a
-                four-cell table. They are how you place a record at a glance —
-                a caption, not data — and the table that held them made four
-                different kinds of fact look like one form to fill in. The full
-                set is one press away in the technical sheet. */}
-            <ul className="mt-4 flex flex-wrap gap-1.5">
-              {[vinyl.year ? String(vinyl.year) : null, vinyl.genre, vinyl.label, vinyl.country]
-                .filter(Boolean)
-                .map((f) => (
-                  <li
-                    key={f as string}
-                    className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary"
-                  >
-                    {f}
-                  </li>
-                ))}
-            </ul>
+              {/* Year, genre and label as chips under the name rather than as a
+                  four-cell table. They are how you place a record at a glance —
+                  a caption, not data — and the table that held them made four
+                  different kinds of fact look like one form to fill in. The
+                  full set is one press away in the technical sheet. */}
+              <ul className="mt-4 flex flex-wrap justify-center gap-1.5">
+                {[vinyl.year ? String(vinyl.year) : null, vinyl.genre, vinyl.label, vinyl.country]
+                  .filter(Boolean)
+                  .map((f) => (
+                    <li
+                      key={f as string}
+                      className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary"
+                    >
+                      {f}
+                    </li>
+                  ))}
+              </ul>
+            </div>
 
             {/**
              * Play, as a play button.
