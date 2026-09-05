@@ -220,8 +220,25 @@ export default function RecordSheet({
   if (!vinyl) return null;
 
   const wished = isWished(collections, vinyl.id);
-  /** how many of your racks hold this record — printed on the save control */
-  const savedIn = collections.filter((c) => c.vinylIds.includes(vinyl.id)).length;
+  /**
+   * What the save control says, which is not simply a count.
+   *
+   * Every record you own is in Mi Colección, so counting containers would
+   * print "En 1 rack" on everything and mean nothing. The two predefined
+   * lists are states rather than racks — owned, or still wanted — and they
+   * only get named when they are the whole answer. The moment a record is in
+   * a rack somebody made, that is what the button is about, and the count is
+   * of those alone.
+   */
+  const savedLabel = (() => {
+    const holding = collections.filter((c) => c.vinylIds.includes(vinyl.id));
+    const racks = holding.filter((c) => (c.kind ?? "custom") === "custom");
+    if (racks.length > 0) return `En ${racks.length} ${racks.length === 1 ? "rack" : "racks"}`;
+    if (holding.some((c) => c.kind === "wishlist")) return "En deseos";
+    if (holding.some((c) => c.kind === "collection")) return "En colección";
+    return null;
+  })();
+
   const mine = findCollection(collections);
   const wishlist = findWishlist(collections);
 
@@ -570,14 +587,12 @@ export default function RecordSheet({
               <button
                 onClick={() => setPicking(true)}
                 aria-label={
-                  savedIn === 0
-                    ? "Guardar en un rack"
-                    : `Guardado en ${savedIn} ${savedIn === 1 ? "rack" : "racks"}. Cambiar.`
+                  savedLabel ? `Guardado: ${savedLabel}. Cambiar.` : "Guardar en un rack"
                 }
                 className={`pressable flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full px-4 text-sub font-medium transition-colors ${
-                  savedIn === 0
-                    ? "border border-line-strong text-content hover:border-line-focus"
-                    : "bg-fill text-paper hover:bg-fill-strong"
+                  savedLabel
+                    ? "bg-fill text-paper hover:bg-fill-strong"
+                    : "border border-line-strong text-content hover:border-line-focus"
                 }`}
               >
                 {/* A crate, not a bookmark. A bookmark is what you put in a
@@ -593,11 +608,7 @@ export default function RecordSheet({
                   />
                   <path d="M6.3 7.1h3.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
                 </svg>
-                <span className="truncate">
-                  {savedIn === 0
-                    ? "Guardar"
-                    : `En ${savedIn} ${savedIn === 1 ? "rack" : "racks"}`}
-                </span>
+                <span className="truncate">{savedLabel ?? "Guardar"}</span>
               </button>
 
               <IconButton label="Compartir" onClick={() => setSharing(true)}>
