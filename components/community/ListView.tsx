@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Page } from "@/components/app/AppShell";
 import Avatar, { Cover } from "@/components/ui/Avatar";
-import Button from "@/components/ui/Button";
+import { IconButton } from "@/components/record/RecordHero";
+import { useRouter } from "next/navigation";
 import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonCovers } from "@/components/ui/Skeleton";
 import SaveListButton from "./SaveListButton";
@@ -72,6 +73,9 @@ export default function ListView({
   // where you came from, when it was one of ours; the owner's profile when it
   // was not — the one destination that is always true for this page
   const cameFrom = useBackTo();
+  const router = useRouter();
+  /* el color de la pantalla lo pone el último disco que entró en el cajón */
+  const ground = items && items.length > 0 ? coverFor(items[items.length - 1]) : null;
   const isOwner = rel?.isYou ?? false;
 
   const load = useCallback(async () => {
@@ -121,7 +125,7 @@ export default function ListView({
       {owner && (
         <Link
           href={cameFrom?.href ?? `/u/${owner.username}`}
-          className="pressable inline-flex items-center gap-2 text-sub text-content-muted transition-colors hover:text-paper"
+          className="pressable relative z-10 -mb-2 inline-flex items-center gap-2 text-sub text-content-muted transition-colors hover:text-paper"
         >
           <span aria-hidden>←</span>
           {/* coming from the owner's own profile, say their name rather than
@@ -152,124 +156,148 @@ export default function ListView({
        * text is harder to read line-to-line, so it is only allowed where it is
        * short.
        */}
-      <header className="relative mt-2 border-b border-line pb-10 text-center">
-        {/* the wash: three covers, blurred past recognition, as light rather
-            than as an image. Screen so it can only ever brighten the ground. */}
-        {items && items.length > 0 && (
-          <div
-            aria-hidden
-            /* No negative z-index: that would put it behind the page's own
-               background, which is opaque, and the wash would never be seen.
-               It is absolutely positioned and the content after it is
-               positioned too, so painting order alone puts the light behind
-               the words. */
-            className="pointer-events-none absolute inset-x-0 top-0 h-[280px] overflow-hidden"
-          >
-            <div className="absolute inset-x-[-20%] top-[-30%] flex h-[320px] opacity-45 blur-[64px]">
-              {items.slice(-3).map((v) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={v.id}
-                  src={coverFor(v)}
-                  alt=""
-                  className="h-full flex-1 object-cover"
-                />
-              ))}
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-b from-surface/45 via-surface/70 to-surface" />
-          </div>
-        )}
-
-        <div className="relative">
-        {items && items.length > 0 && (
-          <span className="mx-auto block w-[200px] sm:w-[248px]">
-            <Crate covers={items.slice(-3).reverse().map((v) => coverFor(v))} />
-          </span>
-        )}
-
-        <h1 className="mx-auto mt-7 max-w-[18ch] text-display font-medium leading-tight text-paper">
-          {title}
-        </h1>
-
-        {(list?.description || initial?.description) && (
-          <p className="mx-auto mt-3.5 max-w-[46ch] text-body leading-relaxed text-content-secondary">
-            {list?.description ?? initial?.description}
-          </p>
-        )}
-
-        {/* Whose it is, and how big — one line, centred, with the two measures
-            after it. Here they are not a decoration on a card: they are part
-            of what the rack is. */}
-        <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-3">
-          {owner && (
-            <Link
-              href={`/u/${owner.username}`}
-              className="pressable flex items-center gap-2 text-sub text-content-secondary transition-colors hover:text-paper"
-            >
-              <Avatar
-                name={owner.displayName}
-                handle={owner.username}
-                src={owner.avatarUrl}
-                size="sm"
-              />
-              {owner.displayName}
-            </Link>
-          )}
-          <span aria-hidden className="text-content-faint">·</span>
-          <span className="text-sub text-content-muted">
-            {items?.length ?? list?.itemCount ?? 0} discos
-          </span>
-          {list && (
-            <ListMetrics listId={list.id} saves={list.saves} likes={list.likes} size="md" />
-          )}
-          {list && <CollaboratorFaces listId={list.id} onOpen={() => setSharing(true)} />}
-        </div>
-
-        {/* The controls, by who you are. Never a disabled button explaining
-            what you would be able to do if you were someone else. */}
-        <div className="mt-7 flex flex-wrap justify-center gap-2.5">
-          {isOwner ? (
-            <>
-              <Button variant="secondary" onClick={() => setSharing(true)}>
-                Invitar a editar
-              </Button>
-              <Button variant="ghost" onClick={share}>
-                Compartir
-              </Button>
-              <Button variant="ghost" href="/coleccion">
-                Editar en mi colección
-              </Button>
-            </>
-          ) : list?.kind === "collection" && owner ? (
-            /**
-             * Somebody's collection is not a list you keep.
-             *
-             * Every account has exactly one and it is not authored — it is
-             * everything they own, and it changes every time they buy a
-             * record. Keeping a copy of that on your shelf would be keeping a
-             * copy of a person. So the button is not disabled here, it is
-             * absent, and what replaces it is the thing you actually wanted
-             * when you pressed it: follow them, and their additions come to
-             * you in Actividad.
-             */
-            <>
-              <FollowButton profileId={owner.id} displayName={owner.displayName} />
-              <Button variant="ghost" onClick={share}>
-                Compartir
-              </Button>
-            </>
+      <header
+        className="relative -mx-5 mb-8 pb-2 text-center sm:-mx-6"
+        style={{ marginTop: "calc(-0.5rem)" }}
+      >
+        {/**
+         * El mismo fondo que un disco y que un artista: aquello de lo que
+         * habla la pantalla, difuminado y llevado a negro.
+         *
+         * Antes era un resplandor de tres portadas a 45% de opacidad sobre el
+         * gris de la aplicación — bonito y de otra familia. Un rack es un
+         * cajón de discos, así que el fondo es el disco que hay dentro, con el
+         * mismo degradado de seis paradas que las otras dos pantallas. Que las
+         * tres se pinten igual es lo que hace que se lean como la misma
+         * aplicación y no como tres páginas.
+         */}
+        <div className="relative h-[46svh] max-h-[420px] w-full overflow-hidden">
+          {ground ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={ground} alt="" className="h-full w-full scale-125 object-cover blur-2xl" />
           ) : (
-            list &&
-            owner && (
-              <SaveListButton
-                listId={list.id}
-                listTitle={title}
-                ownerName={owner.displayName}
-                ownerHandle={owner.username}
-              />
-            )
+            <div className="h-full w-full bg-fill-subtle" />
+          )}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(to bottom," +
+                "rgba(10,10,10,0.42) 0%," +
+                "rgba(10,10,10,0.14) 26%," +
+                "rgba(10,10,10,0.22) 46%," +
+                "rgba(10,10,10,0.52) 64%," +
+                "rgba(10,10,10,0.82) 80%," +
+                "rgba(10,10,10,0.95) 91%," +
+                "#0a0a0a 100%)",
+            }}
+          />
+
+          {/* El cajón, encima de su propio color y al tamaño en el que se ven
+              las fundas: un rack es un objeto que alguien ha montado, y la
+              pantalla abre en el objeto. */}
+          {items && items.length > 0 && (
+            <span className="absolute inset-x-0 top-6 mx-auto block w-[62%] max-w-[260px]">
+              <Crate covers={items.slice(-3).reverse().map((v) => coverFor(v))} />
+            </span>
           )}
         </div>
+
+        <div className="relative -mt-24 mx-auto w-full max-w-[520px] px-5">
+          <h1 className="mx-auto max-w-[18ch] text-title font-medium leading-tight text-paper">
+            {title}
+          </h1>
+
+          {(list?.description || initial?.description) && (
+            <p className="mx-auto mt-3 max-w-[42ch] text-sub leading-relaxed text-content-secondary">
+              {list?.description ?? initial?.description}
+            </p>
+          )}
+
+          {/* De quién es y cuánto hay: una línea, y las dos cifras detrás. */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-3.5 gap-y-2.5">
+            {owner && (
+              <Link
+                href={`/u/${owner.username}`}
+                className="pressable flex items-center gap-2 text-sub text-content-secondary transition-colors hover:text-paper"
+              >
+                <Avatar
+                  name={owner.displayName}
+                  handle={owner.username}
+                  src={owner.avatarUrl}
+                  size="sm"
+                />
+                {owner.displayName}
+              </Link>
+            )}
+            <span aria-hidden className="text-content-faint">·</span>
+            <span className="text-sub text-content-muted">
+              {items?.length ?? list?.itemCount ?? 0} discos
+            </span>
+            {list && (
+              <ListMetrics listId={list.id} saves={list.saves} likes={list.likes} size="md" />
+            )}
+            {list && <CollaboratorFaces listId={list.id} onOpen={() => setSharing(true)} />}
+          </div>
+
+          {/**
+           * La misma botonera que un disco: una acción con nombre y los
+           * redondos al lado. Lo que cambia por quién eres es lo que dice el
+           * botón, nunca la forma — y nunca hay un botón desactivado
+           * explicando lo que podrías hacer si fueras otro.
+           */}
+          <div className="mt-6 flex items-center justify-center gap-3">
+            {isOwner ? (
+              <button
+                onClick={() => setSharing(true)}
+                className="pressable flex h-12 min-w-0 flex-1 max-w-[280px] items-center justify-center rounded-full bg-paper px-5 text-sub font-medium text-ink"
+              >
+                Invitar a editar
+              </button>
+            ) : list?.kind === "collection" && owner ? (
+              /* La colección de alguien no es una lista que se guarda: es todo
+                 lo que tiene y cambia cada vez que compra un disco. Lo que se
+                 quería al pulsar era seguirle. */
+              <FollowButton profileId={owner.id} displayName={owner.displayName} />
+            ) : (
+              list &&
+              owner && (
+                <SaveListButton
+                  listId={list.id}
+                  listTitle={title}
+                  ownerName={owner.displayName}
+                  ownerHandle={owner.username}
+                />
+              )
+            )}
+
+            <IconButton label="Compartir" onClick={share}>
+              <path
+                d="M8 10.5V2.6 M5 5.4 L8 2.4 L11 5.4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M3.2 9.4v3.2a1 1 0 0 0 1 1h7.6a1 1 0 0 0 1-1V9.4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </IconButton>
+
+            {isOwner && (
+              <IconButton label="Editar en mi colección" onClick={() => router.push("/coleccion")}>
+                <path
+                  d="M3 10.6 10.2 3.4a1.4 1.4 0 0 1 2 2L5 12.6 2.4 13.4Z"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinejoin="round"
+                />
+              </IconButton>
+            )}
+          </div>
         </div>
       </header>
 
