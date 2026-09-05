@@ -9,6 +9,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonRackRail } from "@/components/ui/Skeleton";
 import CatalogueNotice from "@/components/ui/CatalogueNotice";
 import WantedRail, { type WantedRow } from "@/components/explore/WantedRail";
+import CatalogueSheet, { type CatalogueItem } from "@/components/CatalogueSheet";
 import PersonRow from "@/components/community/PersonRow";
 import PersonCard from "@/components/community/PersonCard";
 import ListCard from "@/components/community/ListCard";
@@ -149,6 +150,33 @@ export default function ExploreView() {
 
   const records = catalogue.localResults;
   const addable = catalogue.addable;
+
+  /** Un solo carril de resultados: primero los tuyos, después el catálogo. */
+  const found = useMemo(
+    () => [
+      ...records.map((v) => ({ kind: "mine" as const, v })),
+      ...addable.map((r) => ({ kind: "add" as const, r })),
+    ],
+    [records, addable],
+  );
+
+  /** el disco del catálogo que se está mirando, si hay alguno */
+  const [looking, setLooking] = useState<CatalogueItem | null>(null);
+
+  /** guardar desde la esquina de la portada, sin abrir nada */
+  const saveRow = async (r: (typeof addable)[number]) => {
+    remember(query);
+    const v = await catalogue.addFromCatalogue(r, lib.activeListId, (vinyl, listId) =>
+      void lib.saveToList(vinyl, listId),
+    );
+    if (!v)
+      return toast.show(catalogue.lastError.current ?? "No se pudo añadir ese disco.", {
+        tone: "error",
+      });
+    toast.show(`${v.title} · guardado`, { media: { src: r.thumb ?? coverFor(v) } });
+    repo.listReleases().then(setLibrary).catch(() => {});
+    return v;
+  };
 
   // arriving from the bar's search puts the cursor where you expect it
   useEffect(() => {
@@ -585,155 +613,110 @@ export default function ExploreView() {
             />
           ) : (
             <div className="space-y-9">
-              {show("records") && records.length > 0 && (
+              {/**
+               * Un solo resultado por disco, lo tengas o no.
+               *
+               * Estaban en dos bloques — «En tu colección» arriba y «Añadir a
+               * tu colección» debajo — y eso convertía una pregunta («¿está
+               * esto?») en dos listas que hay que recorrer enteras para
+               * responderla. Quien busca un disco busca el disco; que ya lo
+               * tengas es un dato sobre él, no otra categoría de cosa.
+               *
+               * Así que una rejilla, los tuyos primero porque son la respuesta
+               * más probable, y una marca en la esquina de la portada para los
+               * que ya están en casa. La misma esquina es el botón de guardar
+               * en los que no: se ve de un vistazo qué falta y se añade sin
+               * abrir nada, y tocando la portada se abre la ficha.
+               */}
+              {show("records") && found.length > 0 && (
                 <ResultBlock
-                  title="En tu colección"
+                  title="Vinilos"
                   onAll={() => setScope("records")}
                   showAll={scope === "all"}
                 >
                   <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12">
-                    {(scope === "all" ? records.slice(0, 6) : records).map(
-                      (v) => (
-                        <li key={v.id}>
-                          {/**
-                           * Opens here, not on the shelf.
-                           *
-                           * It used to be a link to /coleccion, which threw
-                           * away the search you had just typed and dropped you
-                           * on your whole collection to find the record again
-                           * yourself. A result is the record: pressing it
-                           * opens the record, and your search is still behind
-                           * it when you close the sheet.
-                           */}
+                    {(scope === "all" ? found.slice(0, 12) : found.slice(0, 48)).map((row) =>
+                      row.kind === "mine" ? (
+                        <li key={row.v.id} className="relative">
                           <button
                             onClick={() => {
                               remember(query);
-                              setOpenRecord(v);
+                              setOpenRecord(row.v);
                             }}
                             className="pressable block w-full text-left"
                           >
-                            <Cover vinyl={v} alt={v.title} />
+                            <Cover vinyl={row.v} alt={row.v.title} />
                             <span className="mt-2 block truncate text-sub text-paper">
-                              {v.title}
+                              {row.v.title}
                             </span>
                             <span className="block truncate text-caption text-content-muted">
-                              {v.artist}
+                              {row.v.artist}
                             </span>
+                          </button>
+                          <span
+                            aria-label="En tu colección"
+                            className="pointer-events-none absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-paper backdrop-blur-md"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+                              <path
+                                d="M2.5 7.4 L5.6 10.5 L11.5 3.8"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </span>
+                        </li>
+                      ) : (
+                        <li key={`d${row.r.id}`} className="relative">
+                          <button
+                            onClick={() => {
+                              remember(query);
+                              setLooking(row.r);
+                            }}
+                            className="pressable block w-full text-left"
+                          >
+                            <span className="block aspect-square w-full overflow-hidden rounded-[3px] bg-fill-subtle">
+                              {row.r.thumb && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={row.r.cover_image ?? row.r.thumb}
+                                  alt=""
+                                  loading="lazy"
+                                  className="h-full w-full object-cover"
+                                />
+                              )}
+                            </span>
+                            <span className="mt-2 block truncate text-sub text-paper">
+                              {row.r.title}
+                            </span>
+                            <span className="block truncate text-caption text-content-muted">
+                              {[row.r.year, row.r.country].filter(Boolean).join(" · ")}
+                            </span>
+                          </button>
+                          <button
+                            onClick={() => void saveRow(row.r)}
+                            disabled={catalogue.adding === row.r.id}
+                            aria-label={`Guardar ${row.r.title}`}
+                            className="pressable absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-paper backdrop-blur-md transition-colors hover:bg-ink/90 disabled:opacity-50"
+                          >
+                            {catalogue.adding === row.r.id ? (
+                              <span className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-current border-t-transparent" />
+                            ) : (
+                              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+                                <path
+                                  d="M7 2 V12 M2 7 H12"
+                                  stroke="currentColor"
+                                  strokeWidth="1.7"
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                            )}
                           </button>
                         </li>
                       ),
                     )}
-                  </ul>
-                </ResultBlock>
-              )}
-
-              {/* What you don't have yet, offered underneath — never mixed in.
-                  "Lo tengo" and "puedo tenerlo" are different answers and a
-                  single blended grid makes you check each one. */}
-              {show("records") && addable.length > 0 && (
-                <ResultBlock
-                  title="Añadir a tu colección"
-                  onAll={() => setScope("records")}
-                  showAll={scope === "all"}
-                >
-                  {/* rows in columns once there is room: a single file of them
-                      across a full-width page is mostly empty space */}
-                  <ul className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3 [&>li]:border-b [&>li]:border-line">
-                    {(scope === "all"
-                      ? addable.slice(0, 6)
-                      : addable.slice(0, 24)
-                    ).map((r) => {
-                      const done = Boolean(catalogue.savedIn[`d${r.id}`]);
-                      return (
-                        <li key={r.id} className="flex items-center gap-3 py-3">
-                          <span className="h-12 w-12 shrink-0 overflow-hidden rounded-sm bg-fill-subtle">
-                            {r.thumb && (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={r.thumb}
-                                alt=""
-                                loading="lazy"
-                                className="h-full w-full object-cover"
-                              />
-                            )}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-body text-paper">
-                              {r.title}
-                            </span>
-                            <span className="block truncate text-sub text-content-muted">
-                              {[r.year, r.country, r.format?.join(", ")]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          </span>
-                          <button
-                            onClick={async () => {
-                              remember(query);
-                              const v = await catalogue.addFromCatalogue(
-                                r,
-                                lib.activeListId,
-                                (vinyl, listId) =>
-                                  void lib.saveToList(vinyl, listId),
-                              );
-                              if (!v)
-                                return toast.show("No se pudo añadir.", {
-                                  tone: "error",
-                                });
-                              toast.show(`${v.title} · guardado`, {
-                                media: { src: r.thumb ?? coverFor(v) },
-                                action: {
-                                  label: "Ver",
-                                  onClick: () => router.push("/coleccion"),
-                                },
-                              });
-                              repo
-                                .listReleases()
-                                .then(setLibrary)
-                                .catch(() => {});
-                            }}
-                            disabled={catalogue.adding === r.id || done}
-                            aria-label={`Añadir ${r.title} a tu colección`}
-                            className="pressable flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line-strong text-paper disabled:opacity-40"
-                          >
-                            {done ? (
-                              <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 14 14"
-                                fill="none"
-                                aria-hidden
-                              >
-                                <path
-                                  d="M2.5 7.5 L5.5 10.5 L11.5 3.5"
-                                  stroke="currentColor"
-                                  strokeWidth="1.6"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            ) : catalogue.adding === r.id ? (
-                              <span className="h-3.5 w-3.5 animate-spin rounded-full border-[1.6px] border-current border-t-transparent" />
-                            ) : (
-                              <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 14 14"
-                                fill="none"
-                                aria-hidden
-                              >
-                                <path
-                                  d="M7 2 V12 M2 7 H12"
-                                  stroke="currentColor"
-                                  strokeWidth="1.6"
-                                  strokeLinecap="round"
-                                />
-                              </svg>
-                            )}
-                          </button>
-                        </li>
-                      );
-                    })}
                   </ul>
                 </ResultBlock>
               )}
@@ -802,6 +785,19 @@ export default function ExploreView() {
       {/* The same sheet as everywhere else: listen, read, put it in a list.
           Editing rows are hidden — a search result is not a place you can
           take something out of. */}
+      <CatalogueSheet
+        item={looking}
+        onClose={() => setLooking(null)}
+        targetName={lib.activeList?.title ?? "Mi Colección"}
+        saved={Boolean(looking && catalogue.savedIn[`d${looking.id}`])}
+        busy={catalogue.adding === looking?.id}
+        onSave={() => (looking ? saveRow(looking) : null)}
+        onSaved={(v) => {
+          setJustSaved(true);
+          setOpenRecord(v);
+        }}
+      />
+
       <RecordSheet
         vinyl={openRecord}
         onClose={() => {
