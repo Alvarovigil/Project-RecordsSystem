@@ -43,6 +43,16 @@ export type SheetProps = {
   width?: number;
   /** hide the header entirely; the content provides its own */
   bare?: boolean;
+  /**
+   * Un «Listo» arriba a la derecha.
+   *
+   * Para las hojas donde lo que se hace es tocar cosas de una lista y cada
+   * toque ya ha surtido efecto: no hay nada que confirmar, pero sí hace falta
+   * una salida visible. Arrastrar hacia abajo y tocar fuera cierran también —
+   * las dos funcionan desde siempre — pero un gesto que no está escrito en
+   * ninguna parte no es una salida para quien no lo conoce.
+   */
+  done?: boolean;
 };
 
 const SPRING = { type: "spring" as const, damping: 34, stiffness: 380, mass: 0.85 };
@@ -57,6 +67,7 @@ export default function Sheet({
   size = "tall",
   width = 460,
   bare = false,
+  done = false,
 }: SheetProps) {
   const { isPhone } = useDevice();
   const titleId = useId();
@@ -103,7 +114,25 @@ export default function Sheet({
           />
           {isPhone ? (
             <PhoneSheet size={size} onClose={onClose}>
-              {!bare && <Header id={titleId} title={title} subtitle={subtitle} action={action} grabber />}
+              {!bare && (
+                <Header
+                  id={titleId}
+                  title={title}
+                  subtitle={subtitle}
+                  action={
+                    action ??
+                    (done ? (
+                      <button
+                        onClick={onClose}
+                        className="pressable -mr-1 rounded-full px-3 py-1.5 text-sub font-medium text-paper transition-colors hover:bg-fill"
+                      >
+                        Listo
+                      </button>
+                    ) : undefined)
+                  }
+                  grabber
+                />
+              )}
               {children}
             </PhoneSheet>
           ) : (

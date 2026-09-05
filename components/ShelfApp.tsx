@@ -382,6 +382,19 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
     setSearchOpen(true);
   };
   const [open, setOpen] = useState<Vinyl | null>(null);
+  /**
+   * Un disco que se abre recién guardado desde el catálogo.
+   *
+   * Al guardarlo deja de ser una ficha de catálogo y pasa a ser un disco tuyo,
+   * así que la pantalla que se enseña es la del disco — no la misma de antes
+   * con el botón cambiado — y llega con la hoja de racks puesta, que es la
+   * continuación del gesto de guardarlo.
+   */
+  const [pickOnOpen, setPickOnOpen] = useState(false);
+  const openRecord = (v: Vinyl, pick = false) => {
+    setPickOnOpen(pick);
+    setOpen(v);
+  };
   const [fullyOpen, setFullyOpen] = useState(false); // true after the open animation finishes
   const [active, setActive] = useState<Vinyl | null>(allVinilos[0] ?? null);
 
@@ -780,6 +793,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             return v ? coverFor(v) : null;
           }}
           onDelete={(v) => handleDeleteVinylPermanently(v.id)}
+          pickOnOpen={pickOnOpen}
           nowPlayingId={nowPlaying?.id}
           // a track is played as a record of its own: same player, new src
           onPlayTrack={(track) => playPreview(track)}
@@ -796,7 +810,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           activeCollectionId={activeCollectionId}
           allVinilos={allVinilos}
           localVinilos={vinilos}
-          onJumpTo={setOpen}
+          onJumpTo={openRecord}
           onCreateList={handleCreateCollection}
           onSaveToList={handleSaveToList}
           onRemoveFromList={(vinylId, listId) => handleToggleVinyl(listId, vinylId)}
@@ -1492,9 +1506,10 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         activeCollectionId={activeCollectionId}
         allVinilos={allVinilos}
         localVinilos={vinilos}
-        onJumpTo={(v) => {
+        onJumpTo={(v, pick) => {
           const idx = vinilos.findIndex((x) => x.id === v.id);
           if (idx >= 0) shelfRef.current?.goTo(idx);
+          if (pick) openRecord(v, true);
         }}
         onCreateList={handleCreateCollection}
         onSaveToList={handleSaveToList}

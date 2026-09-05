@@ -3779,5 +3779,147 @@
         "duration": ""
       }
     ]
+  },
+  {
+    "id": "billie-eilish-happier-than-ever-19673725",
+    "title": "Happier Than Ever",
+    "artist": "Billie Eilish",
+    "year": 2021,
+    "genre": "Pop",
+    "label": "Darkroom (4)",
+    "country": "Worldwide",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 19673725,
+    "cover": "/covers/billie-eilish-happier-than-ever-19673725.jpg",
+    "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/ab/33/44/ab3344dc-b60d-e4d2-3e54-7d5ee805cdaa/mzaf_15486383010453904988.plus.aac.p.m4a",
+    "tracklist": [
+      {
+        "position": "1",
+        "title": "Getting Older",
+        "duration": "4:04"
+      },
+      {
+        "position": "2",
+        "title": "I Didn't Change My Number",
+        "duration": "2:38"
+      },
+      {
+        "position": "3",
+        "title": "Billie Bossa Nova",
+        "duration": "3:16"
+      },
+      {
+        "position": "4",
+        "title": "My Future",
+        "duration": "3:30"
+      },
+      {
+        "position": "5",
+        "title": "Oxytocin",
+        "duration": "3:30"
+      },
+      {
+        "position": "6",
+        "title": "Goldwing",
+        "duration": "2:31"
+      },
+      {
+        "position": "7",
+        "title": "Lost Cause",
+        "duration": "3:32"
+      },
+      {
+        "position": "8",
+        "title": "Halley's Comet",
+        "duration": "3:54"
+      },
+      {
+        "position": "9",
+        "title": "Not My Responsibility",
+        "duration": "3:47"
+      },
+      {
+        "position": "10",
+        "title": "Overheated",
+        "duration": "3:34"
+      },
+      {
+        "position": "11",
+        "title": "Everybody Dies",
+        "duration": "3:26"
+      },
+      {
+        "position": "12",
+        "title": "Your Power",
+        "duration": "4:05"
+      },
+      {
+        "position": "13",
+        "title": "NDA",
+        "duration": "3:15"
+      },
+      {
+        "position": "14",
+        "title": "Therefore I Am",
+        "duration": "2:53"
+      },
+      {
+        "position": "15",
+        "title": "Happier Than Ever",
+        "duration": "4:58"
+      },
+      {
+        "position": "16",
+        "title": "Male Fantasy",
+        "duration": "3:14"
+      }
+    ]
+  },
+  {
+    "id": "billie-eilish-live-35782369",
+    "title": "Live",
+    "artist": "Billie Eilish",
+    "year": 2025,
+    "genre": "Pop",
+    "label": "Interscope Records",
+    "country": "Worldwide",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 35782369,
+    "cover": "/covers/billie-eilish-live-35782369.jpg",
+    "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/82/8c/8e/828c8e04-c826-adba-8daf-8fad85c4e2a8/mzaf_12565804220288886940.plus.aac.p.m4a",
+    "tracklist": [
+      {
+        "position": "A1",
+        "title": "Skinny (Live)",
+        "duration": ""
+      },
+      {
+        "position": "A2",
+        "title": "L'Amour De Ma Vie (Live)",
+        "duration": ""
+      },
+      {
+        "position": "B3",
+        "title": "Wildflower (Live)",
+        "duration": ""
+      },
+      {
+        "position": "B4",
+        "title": "Birds Of A Feather (Live)",
+        "duration": ""
+      }
+    ]
   }
 ]

@@ -64,6 +64,7 @@ export default function RecordSheet({
   nowPlayingId,
   onPlayTrack,
   canEdit = true,
+  pickOnOpen = false,
 }: {
   vinyl: Vinyl | null;
   onClose: () => void;
@@ -94,6 +95,8 @@ export default function RecordSheet({
   /** play one track: a synthetic record, so the player learns nothing new */
   onPlayTrack?: (v: Vinyl) => void;
   canEdit?: boolean;
+  /** llega desde el catálogo recién guardado: la hoja de racks se despliega */
+  pickOnOpen?: boolean;
 }) {
   const repo = useRepository();
   const toast = useToast();
@@ -107,6 +110,13 @@ export default function RecordSheet({
   const { sentinel, scrolled } = useScrolledPast(Boolean(vinyl));
   /** the picker is doing double duty: "guardar en" and "lo tengo, ¿en qué rack?" */
   const [acquiring, setAcquiring] = useState(false);
+
+  /* Un disco que acaba de entrar en casa se abre con la hoja de racks puesta:
+     colocarlo es lo siguiente que se hace, y es la continuación del gesto que
+     lo guardó, no una acción nueva. */
+  useEffect(() => {
+    if (vinyl && pickOnOpen) setPicking(true);
+  }, [vinyl?.id, pickOnOpen]);
 
   useEffect(() => {
     if (!vinyl) return;

@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 /**
  * The shape of what is coming, while it comes.
  *
@@ -213,4 +215,60 @@ export function SkeletonActivity({ n = 4 }: { n?: number }) {
  */
 export function CoverGridSkeleton({ count = 6 }: { count?: number }) {
   return <SkeletonCovers n={count} cols="grid-cols-3 sm:grid-cols-4 lg:grid-cols-6" />;
+}
+
+/**
+ * Una pantalla que aparece entera, y no a trozos.
+ *
+ * El patrón que usa cualquier aplicación nativa y casi ninguna web: mientras
+ * falta algo se enseña el hueco con su forma, y cuando está todo se cambia por
+ * el contenido con un fundido corto. Lo que nunca se hace es ir soltando las
+ * piezas según llegan — primero el título, luego la foto, luego una fila de
+ * datos que empuja lo de abajo — porque cada pieza que entra mueve la
+ * anterior y el resultado se lee como lentitud aunque haya tardado lo mismo.
+ *
+ * El fundido es del contenido, no del esqueleto: el esqueleto ya ha hecho su
+ * trabajo — sostener la caja — y lo que importa es que lo que llega no dé un
+ * salto.
+ */
+export function Reveal({
+  ready,
+  skeleton,
+  children,
+  className = "",
+}: {
+  ready: boolean;
+  /** el hueco, con la forma exacta de lo que va a ocuparlo */
+  skeleton: React.ReactNode;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      {ready ? (
+        <div className="reveal-in">{children}</div>
+      ) : (
+        <div aria-busy className="reveal-in">
+          {skeleton}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Un plazo, para que nada se quede colgado esperando.
+ *
+ * Una petición que no contesta no puede dejar una pantalla en blanco para
+ * siempre: pasado el plazo se enseña lo que haya, que en el peor caso es el
+ * nombre y un fondo. Esperar a la perfección es cómo un estado de carga se
+ * convierte en un error.
+ */
+export function useDeadline(ms: number) {
+  const [passed, setPassed] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setPassed(true), ms);
+    return () => clearTimeout(t);
+  }, [ms]);
+  return passed;
 }

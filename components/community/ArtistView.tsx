@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { Page } from "@/components/app/AppShell";
 import { Cover } from "@/components/ui/Avatar";
 import EmptyState from "@/components/ui/EmptyState";
-import { SkeletonCovers } from "@/components/ui/Skeleton";
+import { useImagesReady } from "@/hooks/useImagesReady";
+import FadeImage from "@/components/ui/FadeImage";
+import { Reveal, SkeletonCovers, useDeadline } from "@/components/ui/Skeleton";
 import CatalogueSheet, { type CatalogueItem } from "@/components/CatalogueSheet";
 import RecordSheet from "@/components/mobile/RecordSheet";
 import { useLibrary } from "@/hooks/useLibrary";
@@ -34,10 +36,11 @@ export default function ArtistView({ slug }: { slug: string }) {
   const toast = useToast();
   const router = useRouter();
 
-  const [more, setMore] = useState<CatalogueItem[] | null>(null);
   const [portrait, setPortrait] = useState<{ image: string | null; name: string } | null>(null);
   const [looking, setLooking] = useState<CatalogueItem | null>(null);
   const [open, setOpen] = useState<Vinyl | null>(null);
+  /* recién guardado: la pantalla del disco llega con la hoja de racks puesta */
+  const [justSaved, setJustSaved] = useState(false);
   const [saving, setSaving] = useState<number | null>(null);
   const [saved, setSaved] = useState<Record<number, true>>({});
 
@@ -73,10 +76,27 @@ export default function ArtistView({ slug }: { slug: string }) {
    */
   const anchor = group?.records.find((r) => r.discogsId)?.discogsId ?? null;
 
+  /**
+   * Una petición por artista, y no una por cada cambio de la biblioteca.
+   *
+   * Esto dependía de `group` y de `lib.releases` — dos objetos cuya identidad
+   * cambia cada vez que la biblioteca se refresca, que al arrancar es dos
+   * veces: primero la copia guardada y después el servidor. Cada cambio
+   * volvía a poner la pantalla en carga y a pedir el artista otra vez, y eso
+   * es exactamente lo que se veía: la página montándose, deshaciéndose y
+   * volviéndose a montar.
+   *
+   * La petición depende solo de a quién se está mirando. Lo que hay que quitar
+   * de la lista — lo que ya tienes — se calcula después, aquí abajo, que es
+   * donde correspondía desde el principio.
+   */
+  const [catalogue, setCatalogue] = useState<CatalogueItem[] | null>(null);
+
   useEffect(() => {
     if (!name) return;
     let alive = true;
-    setMore(null);
+    setCatalogue(null);
+    setPortrait(null);
     const params = new URLSearchParams({ q: name });
     if (anchor) params.set("release", String(anchor));
 
@@ -85,35 +105,31 @@ export default function ArtistView({ slug }: { slug: string }) {
       .then((d) => {
         if (!alive) return;
         if (d.artist) setPortrait({ image: d.artist.image ?? null, name: d.artist.name });
-
-        /**
-         * What you are missing, which means the albums and not the pressings.
-         *
-         * Matching on the release id alone is not enough: owning a 2019
-         * repress of Motomami should hide Motomami, and those are two
-         * different ids. So a title you already have on the shelf takes the
-         * row out, whichever pressing it is.
-         */
-        const ownedIds = new Set(lib.releases.map((v) => v.discogsId));
-        const ownedTitles = new Set(
-          (group?.records ?? []).map((v) =>
-            v.title.toLowerCase().replace(/[^a-z0-9]+/g, ""),
-          ),
-        );
-        const rows: CatalogueItem[] = (d.releases ?? [])
-          .filter(
-            (r: { id: number; title: string }) =>
-              !ownedIds.has(r.id) &&
-              !ownedTitles.has(r.title.toLowerCase().replace(/[^a-z0-9]+/g, "")),
-          )
-          .slice(0, 24);
-        setMore(rows);
+        setCatalogue((d.releases ?? []).slice(0, 40));
       })
-      .catch(() => alive && setMore([]));
+      .catch(() => alive && setCatalogue([]));
     return () => {
       alive = false;
     };
-  }, [name, anchor, group, lib.releases]);
+  }, [name, anchor]);
+
+  /**
+   * Lo que te falta, que son los álbumes y no las ediciones.
+   *
+   * Cruzar solo por id de edición no basta: tener el reprensado de 2019 de
+   * Motomami tiene que esconder Motomami, y son dos ids distintos. Así que un
+   * título que ya está en la estantería quita la fila, sea la prensada que
+   * sea.
+   */
+  const key = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const more = useMemo(() => {
+    if (catalogue === null) return null;
+    const ownedIds = new Set(lib.releases.map((v) => v.discogsId));
+    const ownedTitles = new Set((group?.records ?? []).map((v) => key(v.title)));
+    return catalogue
+      .filter((r) => !ownedIds.has(r.id) && !ownedTitles.has(key(r.title)))
+      .slice(0, 24);
+  }, [catalogue, lib.releases, group]);
 
   /**
    * De dónde sale el color del fondo.
@@ -192,6 +208,29 @@ export default function ArtistView({ slug }: { slug: string }) {
 
   const owned = group?.records ?? [];
 
+  /**
+   * Una sola puerta de carga para toda la pantalla.
+   *
+   * Esta página se montaba a trozos delante de quien la abría: primero el
+   * nombre sacado del slug, luego la foto — que cambia de sitio todo lo que
+   * hay debajo —, luego un chip más, luego la rejilla. Cada pieza que entra
+   * empuja a la anterior, y eso se lee como lentitud aunque el tiempo total
+   * sea el mismo.
+   *
+   * Las dos cosas que faltan llegan en la misma petición, así que hay un solo
+   * momento en el que la pantalla está completa: cuando esa petición contesta
+   * y la foto está descodificada. Hasta entonces se enseña el hueco con su
+   * forma exacta; después entra todo junto.
+   *
+   * Con un plazo, claro: si el catálogo no contesta en dos segundos y medio se
+   * enseña lo que haya — el nombre y un fondo — porque una pantalla en blanco
+   * esperando a estar perfecta es una pantalla rota.
+   */
+  const answered = more !== null;
+  const heroDecoded = useImagesReady(answered ? [heroImage] : []);
+  const impatient = useDeadline(4000);
+  const ready = (answered && heroDecoded) || impatient;
+
   return (
     <Page width="full">
       {/**
@@ -266,15 +305,37 @@ export default function ArtistView({ slug }: { slug: string }) {
          * nombre, que es lo que evita tener que oscurecer la foto entera para
          * poder leerlo.
          */}
-        <div className="relative -mt-16">
+        <Reveal
+          ready={ready}
+          className="relative -mt-16"
+          skeleton={
+            /* El mismo hueco, a la misma altura y con las mismas piezas: si el
+               esqueleto no mide lo que va a medir el contenido, el salto que
+               evita se lo provoca él. */
+            <div>
+              <div className="skeleton h-[58svh] max-h-[520px] w-full" style={{ borderRadius: 0 }} />
+              <div className="relative -mt-28 mx-auto w-full max-w-[440px] px-5">
+                <div className="skeleton mx-auto h-7 w-1/2 rounded-full" />
+                <div className="mt-5 flex justify-center gap-1.5">
+                  <div className="skeleton h-6 w-20 rounded-full" />
+                  <div className="skeleton h-6 w-28 rounded-full" />
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <div>
+
           <div className="relative h-[58svh] max-h-[520px] w-full overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            {/* La foto puede cambiar bajo los pies: hasta que el catálogo
+                contesta, ahí está la portada de uno de sus discos difuminada.
+                El cambio se funde en vez de parpadear. */}
+            <FadeImage
               src={heroImage}
               alt={portrait?.image ? `Foto de ${portrait?.name || name}` : ""}
-              className={`h-full w-full object-cover object-top ${
-                portrait?.image ? "" : "scale-125 blur-2xl"
-              }`}
+              eager
+              className="h-full w-full"
+              imgClassName={`object-cover object-top ${portrait?.image ? "" : "scale-125 blur-2xl"}`}
             />
             {/* El mismo degradado de seis paradas que la ficha de un disco: casi
                 nada durante el primer tercio, y negro con sitio de sobra antes
@@ -320,80 +381,96 @@ export default function ArtistView({ slug }: { slug: string }) {
               <p className="mt-4 text-sub text-content-muted">Todavía no tienes ninguno suyo.</p>
             )}
           </div>
-        </div>
+          </div>
+        </Reveal>
       </header>
 
-      {owned.length > 0 && (
-        <section className="pb-12">
-          <h2 className="text-body font-medium text-paper">En tu colección</h2>
-          <ul className="mt-5 grid grid-cols-3 gap-x-4 gap-y-7 sm:grid-cols-4 lg:grid-cols-6">
-            {owned.map((v, i) => (
-              <li key={v.id}>
-                <button onClick={() => setOpen(v)} className="pressable block w-full text-left">
-                  <Cover src={coverFor(v)} eager={i < 6} className="aspect-square w-full rounded-[3px]" />
-                  <span className="mt-2 block truncate text-sub font-medium text-paper">{v.title}</span>
-                  <span className="block truncate text-caption text-content-muted">
-                    {v.year || ""}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="border-t border-line pb-16 pt-10">
-        <h2 className="text-body font-medium text-paper">
-          {owned.length > 0 ? "Lo que te falta" : `Discos de ${name}`}
-        </h2>
-        <p className="mt-1.5 text-sub text-content-muted">
-          Del catálogo, sin lo que ya tienes. Toca uno para ver su ficha.
-        </p>
-
-        <div className="mt-6">
-          {more === null ? (
-            <SkeletonCovers n={12} cols="grid-cols-3 sm:grid-cols-4 lg:grid-cols-6" gap="gap-x-4 gap-y-7" />
-          ) : more.length === 0 ? (
-            <EmptyState
-              compact
-              title="No hemos encontrado más"
-              body="O lo tienes todo suyo, o el catálogo no ha querido contestar esta vez."
-              action={{ label: "Buscar a mano", href: "/explorar?buscar=1" }}
-            />
-          ) : (
-            <ul className="grid grid-cols-3 gap-x-4 gap-y-7 sm:grid-cols-4 lg:grid-cols-6">
-              {more.map((r) => (
-                <li key={r.id}>
-                  <button
-                    onClick={() => setLooking(r)}
-                    className="pressable block w-full text-left"
-                  >
-                    <span className="relative block">
-                      <Cover
-                        src={r.cover_image ?? r.thumb ?? "/sleeve-vacio.jpg"}
-                        className="aspect-square w-full rounded-[3px]"
-                      />
-                      {saved[r.id] && (
-                        <span className="absolute bottom-1.5 right-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-ink/75 text-paper backdrop-blur-xl">
-                          <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
-                            <path d="M2.5 7.4 L5.6 10.5 L11.5 3.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </span>
-                      )}
-                    </span>
-                    <span className="mt-2 block truncate text-sub text-paper/85">
-                      {r.title.replace(new RegExp(`^${escapeRe(name)}\\s+-\\s+`, "i"), "")}
-                    </span>
+      {/* Las rejillas entran con la cabecera y no antes: la de tu colección es
+          local y estaría lista al instante, pero enseñarla mientras arriba
+          todavía hay un hueco gris es exactamente la sensación de página que se
+          va montando sola. */}
+      <Reveal
+        ready={ready}
+        skeleton={
+          <SkeletonCovers
+            n={12}
+            cols="grid-cols-3 sm:grid-cols-4 lg:grid-cols-6"
+            gap="gap-x-4 gap-y-7"
+          />
+        }
+      >
+        {owned.length > 0 && (
+          <section className="pb-12">
+            <h2 className="text-body font-medium text-paper">En tu colección</h2>
+            <ul className="mt-5 grid grid-cols-3 gap-x-4 gap-y-7 sm:grid-cols-4 lg:grid-cols-6">
+              {owned.map((v, i) => (
+                <li key={v.id}>
+                  <button onClick={() => setOpen(v)} className="pressable block w-full text-left">
+                    <Cover src={coverFor(v)} eager={i < 6} className="aspect-square w-full rounded-[3px]" />
+                    <span className="mt-2 block truncate text-sub font-medium text-paper">{v.title}</span>
                     <span className="block truncate text-caption text-content-muted">
-                      {[r.year, r.country].filter(Boolean).join(" · ")}
+                      {v.year || ""}
                     </span>
                   </button>
                 </li>
               ))}
             </ul>
-          )}
-        </div>
-      </section>
+          </section>
+        )}
+
+        <section className="border-t border-line pb-16 pt-10">
+          <h2 className="text-body font-medium text-paper">
+            {owned.length > 0 ? "Lo que te falta" : `Discos de ${name}`}
+          </h2>
+          <p className="mt-1.5 text-sub text-content-muted">
+            Del catálogo, sin lo que ya tienes. Toca uno para ver su ficha.
+          </p>
+
+          <div className="mt-6">
+            {more === null ? (
+              <SkeletonCovers n={12} cols="grid-cols-3 sm:grid-cols-4 lg:grid-cols-6" gap="gap-x-4 gap-y-7" />
+            ) : more.length === 0 ? (
+              <EmptyState
+                compact
+                title="No hemos encontrado más"
+                body="O lo tienes todo suyo, o el catálogo no ha querido contestar esta vez."
+                action={{ label: "Buscar a mano", href: "/explorar?buscar=1" }}
+              />
+            ) : (
+              <ul className="grid grid-cols-3 gap-x-4 gap-y-7 sm:grid-cols-4 lg:grid-cols-6">
+                {more.map((r) => (
+                  <li key={r.id}>
+                    <button
+                      onClick={() => setLooking(r)}
+                      className="pressable block w-full text-left"
+                    >
+                      <span className="relative block">
+                        <Cover
+                          src={r.cover_image ?? r.thumb ?? "/sleeve-vacio.jpg"}
+                          className="aspect-square w-full rounded-[3px]"
+                        />
+                        {saved[r.id] && (
+                          <span className="absolute bottom-1.5 right-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-ink/75 text-paper backdrop-blur-xl">
+                            <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
+                              <path d="M2.5 7.4 L5.6 10.5 L11.5 3.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </span>
+                        )}
+                      </span>
+                      <span className="mt-2 block truncate text-sub text-paper/85">
+                        {r.title.replace(new RegExp(`^${escapeRe(name)}\\s+-\\s+`, "i"), "")}
+                      </span>
+                      <span className="block truncate text-caption text-content-muted">
+                        {[r.year, r.country].filter(Boolean).join(" · ")}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      </Reveal>
 
       <CatalogueSheet
         item={looking}
@@ -402,6 +479,11 @@ export default function ArtistView({ slug }: { slug: string }) {
         saved={Boolean(looking && saved[looking.id])}
         busy={saving === looking?.id}
         onSave={() => (looking ? save(looking) : null)}
+        onSaved={(v) => {
+          setLooking(null);
+          setJustSaved(true);
+          setOpen(v);
+        }}
         onWish={() => looking && void wish(looking)}
         collections={collections}
         coverOf={(id) => {
@@ -414,7 +496,11 @@ export default function ArtistView({ slug }: { slug: string }) {
 
       <RecordSheet
         vinyl={open}
-        onClose={() => setOpen(null)}
+        onClose={() => {
+          setOpen(null);
+          setJustSaved(false);
+        }}
+        pickOnOpen={justSaved}
         collections={collections}
         activeListId={mine?.id ?? ""}
         playing={false}

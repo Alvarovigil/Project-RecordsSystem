@@ -65,7 +65,8 @@ export default function MobileSearch({
   onCreateList: (name: string) => Promise<string>;
   onRemoveFromList: (vinylId: string, listId: string) => void;
   onDeleteVinyl: (vinylId: string) => void;
-  onJumpTo: (v: Vinyl) => void;
+  /** abre la pantalla del disco; `pick` despliega además la hoja de racks */
+  onJumpTo: (v: Vinyl, pick?: boolean) => void;
 }) {
   const toast = useToast();
   const canScan = useCanScan();
@@ -446,6 +447,10 @@ export default function MobileSearch({
         saved={Boolean(looking && search.savedIn[`d${looking.id}`])}
         busy={search.adding === looking?.id}
         onSave={() => (looking ? saveCatalogue(looking) : null)}
+        onSaved={(v) => {
+          onJumpTo(v, true);
+          onClose();
+        }}
         onWish={() => looking && void wishCatalogue(looking)}
         collections={collections}
         coverOf={(id) => allVinilos.find((v) => v.id === id)?.cover ?? null}

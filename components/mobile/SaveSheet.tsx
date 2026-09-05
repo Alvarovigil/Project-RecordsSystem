@@ -118,6 +118,7 @@ export default function SaveSheet({
       subtitle={vinyl.title}
       size="tall"
       width={420}
+      done
     >
       {/* No scroller of its own: PhoneSheet already wraps its children in one,
           and a second inside it is two things that can be dragged. */}

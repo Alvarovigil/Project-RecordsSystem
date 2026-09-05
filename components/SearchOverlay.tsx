@@ -26,7 +26,8 @@ type Props = {
   activeCollectionId: string;
   allVinilos: Vinyl[];
   localVinilos: Vinyl[];
-  onJumpTo: (v: Vinyl) => void;
+  /** abre la pantalla del disco; `pick` despliega además la hoja de racks */
+  onJumpTo: (v: Vinyl, pick?: boolean) => void;
   /** open straight into the camera — the shelf offers scanning as its own act */
   autoScan?: boolean;
 };
@@ -479,8 +480,10 @@ export default function SearchOverlay({
         targetName={collections.find((c) => c.id === targetId)?.name ?? "Mi Colección"}
         saved={Boolean(looking && savedIn[`d${looking.id}`])}
         busy={adding === looking?.id}
-        onSave={() => {
-          if (looking) void add(looking, targetId);
+        onSave={() => (looking ? add(looking, targetId) : null)}
+        onSaved={(v) => {
+          onJumpTo(v, true);
+          onClose();
         }}
       />
 

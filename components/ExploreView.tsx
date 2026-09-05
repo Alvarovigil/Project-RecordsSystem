@@ -81,6 +81,8 @@ export default function ExploreView() {
   const [recents, setRecents] = useState<string[]>([]);
   /** the record whose sheet is open, opened from a result */
   const [openRecord, setOpenRecord] = useState<Vinyl | null>(null);
+  /* recién guardado desde el catálogo: llega con la hoja de racks puesta */
+  const [justSaved, setJustSaved] = useState(false);
 
   const searching = query.trim().length > 0;
 
@@ -139,6 +141,7 @@ export default function ExploreView() {
     if (!v) return toast.show("No se pudo añadir ese disco.", { tone: "error" });
     setWantedSaved((s) => new Set(s).add(row.id));
     toast.show(`${v.title} · guardado`, { media: { src: row.thumb ?? coverFor(v) } });
+    return v;
   };
 
   const records = catalogue.localResults;
@@ -513,6 +516,10 @@ export default function ExploreView() {
             ownedIds={ownedDiscogsIds}
             targetName={lib.activeList?.title ?? "Mi Colección"}
             onSave={saveWanted}
+            onSaved={(v) => {
+              setJustSaved(true);
+              setOpenRecord(v);
+            }}
             savingId={wantedSaving}
             savedIds={wantedSaved}
           />
@@ -525,6 +532,10 @@ export default function ExploreView() {
               ownedIds={ownedDiscogsIds}
               targetName={lib.activeList?.title ?? "Mi Colección"}
               onSave={saveWanted}
+            onSaved={(v) => {
+              setJustSaved(true);
+              setOpenRecord(v);
+            }}
               savingId={wantedSaving}
               savedIds={wantedSaved}
             />
@@ -790,7 +801,11 @@ export default function ExploreView() {
           take something out of. */}
       <RecordSheet
         vinyl={openRecord}
-        onClose={() => setOpenRecord(null)}
+        onClose={() => {
+          setOpenRecord(null);
+          setJustSaved(false);
+        }}
+        pickOnOpen={justSaved}
         canEdit={false}
         collections={lib.lists.map((l) => ({
           id: l.id,

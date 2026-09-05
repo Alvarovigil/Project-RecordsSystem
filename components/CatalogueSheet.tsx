@@ -82,6 +82,7 @@ export default function CatalogueSheet({
   onAddToList,
   onRemoveFromList,
   onCreateList,
+  onSaved,
   action,
   extra,
 }: {
@@ -102,6 +103,16 @@ export default function CatalogueSheet({
   onAddToList?: (listId: string, vinyl: Vinyl) => void;
   onRemoveFromList?: (listId: string, vinyl: Vinyl) => void;
   onCreateList?: (name: string) => Promise<string> | string;
+  /**
+   * Qué hacer cuando el disco ya es tuyo.
+   *
+   * Guardarlo lo convierte en otra cosa: ahora tiene reproductor, gente que lo
+   * tiene, racks donde está y un menú para sacarlo. Quedarse en esta pantalla
+   * con el botón puesto en «En Mi Colección» sería enseñar la ficha del
+   * catálogo de algo que ya está en casa. Así que quien tenga a mano la
+   * pantalla del disco se lo queda, y esta se cierra.
+   */
+  onSaved?: (vinyl: Vinyl) => void;
   /** replaces the save button where saving is not what this screen does */
   action?: React.ReactNode;
   /** a second, context-specific action — the scanner uses it for editions */
@@ -124,7 +135,13 @@ export default function CatalogueSheet({
 
   const keep = async () => {
     const v = (await onSave?.()) as Vinyl | null | undefined;
-    if (v && collections && onAddToList) {
+    if (!v) return;
+    if (onSaved) {
+      onSaved(v);
+      onClose();
+      return;
+    }
+    if (collections && onAddToList) {
       setKept(v);
       setPicking(true);
     }

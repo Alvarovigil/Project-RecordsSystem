@@ -836,3 +836,33 @@ html[data-no-install] .door-pointer { display: var(--door-display, block); }
   }
 }
 .rotate-lock { display: none; }
+
+/**
+ * Lo que acaba de llegar entra con un fundido corto, nunca de golpe.
+ *
+ * Doscientos milisegundos y un pelín de recorrido hacia arriba: lo justo para
+ * que el ojo registre que algo ha cambiado sin que parezca una animación. Con
+ * `prefers-reduced-motion` se queda solo el fundido, que es información — dice
+ * «esto es nuevo» — y no decoración.
+ */
+.reveal-in {
+  animation: reveal-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-in {
+    animation: none;
+    opacity: 1;
+  }
+}

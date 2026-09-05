@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Cover } from "@/components/ui/Avatar";
 import Skeleton, { SkeletonText } from "@/components/ui/Skeleton";
 import CatalogueSheet, { type CatalogueItem } from "@/components/CatalogueSheet";
+import type { Vinyl } from "@/lib/types";
 
 /**
  * A chart of records people are still looking for.
@@ -30,6 +31,7 @@ export default function WantedRail({
   ownedIds,
   targetName,
   onSave,
+  onSaved,
   savingId,
   savedIds,
 }: {
@@ -39,7 +41,9 @@ export default function WantedRail({
   genre?: string | null;
   ownedIds: Set<number>;
   targetName: string;
-  onSave: (row: WantedRow) => void;
+  onSave: (row: WantedRow) => unknown;
+  /** el disco ya es tuyo: quien tenga la pantalla del disco se lo queda */
+  onSaved?: (vinyl: Vinyl) => void;
   savingId: number | null;
   savedIds: Set<number>;
 }) {
@@ -123,7 +127,8 @@ export default function WantedRail({
         targetName={targetName}
         saved={Boolean(looking && savedIds.has(looking.id))}
         busy={savingId === looking?.id}
-        onSave={() => looking && onSave(looking)}
+        onSave={() => (looking ? onSave(looking) : null)}
+        onSaved={onSaved}
       />
     </section>
   );
