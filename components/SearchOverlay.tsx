@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import RackRow from "@/components/community/RackRow";
+import { rackOfList } from "@/lib/rack";
 
 import { useEffect, useRef, useState } from "react";
 import type { Vinyl } from "@/lib/types";
@@ -303,23 +305,10 @@ export default function SearchOverlay({
               {communityLists.length > 0 && (
                 <>
                   <SectionLabel>Racks</SectionLabel>
-                  <ul className="divide-y divide-paper/[0.07]">
+                  <ul className="divide-y divide-line">
                     {communityLists.map((l) => (
                       <li key={l.id}>
-                        <Link
-                          href={`/u/${l.owner.username}/${l.slug}`}
-                          className="flex items-center gap-3 px-2 py-3 transition hover:bg-paper/5"
-                        >
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[14px] text-paper/90">
-                              {l.title}
-                            </span>
-                            <span className="mono block truncate text-[11px] uppercase tracking-[0.14em] text-paper/40">
-                              {l.owner.displayName} · {l.itemCount} discos
-                            </span>
-                          </span>
-                          <span className="text-paper/25">→</span>
-                        </Link>
+                        <RackRow rack={rackOfList(l)} density="compact" showOwner />
                       </li>
                     ))}
                   </ul>

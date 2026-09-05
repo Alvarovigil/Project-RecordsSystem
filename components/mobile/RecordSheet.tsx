@@ -11,6 +11,8 @@ import RecordSpecsCard from "@/components/RecordSpecsCard";
 import SaveSheet from "./SaveSheet";
 import Tracklist from "./Tracklist";
 import Card from "@/components/ui/Card";
+import RackRow from "@/components/community/RackRow";
+import { rackOfList } from "@/lib/rack";
 import ShareSheet from "@/components/ShareSheet";
 import { SITE_URL } from "@/lib/site";
 import { useToast } from "@/components/ui/Toast";
@@ -766,30 +768,16 @@ export default function RecordSheet({
                           En estos racks
                         </h4>
                       )}
-                      <ul>
+                      <ul className="px-2">
                         {elsewhere.slice(0, 6).map((l) => (
                           <li key={l.id}>
-                            <Link
-                              href={`/u/${l.owner.username}/${l.slug}`}
+                            <RackRow
+                              rack={rackOfList(l)}
+                              density="compact"
+                              showOwner
+                              className="rounded-md px-3"
                               onClick={onClose}
-                              className="pressable flex items-center gap-3 px-5 py-2.5"
-                            >
-                              <Avatar
-                                name={l.owner.displayName}
-                                handle={l.owner.username}
-                                src={l.owner.avatarUrl}
-                                size="sm"
-                              />
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sub text-paper">{l.title}</span>
-                                <span className="block truncate text-caption text-content-muted">
-                                  {l.owner.displayName} · {l.itemCount} discos
-                                </span>
-                              </span>
-                              <span aria-hidden className="text-content-faint">
-                                →
-                              </span>
-                            </Link>
+                            />
                           </li>
                         ))}
                       </ul>

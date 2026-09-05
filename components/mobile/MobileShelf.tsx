@@ -22,12 +22,12 @@ import dynamic from "next/dynamic";
  * thing wearing its name.
  */
 const VinylShelf3D = dynamic(() => import("@/components/VinylShelf3D"), { ssr: false });
-import Avatar from "@/components/ui/Avatar";
+import RackRow from "@/components/community/RackRow";
+import { rackOfCollection, rackOfList } from "@/lib/rack";
 import { coverFor } from "@/lib/cover";
 import { useImagesReady } from "@/hooks/useImagesReady";
 import { listTitleFor } from "@/lib/list-title";
 import { findWishlist } from "@/lib/collections";
-import SharedMark from "@/components/ui/SharedMark";
 import LightLab, { DEFAULT_RIG, useLightLab } from "./LightLab";
 import { useRepository } from "@/hooks/useRepository";
 import type { Collection } from "@/lib/collections";
@@ -146,6 +146,10 @@ export default function MobileShelf({
     ...primary.sort((a) => (a.kind === "collection" ? -1 : 1)),
     ...custom,
   ];
+
+  /* una portada lee mejor que un mosaico a este tamaño, y la última que entró
+     es la que más probablemente reconozcas */
+  const coverOfId = (id: string) => allVinilos.find((v) => v.id === id)?.cover ?? null;
 
   const [editing, setEditing] = useState<Collection | null>(null);
   /**
@@ -307,58 +311,23 @@ export default function MobileShelf({
               i === primary.length && primary.length > 0 && custom.length > 0;
             const isActive = c.id === activeListId;
             const isPrimary = (c.kind ?? "custom") !== "custom";
-            // one cover reads better than a mosaic at this size; the last one
-            // in is the one you are most likely to recognise
-            const cover = c.vinylIds
-              .map((id) => allVinilos.find((v) => v.id === id))
-              .filter((v): v is Vinyl => Boolean(v?.cover))
-              .pop();
             return (
               <li
                 key={c.id}
                 className={`relative ${startsCustom ? "mt-2 border-t border-line pt-3" : ""}`}
               >
-                <button
+                <RackRow
+                  rack={rackOfCollection(c, coverOfId, {
+                    locked: isPrimary,
+                    note: isActive ? "viendo ahora" : undefined,
+                  })}
+                  active={isActive}
+                  className="pr-12"
                   onClick={() => {
                     onActivate(c.id);
                     setSwitching(false);
                   }}
-                  className={`pressable flex w-full items-center gap-3 rounded-md py-2.5 pl-3 pr-12 text-left transition ${
-                    isActive ? "bg-fill-strong" : "bg-fill-subtle"
-                  }`}
-                >
-                  <span className="flex h-11 w-11 shrink-0 overflow-hidden rounded-sm bg-fill">
-                    {cover?.cover && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={cover.cover} alt="" className="h-full w-full object-cover" />
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5">
-                      <span className="truncate text-body text-paper">{c.name}</span>
-                      {c.sharedBy && (
-                        <span className="text-content-faint">
-                          <SharedMark title={`Compartida por ${c.sharedBy.displayName}`} />
-                        </span>
-                      )}
-                      {isPrimary && (
-                        <span aria-label="Rack predefinido" className="shrink-0 text-content-faint">
-                          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                            <rect x="2.5" y="5.5" width="7" height="5" rx="0.6" stroke="currentColor" />
-                            <path d="M4 5.5V4a2 2 0 1 1 4 0v1.5" stroke="currentColor" />
-                          </svg>
-                        </span>
-                      )}
-                    </span>
-                    <span className="mt-0.5 block truncate text-caption text-content-muted">
-                      {/* whose it is before how many: the number is
-                          bookkeeping, the name is why this list is here */}
-                      {c.sharedBy ? `de ${c.sharedBy.displayName} y tú · ` : ""}
-                      {c.vinylIds.length} {c.vinylIds.length === 1 ? "disco" : "discos"}
-                      {isActive ? " · viendo ahora" : ""}
-                    </span>
-                  </span>
-                </button>
+                />
 
                 <button
                   onClick={() => setEditing(c)}
@@ -423,40 +392,17 @@ export default function MobileShelf({
             <ul className="flex flex-col gap-1 px-3 pb-2 pt-3">
               {savedLists.map((l) => (
                 <li key={l.id} className="relative">
-                  <button
+                  <RackRow
+                    rack={rackOfList(l, (savedCovers[l.id] ?? [])[0] ?? null)}
+                    showOwner
+                    as="button"
+                    className="pr-12"
                     onClick={() => {
                       onOpenSaved(l);
                       setSwitching(false);
                     }}
-                    className="pressable flex w-full items-center gap-3 rounded-md bg-fill-subtle py-2.5 pl-3 pr-12 text-left"
-                  >
-                    <span className="flex h-11 w-11 shrink-0 overflow-hidden rounded-sm bg-fill">
-                      {(savedCovers[l.id] ?? [])[0] ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={(savedCovers[l.id] ?? [])[0]}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <Avatar
-                          name={l.owner.displayName}
-                          handle={l.owner.username}
-                          src={l.owner.avatarUrl}
-                          size="md"
-                        />
-                      )}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-body text-paper">
-                        {listTitleFor(l, false)}
-                      </span>
-                      <span className="mt-0.5 block truncate text-caption text-content-muted">
-                        de {l.owner.displayName} · {l.itemCount}{" "}
-                        {l.itemCount === 1 ? "disco" : "discos"}
-                      </span>
-                    </span>
-                  </button>
+                  />
+
                   <button
                     onClick={() => setListMenu(l)}
                     aria-label={`Opciones de ${listTitleFor(l, false)}`}

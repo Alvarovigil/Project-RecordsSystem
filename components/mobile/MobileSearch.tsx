@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import RackRow from "@/components/community/RackRow";
+import { rackOfList } from "@/lib/rack";
 import Avatar from "@/components/ui/Avatar";
 import Segmented from "@/components/ui/Segmented";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
@@ -400,21 +402,12 @@ export default function MobileSearch({
               <ul className="divide-y divide-line">
                 {search.communityLists.map((l) => (
                   <li key={l.id}>
-                    <Link
-                      href={`/u/${l.owner.username}/${l.slug}`}
+                    <RackRow
+                      rack={rackOfList(l)}
+                      density="compact"
+                      showOwner
                       onClick={onClose}
-                      className="pressable flex items-center gap-3 py-3"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-body text-paper">{l.title}</span>
-                        <span className="block truncate text-sub text-content-muted">
-                          {l.owner.displayName} · {l.itemCount} discos
-                        </span>
-                      </span>
-                      <span aria-hidden className="text-content-faint">
-                        →
-                      </span>
-                    </Link>
+                    />
                   </li>
                 ))}
               </ul>

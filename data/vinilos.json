@@ -3587,5 +3587,116 @@
         "duration": "3:37"
       }
     ]
+  },
+  {
+    "id": "bad-bunny-debi-tirar-mas-fotos-36352420",
+    "title": "Debí Tirar Más Fotos",
+    "artist": "Bad Bunny",
+    "year": 2026,
+    "genre": "Latin",
+    "label": "Rimas Entertainment",
+    "country": "USA & Europe",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 36352420,
+    "cover": "/covers/bad-bunny-debi-tirar-mas-fotos-36352420.jpg",
+    "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/66/10/f1/6610f15b-b355-f90f-6539-302341f9c144/mzaf_13499589849131608776.plus.aac.p.m4a",
+    "tracklist": [
+      {
+        "position": "A1",
+        "title": "Nuevayol",
+        "duration": "3:04"
+      },
+      {
+        "position": "A2",
+        "title": "Voy A Llevarte Pa PR",
+        "duration": "2:36"
+      },
+      {
+        "position": "A3",
+        "title": "Baile Inolvidable",
+        "duration": "6:08"
+      },
+      {
+        "position": "A4",
+        "title": "Perfumito Nuevo",
+        "duration": "3:21"
+      },
+      {
+        "position": "B1",
+        "title": "Weltita",
+        "duration": "3:08"
+      },
+      {
+        "position": "B2",
+        "title": "Veldá",
+        "duration": "3:55"
+      },
+      {
+        "position": "B3",
+        "title": "El Clúb",
+        "duration": "3:43"
+      },
+      {
+        "position": "B4",
+        "title": "Ketu Tecré",
+        "duration": "4:11"
+      },
+      {
+        "position": "B5",
+        "title": "Bokete",
+        "duration": "3:36"
+      },
+      {
+        "position": "C1",
+        "title": "Kloufrens",
+        "duration": "3:19"
+      },
+      {
+        "position": "C2",
+        "title": "Turista",
+        "duration": "3:10"
+      },
+      {
+        "position": "C3",
+        "title": "Café Con Ron",
+        "duration": "3:49"
+      },
+      {
+        "position": "C4",
+        "title": "Pitorro De Coco",
+        "duration": "3:27"
+      },
+      {
+        "position": "D1",
+        "title": "Lo Que Le Pasó A Hawaii",
+        "duration": "3:49"
+      },
+      {
+        "position": "D2",
+        "title": "Eoo",
+        "duration": "3:25"
+      },
+      {
+        "position": "D3",
+        "title": "DTMF",
+        "duration": "3:57"
+      },
+      {
+        "position": "D4",
+        "title": "La Mudanza",
+        "duration": "3:33"
+      },
+      {
+        "position": "D5",
+        "title": "Alambre Púa",
+        "duration": "2:25"
+      }
+    ]
   }
 ]

@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Sheet from "@/components/ui/Sheet";
+import RackRow from "@/components/community/RackRow";
+import { rackOfCollection } from "@/lib/rack";
 import type { Collection } from "@/lib/collections";
 import type { Vinyl } from "@/lib/types";
 
@@ -63,65 +65,46 @@ export default function SaveSheet({
   const searchable = collections.length > 8;
 
   /**
-   * The same row as the rack list on the main screen.
+   * La misma fila que la estantería, el buscador y la ficha de un disco.
    *
-   * Not a variation on it: an 11px square of the last cover in that rack, the
-   * name, what is in it, and a control on the right. Somebody who has just
-   * chosen a rack from the shelf should find the identical object here, and
-   * the fastest way to make two lists feel like one app is for them to be the
-   * same list.
-   *
-   * The cover is wrapped in a fixed box rather than sized by class: `Cover`
-   * declares `aspect-square w-full` on itself, so a width utility passed in
-   * from outside fights it in the cascade and loses — which is exactly how
-   * this ended up as full-width bands of artwork with the text underneath.
+   * No una variación: {@link RackRow}, la única fila de rack que hay. Quien
+   * acaba de elegir un rack en la pantalla principal encuentra aquí el mismo
+   * objeto, y la manera más rápida de que dos listas parezcan una sola
+   * aplicación es que sean la misma lista. Lo único que cambia es el control de
+   * la derecha, porque aquí no se navega: se añade o se quita.
    */
   const Row = ({ c, held }: { c: Collection; held: boolean }) => {
     const locked = held && c.kind === "collection";
-    const art = c.vinylIds.map((id) => coverOf?.(id)).filter(Boolean).pop() ?? null;
     return (
       <li>
-        <button
-          onClick={() => (held ? (locked ? undefined : onRemove(c.id)) : onAdd(c.id))}
+        <RackRow
+          rack={rackOfCollection(c, coverOf, { locked })}
           disabled={locked}
-          className="pressable flex w-full items-center gap-3 rounded-md bg-fill-subtle py-2.5 pl-3 pr-3 text-left transition hover:bg-fill disabled:cursor-default"
-        >
-          <span className="flex h-11 w-11 shrink-0 overflow-hidden rounded-sm bg-fill">
-            {art && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={art} alt="" className="h-full w-full object-cover" />
-            )}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-body text-paper">{c.name}</span>
-            <span className="mt-0.5 block truncate text-sub text-content-muted">
-              {c.vinylIds.length === 0
-                ? "Vacío"
-                : `${c.vinylIds.length} ${c.vinylIds.length === 1 ? "disco" : "discos"}`}
-            </span>
-          </span>
-          {held ? (
-            <span
-              aria-hidden
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                locked ? "bg-fill text-content-muted" : "bg-paper text-ink"
-              }`}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M2.5 7.4 L5.6 10.5 L11.5 3.8" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-          ) : (
-            <span
-              aria-hidden
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong text-content-secondary"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M7 2.5v9M2.5 7h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            </span>
-          )}
-        </button>
+          onClick={() => (held ? (locked ? undefined : onRemove(c.id)) : onAdd(c.id))}
+          trailing={
+            held ? (
+              <span
+                aria-hidden
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                  locked ? "bg-fill text-content-muted" : "bg-paper text-ink"
+                }`}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M2.5 7.4 L5.6 10.5 L11.5 3.8" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            ) : (
+              <span
+                aria-hidden
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong text-content-secondary"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 2.5v9M2.5 7h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </span>
+            )
+          }
+        />
       </li>
     );
   };
