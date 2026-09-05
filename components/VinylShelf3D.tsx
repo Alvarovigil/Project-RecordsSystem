@@ -182,6 +182,17 @@ export type VinylShelfHandle = {
 
 
 
+/**
+ * Scratch vectors for the selected-record pose.
+ *
+ * Module-level and reused: this runs inside the frame loop, and allocating
+ * three vectors sixty times a second is how a phone's garbage collector ends
+ * up stuttering a scene that is otherwise cheap.
+ */
+const TMP_FWD = new THREE.Vector3();
+const TMP_UP = new THREE.Vector3();
+const TMP_POS = new THREE.Vector3();
+
 const SLEEVE_W = 3;
 const SLEEVE_H = 3;
 const BACKGROUND = "#0a0a0a";
@@ -713,7 +724,9 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     let snapTimer: ReturnType<typeof setTimeout> | null = null;
     const snapToNearest = () => {
       snapTimer = null;
-      if (openTarget.current > 0) return;
+      // locked while a record is selected: the shelf is not a list you are
+      // browsing at that moment, it is one object you are looking at
+      if (openTarget.current > 0 || focusRef.current !== null) return;
       target.current = clampToList(Math.round(target.current));
     };
     const scheduleSnap = () => {
@@ -728,7 +741,9 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       if (tag === "INPUT" || tag === "TEXTAREA") return;
       // let scrolling pass through inside any overlay that opts in
       if (t.closest("[data-scrollable]")) return;
-      if (openTarget.current > 0) return;
+      // locked while a record is selected: the shelf is not a list you are
+      // browsing at that moment, it is one object you are looking at
+      if (openTarget.current > 0 || focusRef.current !== null) return;
       e.preventDefault();
       const delta = vertical
         ? e.deltaY
@@ -752,7 +767,9 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     let lastPos = 0;
     let lastAt = 0;
     const onDown = (e: PointerEvent) => {
-      if (openTarget.current > 0) return; // no drag while opened
+      // locked while a record is selected: the shelf is not a list you are
+      // browsing at that moment, it is one object you are looking at
+      if (openTarget.current > 0 || focusRef.current !== null) return; // no drag while opened
       dragging.current = true;
       velocity.current = 0; // catching a moving shelf stops it, like a list
       /**
@@ -840,7 +857,9 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     window.addEventListener("pointercancel", onUp);
 
     const onKey = (e: KeyboardEvent) => {
-      if (openTarget.current > 0) return;
+      // locked while a record is selected: the shelf is not a list you are
+      // browsing at that moment, it is one object you are looking at
+      if (openTarget.current > 0 || focusRef.current !== null) return;
       const fwd = vertical ? "ArrowDown" : "ArrowRight";
       const back = vertical ? "ArrowUp" : "ArrowLeft";
       if (e.key === fwd) target.current = clampToList(Math.round(target.current) + 1);
@@ -1472,8 +1491,10 @@ function Sleeve({
   const transparentRef = useRef(false);
   /** 1 while this sleeve is wanted on screen, 0 once another one is selected */
   const dimRef = useRef(1);
+  /** 1 while this sleeve IS the selected one: it takes the reading pose */
+  const poseRef = useRef(0);
 
-  useFrame(() => {
+  useFrame((state) => {
     if (!meshGroupRef.current) return;
     // wrap the position to [-modulus/2, modulus/2) so the vinyl quietly loops
     let delta = (baseIndex - currentRef.current) % modulus;
@@ -1507,6 +1528,10 @@ function Sleeve({
     const wanted = focus === null || focus === listIndex ? 1 : 0;
     dimRef.current += (wanted - dimRef.current) * 0.16;
     if (Math.abs(wanted - dimRef.current) < 0.004) dimRef.current = wanted;
+
+    const wantPose = focus !== null && focus === listIndex ? 1 : 0;
+    poseRef.current += (wantPose - poseRef.current) * 0.16;
+    if (Math.abs(wantPose - poseRef.current) < 0.004) poseRef.current = wantPose;
 
     const reveal = revealRef.current * dimRef.current;
     if (reveal < 1) {
@@ -1645,6 +1670,38 @@ function Sleeve({
       meshGroupRef.current.position.y = lift;
       meshGroupRef.current.position.z = 0;
     }
+    /**
+     * The selected record, taken out of the wheel and held up to be read.
+     *
+     * Blended over the pose the wheel just computed rather than replacing it,
+     * so the movement starts wherever the sleeve happened to be and there is
+     * no jump at either end.
+     *
+     * The target is derived from the camera instead of written down: a point
+     * a fixed distance in front of it, raised along its own up vector, facing
+     * it exactly. That is what "perpendicular to the camera" means, and doing
+     * it with the camera's own quaternion is both shorter and correct on any
+     * screen shape — a hardcoded rotation is right for one handset and wrong
+     * for the next.
+     *
+     * Only in the pile: the desktop rack has its own open pose and is driven
+     * by the imperative handle it has always used.
+     */
+    if (vertical && poseRef.current > 0.001) {
+      const cam = state.camera;
+      const t = EASINGS.easeInOutCubic(poseRef.current);
+      TMP_FWD.set(0, 0, -1).applyQuaternion(cam.quaternion);
+      TMP_UP.set(0, 1, 0).applyQuaternion(cam.quaternion);
+      // 9.6: a little nearer than the pile sits, so the record reads as picked
+      // up. 1.15 up the view axis puts it in the top third, where the screen
+      // that follows leaves its room.
+      TMP_POS.copy(cam.position).addScaledVector(TMP_FWD, 9.6).addScaledVector(TMP_UP, 1.15);
+      const parent = meshGroupRef.current.parent;
+      if (parent) parent.worldToLocal(TMP_POS);
+      meshGroupRef.current.position.lerp(TMP_POS, t);
+      meshGroupRef.current.quaternion.slerp(cam.quaternion, t);
+    }
+
     const s = 0.97 + reveal * 0.03;
     meshGroupRef.current.scale.set(s, s, 1);
 
