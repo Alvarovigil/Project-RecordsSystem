@@ -253,12 +253,23 @@ function Skeleton() {
   );
 }
 
-/** A fact, said the way a caption is: the label small above, the value below. */
+/**
+ * A fact, as a tile rather than as a row of a definition list.
+ *
+ * `dt` over `dd` in a two-column grid is how a spec sheet is printed, and it
+ * reads as printing: four labels down the left, four values beside them, all
+ * one weight, nothing to look at. Given a surface of its own each fact becomes
+ * an object — the eye can land on one and skip three, which is the whole
+ * difference between a screen you scan and a page you read.
+ *
+ * A shade lighter than the card holding them, because a tile the same colour
+ * as its container is not a tile.
+ */
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 rounded-[10px] bg-fill px-4 py-3">
       <dt className="text-micro uppercase tracking-label text-content-faint">{label}</dt>
-      <dd className="mt-1 text-body leading-snug text-paper">{value}</dd>
+      <dd className="mt-1.5 truncate text-body leading-snug text-paper">{value}</dd>
     </div>
   );
 }
@@ -266,49 +277,47 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
 /**
  * What this sheet says, and what it stopped saying.
  *
- * A Discogs release carries about thirty fields and the temptation is to
- * print all of them, which is how the first version of this ended up as a
- * database row wearing a card. The question for every line is the same: would
- * somebody holding this sleeve ever look for it?
+ * A release carries about thirty fields and the first version printed most of
+ * them. That is the right instinct for an archive and the wrong one here: this
+ * is not a database anybody is contributing to, it is a shelf, and the person
+ * reading is somebody who buys records rather than catalogues them.
  *
- * **Gone: the barcode.** You scanned it to get here. Printing it back is the
- * app telling you the thing you just told it.
+ * So the question for every line is not "is it true" but "would somebody
+ * holding this sleeve ever look for it". Almost nothing survives that.
  *
- * **Gone: the rating.** "4,32 / 5 · 118 votos" is a stranger's mark out of
- * ten for a record you own, and the product says out loud on its own landing
- * that it is not that — no puntuar los discos del uno al diez. Keeping it in
- * the one screen a collector reads most carefully would have been the tell.
+ * **Gone: the run-out groove.** The etching between the last track and the
+ * label is how a specialist tells an original from a repress, and it is the
+ * single most connoisseur field there is. It was given a plate of its own and
+ * a paragraph explaining what it was — which is the tell: a fact that needs
+ * teaching before it can be read belongs to the archive, not to the shelf.
  *
- * **Capped: the credits.** Discogs lists everybody, and "Lacquer Cut By" and
- * "A&R Coordinator" are twenty names between you and the four that matter.
- * Six, then a line to open the rest.
+ * **Gone: the credits.** Twenty names, of which two are the ones anybody
+ * means, and no way to know which two without reading all of them.
  *
- * **Clamped: the notes.** Sometimes "Limited to 500 numbered copies", which
- * is gold; sometimes nine paragraphs of English about a licensing dispute.
- * Three lines, then more if you want them.
+ * **Gone: the edition notes.** Sometimes "limited to 500 numbered copies";
+ * more often nine paragraphs of English about a licensing arrangement. What
+ * was worth having in them — 180g, gatefold, coloured — is already in the
+ * format chips.
  *
- * What is left leads with the one field that identifies a pressing out of
- * forty, and ends with the two numbers a collector actually reads: how many
- * people have it and how many want it.
+ * **Gone: the pressing plant, the styles, and the barcode**, the last of which
+ * you scanned to get here.
+ *
+ * What is left is the two things a person actually opens this for: the photos
+ * of the object, which are the only part of a technical sheet that is a
+ * pleasure rather than a reference — and the handful of facts that place a
+ * record at a glance. Then the two numbers that say whether anybody else is
+ * chasing it.
  */
 function Specs({ specs: s }: { specs: RecordSpecs }) {
-  const styles = s.styles.length ? s.styles : s.genres;
-  const [allCredits, setAllCredits] = useState(false);
-  const [allNotes, setAllNotes] = useState(false);
-
-  const CREDITS_SHOWN = 6;
-  const people = allCredits ? s.people : s.people.slice(0, CREDITS_SHOWN);
-  const hidden = Math.max(0, s.people.length - CREDITS_SHOWN);
-
   const market = s.have !== null || s.want !== null || s.lowestPrice !== null;
+  const formats = s.formats.join(", ").split(", ").filter(Boolean);
 
   return (
     <>
       {/**
-       * The object, photographed — and first, because it is the only part of a
-       * technical sheet that is a pleasure rather than a reference. The back,
-       * the gatefold, the inner sleeves, a scan of each label: the things you
-       * turn a record over to look at.
+       * The object, photographed — and first, because it is the reason to open
+       * this at all. The back, the gatefold, the inner sleeves, a scan of each
+       * label: the things you turn a record over to look at.
        */}
       {s.images.length > 0 && (
         <Block title="Esta edición, por dentro">
@@ -326,8 +335,8 @@ function Specs({ specs: s }: { specs: RecordSpecs }) {
                   src={img.thumb}
                   alt=""
                   loading="lazy"
-                  className={`skeleton h-[132px] rounded-[3px] object-cover ${
-                    img.wide ? "w-[240px]" : "w-[132px]"
+                  className={`skeleton h-[160px] rounded-[3px] object-cover ${
+                    img.wide ? "w-[288px]" : "w-[160px]"
                   }`}
                 />
               </a>
@@ -337,145 +346,52 @@ function Specs({ specs: s }: { specs: RecordSpecs }) {
       )}
 
       {/**
-       * The shelf talker.
+       * What kind of object it is.
        *
-       * The catalogue number gets the biggest type on the card because it is
-       * the only field here that identifies one pressing out of forty — it is
-       * what you read out on the phone to a shop and what you check against a
-       * listing before paying original money for a repress. Everything else in
-       * this block is a caption to it.
+       * The format goes first and as chips, because "2×", "LP", "Album" and
+       * "Gatefold" are four separate facts about the thing in your hands and
+       * reading them as one comma sentence hides the one you were looking for.
+       * Everything under it is a caption to that.
        */}
-      <Block>
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-micro uppercase tracking-label text-content-faint">
-              Número de catálogo
-            </p>
-            <p className="mono mt-2 break-words text-title leading-none text-paper">
-              {s.catno || "—"}
-            </p>
-            {s.label && <p className="mt-2.5 text-sub text-content-secondary">{s.label}</p>}
-          </div>
-          {s.released && (
-            <p className="mono shrink-0 text-heading leading-none text-content-faint">
-              {String(s.released).slice(0, 4)}
-            </p>
-          )}
-        </div>
-
-        {/* the format as a row of chips: "2×", "LP", "Album" and "Gatefold"
-            are four separate facts about the object, and reading them as one
-            comma sentence hides the one you were looking for */}
-        {s.formats.length > 0 && (
-          <ul className="mt-5 flex flex-wrap gap-1.5">
-            {s.formats
-              .join(", ")
-              .split(", ")
-              .map((f, i) => (
-                <li
-                  key={`${f}-${i}`}
-                  className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary"
-                >
-                  {f}
-                </li>
-              ))}
+      <Block title="La edición">
+        {formats.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5">
+            {formats.map((f, i) => (
+              <li
+                key={`${f}-${i}`}
+                className="rounded-full bg-fill px-3.5 py-1.5 text-sub text-content-secondary"
+              >
+                {f}
+              </li>
+            ))}
           </ul>
         )}
 
-        <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5">
+        <dl className={`grid grid-cols-2 gap-x-4 gap-y-5 ${formats.length > 0 ? "mt-6" : ""}`}>
+          {s.released && <Fact label="Publicada" value={String(s.released).slice(0, 4)} />}
           {s.country && <Fact label="País" value={s.country} />}
-          {s.pressedBy && <Fact label="Prensada en" value={s.pressedBy} />}
-          {styles.length > 0 && (
-            <Fact label="Estilo" value={styles.slice(0, 3).join(" · ")} />
-          )}
+          {s.label && <Fact label="Sello" value={s.label} />}
+          {/* The one specialist field that stays, and demoted to a fact among
+              facts: it is the only thing here that identifies one pressing out
+              of forty, which is what you read out to a shop before paying
+              original money for a repress. */}
+          {s.catno && <Fact label="Referencia" value={<span className="mono">{s.catno}</span>} />}
         </dl>
       </Block>
 
       {/**
-       * The run-out groove: the etching between the last track and the label,
-       * and the closest thing a record has to a signature. It is how you tell
-       * an original from a repress when everything else matches — so it is set
-       * in mono, printed whole, and given a plate of its own.
-       *
-       * The barcode used to sit beside it and no longer does: you scanned it
-       * to get here.
-       */}
-      {s.matrix && (
-        <Block title="Grabado en el surco">
-          <p className="mono break-words rounded-[3px] bg-ink px-3.5 py-3 text-sub leading-relaxed text-paper">
-            {s.matrix}
-          </p>
-          <p className="mt-2.5 text-caption leading-relaxed text-content-muted">
-            Lo que hay escrito entre el último surco y la etiqueta. Es lo que
-            distingue una original de una reedición cuando todo lo demás coincide.
-          </p>
-        </Block>
-      )}
-
-      {/**
-       * By person, not by job — the way a sleeve prints it. Kevin Parker wrote,
-       * played, produced and mixed Currents; as a list of roles that is his
-       * name four times, and as a list of people it is the single most
-       * interesting fact about the record.
-       */}
-      {s.people.length > 0 && (
-        <Block title="Quién la hizo">
-          <ul className="divide-y divide-line">
-            {people.map((p) => (
-              <li key={p.name} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2.5 first:pt-0">
-                <span className="text-body text-paper">{p.name}</span>
-                <span className="text-caption text-content-muted">{p.roles.join(" · ")}</span>
-              </li>
-            ))}
-          </ul>
-          {hidden > 0 && (
-            <button
-              onClick={() => setAllCredits((v) => !v)}
-              className="pressable mt-3 text-sub text-content-muted underline-offset-4 transition hover:text-paper hover:underline"
-            >
-              {allCredits ? "Ver solo lo principal" : `Y ${hidden} más`}
-            </button>
-          )}
-        </Block>
-      )}
-
-      {s.notes && (
-        <Block title="Notas de la edición">
-          <p
-            className={`whitespace-pre-line text-sub leading-relaxed text-content-secondary ${
-              allNotes ? "" : "line-clamp-3"
-            }`}
-          >
-            {s.notes}
-          </p>
-          {s.notes.length > 180 && (
-            <button
-              onClick={() => setAllNotes((v) => !v)}
-              className="pressable mt-2.5 text-sub text-content-muted underline-offset-4 transition hover:text-paper hover:underline"
-            >
-              {allNotes ? "Menos" : "Leer entera"}
-            </button>
-          )}
-        </Block>
-      )}
-
-      {/**
-       * The market, last and on purpose.
+       * The two numbers, last and on purpose.
        *
        * How many people have it and how many want it is the first thing a
-       * collector looks at — but leading with it turns a shelf into a
-       * portfolio. It sits under everything else, next to the way out to the
-       * catalogue where those numbers actually live.
-       *
-       * Two numbers side by side rather than four small facts: "la tienen" and
-       * "la quieren" only mean anything against each other, and that
-       * comparison is the whole of what a collector reads here.
+       * collector looks at — and leading with it turns a shelf into a
+       * portfolio. Side by side rather than as separate facts, because they
+       * only mean anything against each other.
        */}
       {market && (
         <Block title="Quién lo tiene">
           <div className="flex items-stretch gap-2.5">
-            <Count n={s.have} label="la tienen" />
-            <Count n={s.want} label="la quieren" />
+            <Count n={s.have} label="lo tienen" />
+            <Count n={s.want} label="lo quieren" />
           </div>
 
           {s.lowestPrice !== null && (
@@ -512,7 +428,7 @@ function Specs({ specs: s }: { specs: RecordSpecs }) {
 /** one of the two numbers that only mean anything beside each other */
 function Count({ n, label }: { n: number | null; label: string }) {
   return (
-    <div className="flex-1 rounded-[10px] bg-fill-subtle px-4 py-3.5">
+    <div className="flex-1 rounded-[10px] bg-fill px-4 py-3.5">
       <p className="text-heading leading-none text-paper" style={{ fontVariantNumeric: "tabular-nums" }}>
         {n === null ? "—" : n.toLocaleString("es-ES")}
       </p>
