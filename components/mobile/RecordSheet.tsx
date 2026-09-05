@@ -102,6 +102,9 @@ export default function RecordSheet({
   const repo = useRepository();
   const toast = useToast();
   const [elsewhere, setElsewhere] = useState<ListWithRecord[]>([]);
+  /* la portada que va dentro del cajón de cada fila: sin ella la miniatura es
+     una caja vacía, que es justo lo que no queremos enseñar de un rack lleno */
+  const [rackCovers, setRackCovers] = useState<Record<string, string[]>>({});
   const [friends, setFriends] = useState<FriendWithRecord[]>([]);
   const [picking, setPicking] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -132,7 +135,14 @@ export default function RecordSheet({
     setFriends([]);
     repo
       .listsWithRelease(vinyl.id)
-      .then(setElsewhere)
+      .then((ls) => {
+        setElsewhere(ls);
+        if (ls.length)
+          repo
+            .coversOfLists(ls.map((l) => l.id))
+            .then(setRackCovers)
+            .catch(() => {});
+      })
       .catch(() => {});
     repo
       .friendsWithRelease(vinyl.id)
@@ -438,32 +448,71 @@ export default function RecordSheet({
                */}
               {(friends.length > 0 || elsewhere.length > 0) && (
                 <Card title="Quién más lo tiene" padded={false}>
-                  {friends.length > 0 && (
-                    <ul className="rail flex gap-4 px-5 pb-1 pr-10" style={{ scrollPaddingLeft: "1.25rem" }}>
-                      {friends.slice(0, 10).map((f) => (
-                        <li key={f.user.id} className="w-[76px] shrink-0">
-                          <Link
-                            href={`/u/${f.user.username}`}
-                            onClick={onClose}
-                            className="pressable block text-center"
-                          >
-                            <Avatar
-                              name={f.user.displayName}
-                              handle={f.user.username}
-                              src={f.user.avatarUrl}
-                              size="lg"
-                            />
-                            <span className="mt-2 block truncate text-caption text-paper">
-                              {f.user.displayName}
-                            </span>
-                            <span className="block truncate text-caption text-content-faint">
-                              {f.viaListTitle}
-                            </span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  {friends.length > 0 &&
+                    (friends.length <= 3 ? (
+                      /**
+                       * Con dos o tres, filas; con más, carril.
+                       *
+                       * Un carril de círculos grandes con dos caras deja media
+                       * pantalla vacía y obliga a cortar el nombre del rack a
+                       * la mitad — «Prensados q…», que no dice nada. En fila,
+                       * cada persona se lleva el ancho entero: la cara, su
+                       * nombre y en qué rack lo tiene, sin recortar. El carril
+                       * empieza a tener sentido cuando hay bastantes caras
+                       * como para que la fila cortada signifique «hay más».
+                       */
+                      <ul className="px-2">
+                        {friends.map((f) => (
+                          <li key={f.user.id}>
+                            <Link
+                              href={`/u/${f.user.username}`}
+                              onClick={onClose}
+                              className="pressable flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-fill-subtle"
+                            >
+                              <Avatar
+                                name={f.user.displayName}
+                                handle={f.user.username}
+                                src={f.user.avatarUrl}
+                                size="md"
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-body text-paper">
+                                  {f.user.displayName}
+                                </span>
+                                <span className="block truncate text-caption text-content-muted">
+                                  en {f.viaListTitle}
+                                </span>
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <ul className="rail flex gap-4 px-5 pb-1 pr-10" style={{ scrollPaddingLeft: "1.25rem" }}>
+                        {friends.slice(0, 12).map((f) => (
+                          <li key={f.user.id} className="w-[76px] shrink-0">
+                            <Link
+                              href={`/u/${f.user.username}`}
+                              onClick={onClose}
+                              className="pressable block text-center"
+                            >
+                              <Avatar
+                                name={f.user.displayName}
+                                handle={f.user.username}
+                                src={f.user.avatarUrl}
+                                size="lg"
+                              />
+                              <span className="mt-2 block truncate text-caption text-paper">
+                                {f.user.displayName}
+                              </span>
+                              <span className="block truncate text-caption text-content-faint">
+                                {f.viaListTitle}
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ))}
 
                   {elsewhere.length > 0 && (
                     <>
@@ -476,7 +525,7 @@ export default function RecordSheet({
                         {elsewhere.slice(0, 6).map((l) => (
                           <li key={l.id}>
                             <RackRow
-                              rack={rackOfList(l)}
+                              rack={rackOfList(l, (rackCovers[l.id] ?? [])[0] ?? null)}
                               density="compact"
                               showOwner
                               className="rounded-md px-3"

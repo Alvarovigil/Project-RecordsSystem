@@ -3,6 +3,7 @@
 import Link from "next/link";
 import RackRow, { Chevron } from "@/components/community/RackRow";
 import PersonRow from "@/components/community/PersonRow";
+import { useRackCovers } from "@/hooks/useRackCovers";
 import { rackOfList } from "@/lib/rack";
 
 import { useEffect, useRef, useState } from "react";
@@ -107,6 +108,7 @@ export default function SearchOverlay({
     addFromCatalogue(r, listId, onSaveToList);
 
   // one cursor over the visible list: ↑↓ to move, ↵ to act on it
+  const rackCovers = useRackCovers(communityLists);
   const [cursor, setCursor] = useState(0);
   useEffect(() => setCursor(0), [q, mode]);
   // one cursor walks both sections in reading order
@@ -289,7 +291,7 @@ export default function SearchOverlay({
                   <ul className="divide-y divide-line">
                     {communityLists.map((l) => (
                       <li key={l.id}>
-                        <RackRow rack={rackOfList(l)} density="compact" showOwner />
+                        <RackRow rack={rackOfList(l, (rackCovers[l.id] ?? [])[0] ?? null)} density="compact" showOwner />
                       </li>
                     ))}
                   </ul>

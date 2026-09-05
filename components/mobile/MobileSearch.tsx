@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import RackRow, { Chevron, NewRackRow } from "@/components/community/RackRow";
 import PersonRow from "@/components/community/PersonRow";
+import { useRackCovers } from "@/hooks/useRackCovers";
 import { rackOfCollection, rackOfList } from "@/lib/rack";
 import Avatar from "@/components/ui/Avatar";
 import Segmented from "@/components/ui/Segmented";
@@ -80,6 +81,7 @@ export default function MobileSearch({
   const [looking, setLooking] = useState<DiscogsResult | null>(null);
 
   const search = useCatalogueSearch({ query: q, mode, localVinilos, allVinilos });
+  const rackCovers = useRackCovers(search.communityLists);
 
   useEffect(() => setTargetId(activeCollectionId), [activeCollectionId]);
 
@@ -403,7 +405,7 @@ export default function MobileSearch({
                 {search.communityLists.map((l) => (
                   <li key={l.id}>
                     <RackRow
-                      rack={rackOfList(l)}
+                      rack={rackOfList(l, (rackCovers[l.id] ?? [])[0] ?? null)}
                       density="compact"
                       showOwner
                       onClick={onClose}
