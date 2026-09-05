@@ -390,7 +390,7 @@ export default function ExploreView() {
                   ["all", "Todo", null],
                   ["records", "Discos", counts.records],
                   ["lists", "Racks", counts.lists],
-                  ["people", "Gente", counts.people],
+                  ["people", "Usuarios", counts.people],
                 ] as const
               ).map(([value, label, n]) => {
                 const active = scope === value;
@@ -530,7 +530,7 @@ export default function ExploreView() {
             />
           )}
 
-          <Section title="Gente que colecciona">
+          <Section title="Usuarios que coleccionan">
             {/* The same rail as the crates above, for the same reason: this is
                 something to skim past, not a directory to work through. And
                 the cards are shelves rather than faces — see PersonCard. */}
@@ -742,7 +742,7 @@ export default function ExploreView() {
 
               {show("people") && people.length > 0 && (
                 <ResultBlock
-                  title="Gente"
+                  title="Usuarios"
                   onAll={() => setScope("people")}
                   showAll={scope === "all"}
                 >

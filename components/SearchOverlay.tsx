@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import RackRow from "@/components/community/RackRow";
+import RackRow, { Chevron } from "@/components/community/RackRow";
+import PersonRow from "@/components/community/PersonRow";
 import { rackOfList } from "@/lib/rack";
 
 import { useEffect, useRef, useState } from "react";
@@ -187,7 +188,7 @@ export default function SearchOverlay({
                 mode === m ? "text-paper" : "text-paper/35 hover:text-paper/70"
               }`}
             >
-              {m === "vinyls" ? "Vinilos" : "Gente y racks"}
+              {m === "vinyls" ? "Vinilos" : "Usuarios y racks"}
               {mode === m && (
                 <span className="absolute left-0 right-0 -bottom-px h-px bg-paper" />
               )}
@@ -271,31 +272,10 @@ export default function SearchOverlay({
               {people.length > 0 && (
                 <>
                   <SectionLabel>Personas</SectionLabel>
-                  <ul className="divide-y divide-paper/[0.07]">
+                  <ul className="divide-y divide-line">
                     {people.map((u) => (
                       <li key={u.id}>
-                        <Link
-                          href={`/u/${u.username}`}
-                          className="flex items-center gap-3 px-2 py-3 transition hover:bg-paper/5"
-                        >
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper/10 mono text-[10px] text-paper/60">
-                            {u.avatarUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={u.avatarUrl} alt="" className="h-full w-full object-cover" />
-                            ) : (
-                              u.displayName.slice(0, 2).toUpperCase()
-                            )}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[14px] text-paper/90">
-                              {u.displayName}
-                            </span>
-                            <span className="mono block truncate text-[11px] text-paper/40">
-                              @{u.username}
-                            </span>
-                          </span>
-                          <span className="text-paper/25">→</span>
-                        </Link>
+                        <PersonRow profile={u} />
                       </li>
                     ))}
                   </ul>
@@ -352,14 +332,14 @@ export default function SearchOverlay({
                         </span>
                       )}
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[14px] text-paper/90">{a.name}</span>
-                        <span className="block truncate text-[11px] text-paper/45">
+                        <span className="block truncate text-body text-paper">{a.name}</span>
+                        <span className="block truncate text-caption text-content-muted">
                           {a.records.length > 0
                             ? `${a.records.length} ${a.records.length === 1 ? "disco tuyo" : "discos tuyos"}`
                             : "Ver sus discos"}
                         </span>
                       </span>
-                      <span className="text-paper/25">→</span>
+                      <Chevron />
                     </Link>
                   </li>
                 ))}

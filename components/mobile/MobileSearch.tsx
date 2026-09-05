@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import RackRow from "@/components/community/RackRow";
+import RackRow, { Chevron } from "@/components/community/RackRow";
+import PersonRow from "@/components/community/PersonRow";
 import { rackOfList } from "@/lib/rack";
 import Avatar from "@/components/ui/Avatar";
 import Segmented from "@/components/ui/Segmented";
@@ -164,7 +165,7 @@ export default function MobileSearch({
               onChange={setMode}
               segments={[
                 { value: "vinyls", label: "Discos" },
-                { value: "people", label: "Gente y racks" },
+                { value: "people", label: "Usuarios y racks" },
               ]}
             />
           </div>
@@ -281,9 +282,7 @@ export default function MobileSearch({
                             : "Ver sus discos"}
                         </span>
                       </span>
-                      <span aria-hidden className="shrink-0 text-content-faint">
-                        →
-                      </span>
+                      <Chevron />
                     </Link>
                   </li>
                 ))}
@@ -311,9 +310,7 @@ export default function MobileSearch({
                           {[v.artist, v.year].filter(Boolean).join(" · ")}
                         </span>
                       </span>
-                      <span aria-hidden className="shrink-0 text-content-faint">
-                        →
-                      </span>
+                      <Chevron />
                     </button>
                   </li>
                 ))}
@@ -376,20 +373,7 @@ export default function MobileSearch({
               <ul className="divide-y divide-line">
                 {search.people.map((u) => (
                   <li key={u.id}>
-                    <Link
-                      href={`/u/${u.username}`}
-                      onClick={onClose}
-                      className="pressable flex items-center gap-3 py-3"
-                    >
-                      <Avatar name={u.displayName} handle={u.username} src={u.avatarUrl} size="md" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-body text-paper">{u.displayName}</span>
-                        <span className="block truncate text-sub text-content-muted">@{u.username}</span>
-                      </span>
-                      <span aria-hidden className="text-content-faint">
-                        →
-                      </span>
-                    </Link>
+                    <PersonRow profile={u} />
                   </li>
                 ))}
               </ul>
