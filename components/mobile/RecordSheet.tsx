@@ -17,7 +17,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useRepository } from "@/hooks/useRepository";
 import { coverFor } from "@/lib/cover";
 import { artistSlug, cleanArtist } from "@/lib/artist";
-import type { ListWithRecord } from "@/lib/data/types";
+import type { FriendWithRecord, ListWithRecord } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 import { findCollection, findWishlist, isWished, type Collection } from "@/lib/collections";
 
@@ -186,6 +186,7 @@ export default function RecordSheet({
   const repo = useRepository();
   const toast = useToast();
   const [elsewhere, setElsewhere] = useState<ListWithRecord[]>([]);
+  const [friends, setFriends] = useState<FriendWithRecord[]>([]);
   const [picking, setPicking] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -221,9 +222,14 @@ export default function RecordSheet({
   useEffect(() => {
     if (!vinyl) return;
     setElsewhere([]);
+    setFriends([]);
     repo
       .listsWithRelease(vinyl.id)
       .then(setElsewhere)
+      .catch(() => {});
+    repo
+      .friendsWithRelease(vinyl.id)
+      .then(setFriends)
       .catch(() => {});
   }, [repo, vinyl]);
 
@@ -712,6 +718,86 @@ export default function RecordSheet({
                   control says it now — "En 2 racks" — and the sheet behind it
                   shows which, so the card was the same answer given twice, the
                   second time without a way to act on it. */}
+              {/**
+               * The reason this app exists, on the screen where it happens.
+               *
+               * A record page that only describes the object is a catalogue
+               * entry. What makes this Rackr is the answer to the two things
+               * somebody wants right after "what is this": who that I follow
+               * has it, and which racks it lives in.
+               *
+               * Faces rather than rows for the friends: a name in a list is a
+               * string, and a photograph of somebody you follow is a person.
+               * That difference is the whole feature.
+               */}
+              {(friends.length > 0 || elsewhere.length > 0) && (
+                <Card title="Quién más lo tiene" padded={false}>
+                  {friends.length > 0 && (
+                    <ul className="rail flex gap-4 px-5 pb-1 pr-8">
+                      {friends.slice(0, 10).map((f) => (
+                        <li key={f.user.id} className="w-[76px] shrink-0">
+                          <Link
+                            href={`/u/${f.user.username}`}
+                            onClick={onClose}
+                            className="pressable block text-center"
+                          >
+                            <Avatar
+                              name={f.user.displayName}
+                              handle={f.user.username}
+                              src={f.user.avatarUrl}
+                              size="lg"
+                            />
+                            <span className="mt-2 block truncate text-caption text-paper">
+                              {f.user.displayName}
+                            </span>
+                            <span className="block truncate text-caption text-content-faint">
+                              {f.viaListTitle}
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {elsewhere.length > 0 && (
+                    <>
+                      {friends.length > 0 && (
+                        <h4 className="px-5 pb-1 pt-5 text-caption uppercase tracking-label text-content-faint">
+                          En estos racks
+                        </h4>
+                      )}
+                      <ul>
+                        {elsewhere.slice(0, 6).map((l) => (
+                          <li key={l.id}>
+                            <Link
+                              href={`/u/${l.owner.username}/${l.slug}`}
+                              onClick={onClose}
+                              className="pressable flex items-center gap-3 px-5 py-2.5"
+                            >
+                              <Avatar
+                                name={l.owner.displayName}
+                                handle={l.owner.username}
+                                src={l.owner.avatarUrl}
+                                size="sm"
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sub text-paper">{l.title}</span>
+                                <span className="block truncate text-caption text-content-muted">
+                                  {l.owner.displayName} · {l.itemCount} discos
+                                </span>
+                              </span>
+                              <span aria-hidden className="text-content-faint">
+                                →
+                              </span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </Card>
+              )}
+
               {/* One disc at a time, its sides under it, and the titles
                   playable — see Tracklist. */}
               <Tracklist
@@ -726,38 +812,6 @@ export default function RecordSheet({
                   and only then — still holding the sleeve — do you wonder
                   which pressing this is. */}
               <RecordSpecsCard discogsId={vinyl.discogsId} />
-
-              {/* the bridge: this record is the door into other people's shelves */}
-              {elsewhere.length > 0 && (
-                <Card title="Quién más lo tiene" padded={false}>
-                  <ul>
-                    {elsewhere.slice(0, 5).map((l) => (
-                      <li key={l.id}>
-                        <Link
-                          href={`/u/${l.owner.username}/${l.slug}`}
-                          className="pressable flex items-center gap-3 px-5 py-2.5"
-                        >
-                          <Avatar
-                            name={l.owner.displayName}
-                            handle={l.owner.username}
-                            src={l.owner.avatarUrl}
-                            size="sm"
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sub text-paper">{l.title}</span>
-                            <span className="block truncate text-caption text-content-muted">
-                              {l.owner.displayName} · {l.itemCount} discos
-                            </span>
-                          </span>
-                          <span aria-hidden className="text-content-faint">
-                            →
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </Card>
-              )}
 
             </div>
           </div>
