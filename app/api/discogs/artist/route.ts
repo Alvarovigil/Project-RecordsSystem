@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { DISCOGS_UA } from "@/lib/discogs";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
+import { artistSlug } from "@/lib/artist";
 
 /**
  * One artist, identified rather than matched.
@@ -79,7 +80,9 @@ export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim();
   const fromRelease = req.nextUrl.searchParams.get("release")?.trim();
   const givenId = req.nextUrl.searchParams.get("id")?.trim();
-  if (!q && !fromRelease && !givenId) return Response.json({ error: "q required" }, { status: 400 });
+  const photosFor = req.nextUrl.searchParams.get("photos")?.trim();
+  if (!q && !fromRelease && !givenId && !photosFor)
+    return Response.json({ error: "q required" }, { status: 400 });
 
   /**
    * Cache-only mode, for the search box.
@@ -90,6 +93,61 @@ export async function GET(req: NextRequest) {
    * up and otherwise says nothing — so a portrait appears next to an artist
    * anybody has opened before, and nobody pays for one who has not.
    */
+  /**
+   * Las caras de todos los artistas de una búsqueda, en una sola llamada.
+   *
+   * El modo `peek` solo responde por quien ya estuviera resuelto en la caché,
+   * y un artista que sale del catálogo — no de tu estantería — no tiene aún
+   * ninguna ficha guardada. Resultado: la lista de artistas del buscador salía
+   * entera con el disco gris de relleno, que es justo la fila que ese icono
+   * está para no ser.
+   *
+   * Resolver a cada uno cuesta dos llamadas por artista y no cabe en un
+   * presupuesto de sesenta por minuto. Pero buscar artistas por nombre es UNA
+   * llamada que devuelve cien, con su miniatura — la misma consulta que ya se
+   * está haciendo, en la otra pestaña del catálogo. Así que una por búsqueda,
+   * guardada un mes contra el texto buscado, y todas las filas tienen cara.
+   */
+  if (photosFor) {
+    const key = `artistpix:${norm(photosFor)}`;
+    const sbPix = getSupabaseAdminClient();
+    if (sbPix) {
+      const { data } = await sbPix
+        .from("discogs_search_cache")
+        .select("results, created_at")
+        .eq("query", key)
+        .maybeSingle();
+      if (data && Date.now() - new Date(data.created_at).getTime() < 30 * 864e5) {
+        return Response.json({ ...data.results, cached: true });
+      }
+    }
+
+    const found = await discogs(
+      `/database/search?type=artist&per_page=25&q=${encodeURIComponent(photosFor)}`,
+    );
+    const artists = ((found?.results ?? []) as { title?: string; thumb?: string }[])
+      .map((a) => {
+        const name = String(a.title ?? "").replace(/\s*\(\d+\)\s*$/, "");
+        // el mismo proxy que las portadas: i.discogs.com no sirve a otro sitio
+        const image = a.thumb ? `/api/cover?url=${encodeURIComponent(a.thumb)}` : null;
+        return name && image ? { name, slug: artistSlug(name), image } : null;
+      })
+      .filter(Boolean)
+      .slice(0, 25);
+
+    const payload = { artists };
+    if (sbPix && artists.length > 0) {
+      void sbPix
+        .from("discogs_search_cache")
+        .upsert({ query: key, results: payload }, { onConflict: "query" })
+        .then(
+          () => {},
+          () => {},
+        );
+    }
+    return Response.json(payload);
+  }
+
   const peek = req.nextUrl.searchParams.get("peek") === "1";
   const sbPeek = peek ? getSupabaseAdminClient() : null;
   if (peek) {

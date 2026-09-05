@@ -200,44 +200,46 @@ export function useCatalogueSearch({
   );
 
   /**
-   * A face next to an artist, when one is already known.
+   * Una cara junto a cada artista.
    *
-   * Resolving an artist properly costs two Discogs calls, and a list that
-   * updates on every keystroke cannot spend those against a budget of sixty a
-   * minute for the whole application. So this asks the artist route in
-   * cache-only mode: it answers from what has already been looked up and
-   * otherwise says nothing. A portrait therefore appears for anybody whose
-   * page has been opened before — by anyone, since the cache is the server's —
-   * and nobody pays for one who has not.
+   * Antes esto preguntaba por cada artista en modo caché — y solo sabía
+   * preguntar por los que tenían un disco tuyo con id de catálogo, que son
+   * precisamente los que menos falta hacen. Los que salen de la búsqueda no
+   * tenían ninguno, así que la lista entera se quedaba con el disco gris de
+   * relleno.
+   *
+   * Ahora es una sola consulta por búsqueda, la misma que devuelve cien
+   * artistas con su miniatura, y el servidor la guarda un mes. Las filas se
+   * emparejan por slug: si el catálogo no conoce a alguien, esa fila se queda
+   * sin cara y las demás no lo pagan.
    */
   const [artistPhotos, setArtistPhotos] = useState<Record<string, string>>({});
   const askedPhotos = useRef(new Set<string>());
   useEffect(() => {
-    const want = artists
-      .filter((a) => !askedPhotos.current.has(a.slug))
-      .map((a) => ({ slug: a.slug, release: a.records.find((r) => r.discogsId)?.discogsId }))
-      .filter((a): a is { slug: string; release: number } => Boolean(a.release))
-      .slice(0, 4);
-    if (want.length === 0) return;
+    const q = query.trim();
+    if (mode !== "vinyls" || q.length < 2 || artists.length === 0) return;
+    const key = q.toLowerCase();
+    if (askedPhotos.current.has(key)) return;
     let alive = true;
     const t = setTimeout(() => {
-      want.forEach(({ slug, release }) => {
-        askedPhotos.current.add(slug);
-        fetch(`/api/discogs/artist?peek=1&release=${release}`)
-          .then((r) => r.json())
-          .then((d) => {
-            if (alive && d?.artist?.image) {
-              setArtistPhotos((m) => ({ ...m, [slug]: d.artist.image }));
-            }
-          })
-          .catch(() => {});
-      });
+      askedPhotos.current.add(key);
+      fetch(`/api/discogs/artist?photos=${encodeURIComponent(q)}`)
+        .then((r) => r.json())
+        .then((d: { artists?: { slug: string; image: string }[] }) => {
+          if (!alive || !d?.artists?.length) return;
+          setArtistPhotos((m) => {
+            const next = { ...m };
+            for (const a of d.artists!) if (!next[a.slug]) next[a.slug] = a.image;
+            return next;
+          });
+        })
+        .catch(() => {});
     }, 260);
     return () => {
       alive = false;
       clearTimeout(t);
     };
-  }, [artists]);
+  }, [mode, query, artists.length]);
 
   const noteSave = useCallback((key: string, record: SaveRecord) => {
     setSavedIn((m) => ({ ...m, [key]: record }));
