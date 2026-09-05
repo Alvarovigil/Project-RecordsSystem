@@ -7,7 +7,6 @@ import { Cover } from "@/components/ui/Avatar";
 import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonCovers } from "@/components/ui/Skeleton";
 import CatalogueSheet, { type CatalogueItem } from "@/components/CatalogueSheet";
-import { RecordGround } from "@/components/record/RecordHero";
 import RecordSheet from "@/components/mobile/RecordSheet";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useToast } from "@/components/ui/Toast";
@@ -204,18 +203,19 @@ export default function ArtistView({ slug }: { slug: string }) {
        * propio color con el nombre centrado debajo — y las dos son la misma
        * clase de página: una cosa del catálogo que has ido a mirar.
        *
-       * Así que el retrato hace de portada, con su propio fondo difuminado, y
-       * lo que cambia es lo que cambia de verdad: es redondo, porque es una
-       * cara, y debajo van los números que sí se pueden contar de un artista
-       * en lugar de los chips de una edición.
+       * Así que la foto ocupa la parte de arriba entera y se disuelve hacia
+       * abajo en el fondo de la aplicación, con el nombre apoyado en ese
+       * degradado. Sin marco: una funda tiene bordes que respetar y una cara
+       * no, y meter el retrato en un círculo sobre una copia difuminada de sí
+       * mismo era dibujar dos veces la misma imagen. Debajo, los números que
+       * sí se pueden contar de un artista en lugar de los chips de una
+       * edición.
        */}
       <header
-        className="relative -mx-5 mb-2 pb-8 sm:-mx-8"
+        className="relative -mx-5 mb-2 pb-6 sm:-mx-8"
         style={{ marginTop: "calc(-1 * max(1.5rem, var(--safe-top)))" }}
       >
-        <RecordGround cover={heroImage} />
-
-        <div className="relative flex h-16 items-center justify-between px-4">
+        <div className="relative z-10 flex h-16 items-center justify-between px-4">
           <button
             onClick={() => router.back()}
             aria-label="Atrás"
@@ -255,50 +255,71 @@ export default function ArtistView({ slug }: { slug: string }) {
           </button>
         </div>
 
-        <div className="relative mx-auto w-full max-w-[440px] px-5 text-center">
-          {/* Redondo y del mismo tamaño que la funda de un disco en su ficha:
-              el retrato ocupa el sitio de la portada, así que si midiera otra
-              cosa las dos pantallas dejarían de rimar. */}
-          {portrait?.image ? (
-            // eslint-disable-next-line @next/next/no-img-element
+        {/**
+         * La foto a sangre, y el nombre encima de ella.
+         *
+         * El retrato estaba metido en un círculo sobre un fondo difuminado —
+         * un marco dentro de otro marco, con la misma imagen dos veces. Una
+         * cara no es una funda: no tiene bordes que respetar ni proporción que
+         * defender, así que ocupa el ancho entero y se disuelve hacia abajo en
+         * el fondo de la aplicación. El degradado hace de suelo donde apoyar el
+         * nombre, que es lo que evita tener que oscurecer la foto entera para
+         * poder leerlo.
+         */}
+        <div className="relative -mt-16">
+          <div className="relative h-[58svh] max-h-[520px] w-full overflow-hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={portrait.image}
-              alt=""
-              className="mx-auto aspect-square w-[62%] max-w-[240px] rounded-full object-cover shadow-[0_26px_60px_rgba(0,0,0,0.62)]"
+              src={heroImage}
+              alt={portrait?.image ? `Foto de ${portrait?.name || name}` : ""}
+              className={`h-full w-full object-cover object-top ${
+                portrait?.image ? "" : "scale-125 blur-2xl"
+              }`}
             />
-          ) : (
-            /* Sin foto no se deja un círculo gris esperando: el catálogo tiene
-               fichas sin retrato y un hueco de relleno se lee como un fallo de
-               carga. El nombre se queda con la parte de arriba, que es lo que
-               habría hecho igualmente. */
-            <div className="h-6" />
-          )}
+            {/* El mismo degradado de seis paradas que la ficha de un disco: casi
+                nada durante el primer tercio, y negro con sitio de sobra antes
+                de las palabras. */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(to bottom," +
+                  "rgba(10,10,10,0.35) 0%," +
+                  "rgba(10,10,10,0.06) 22%," +
+                  "rgba(10,10,10,0.14) 44%," +
+                  "rgba(10,10,10,0.44) 62%," +
+                  "rgba(10,10,10,0.78) 78%," +
+                  "rgba(10,10,10,0.95) 90%," +
+                  "#0a0a0a 100%)",
+              }}
+            />
+          </div>
 
-          <h1 className="mt-7 text-title font-medium leading-tight text-paper">
-            {portrait?.name || name}
-          </h1>
+          <div className="relative -mt-28 mx-auto w-full max-w-[440px] px-5 text-center">
+            <h1 className="text-title font-medium leading-tight text-paper">
+              {portrait?.name || name}
+            </h1>
 
-          <ul className="mt-4 flex flex-wrap justify-center gap-1.5">
-            <li className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary">
-              Artista
-            </li>
-            {owned.length > 0 && (
+            <ul className="mt-4 flex flex-wrap justify-center gap-1.5">
               <li className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary">
-                {owned.length} {owned.length === 1 ? "disco tuyo" : "discos tuyos"}
+                Artista
               </li>
-            )}
-            {more !== null && more.length > 0 && (
-              <li className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary">
-                {more.length} por descubrir
-              </li>
-            )}
-          </ul>
+              {owned.length > 0 && (
+                <li className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary">
+                  {owned.length} {owned.length === 1 ? "disco tuyo" : "discos tuyos"}
+                </li>
+              )}
+              {more !== null && more.length > 0 && (
+                <li className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary">
+                  {more.length} por descubrir
+                </li>
+              )}
+            </ul>
 
-          {owned.length === 0 && (
-            <p className="mt-4 text-sub text-content-muted">
-              Todavía no tienes ninguno suyo.
-            </p>
-          )}
+            {owned.length === 0 && (
+              <p className="mt-4 text-sub text-content-muted">Todavía no tienes ninguno suyo.</p>
+            )}
+          </div>
         </div>
       </header>
 
