@@ -29,12 +29,10 @@ import { findCollection, findWishlist, isWished, type Collection } from "@/lib/c
 function Panel({
   open,
   onClose,
-  stage,
   children,
 }: {
   open: boolean;
   onClose: () => void;
-  stage: "shelf" | "flat";
   children: React.ReactNode;
 }) {
   const { isPhone } = useDevice();
@@ -59,14 +57,10 @@ function Panel({
         <motion.div
           role="dialog"
           aria-modal="true"
-          /* Over the shelf the panel itself must not move or fade: what is
-             behind it is the record, and sliding a transparent sheet over a
-             thing you can see through it is a shudder with no cause. The
-             content inside does the arriving. */
-          initial={stage === "shelf" ? false : { opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={stage === "shelf" ? { opacity: 0 } : { opacity: 0, y: 16 }}
-          transition={{ duration: stage === "shelf" ? 0.3 : 0.22, ease: [0.16, 1, 0.3, 1] }}
+          exit={{ opacity: 0, y: 16 }}
+          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
           /* Below the app's dialog layer (70), not above it: this is a
              screen, and everything opened from it — guardar, compartir, el
              confirmar de borrar — is a sheet that has to land on top. At 80 it
@@ -83,9 +77,7 @@ function Panel({
            * clock and the island. The inset belongs to the frame, which does
            * not scroll; the scroller lives inside it and is clipped by it.
            */
-          className={`fixed inset-0 z-[60] ${
-            stage === "shelf" ? "bg-transparent" : "bg-surface-raised"
-          }`}
+          className="fixed inset-0 z-[60] bg-surface-raised"
           style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }}
         >
           <div className="scroll-y h-full overflow-y-auto">{children}</div>
@@ -145,7 +137,6 @@ export default function RecordSheet({
   onAddTo,
   onRemoveFromActive,
   onDelete,
-  stage = "flat",
   canEdit = true,
 }: {
   vinyl: Vinyl | null;
@@ -167,17 +158,6 @@ export default function RecordSheet({
    * is the point of this sheet being one sheet.
    */
   canEdit?: boolean;
-  /**
-   * What is behind this screen.
-   *
-   * "shelf" means it was opened from the phone's 3D shelf, which has already
-   * cleared the pile and turned this record to face you. The screen then does
-   * not draw a cover at all — it leaves that space empty so the object itself
-   * shows through, and everything else rises into the bottom of it. "flat" is
-   * the screen as it was: opened from a grid, a search or somebody else's
-   * rack, with nothing behind it and its own picture of the sleeve.
-   */
-  stage?: "shelf" | "flat";
 }) {
   const repo = useRepository();
   const toast = useToast();
@@ -281,7 +261,7 @@ export default function RecordSheet({
        * is a button in the corner rather than a gesture that competes with
        * reading a tracklist.
        */}
-      <Panel open={Boolean(vinyl)} onClose={onClose} stage={stage}>
+      <Panel open={Boolean(vinyl)} onClose={onClose}>
         {/**
          * One header, always the same height.
          *
@@ -371,15 +351,7 @@ export default function RecordSheet({
               faded out. It costs nothing — the image is already downloaded —
               and it is what stops a black page with a square in the middle
               from looking like a file browser. */}
-          {/* No wash over the shelf: the light in that scene is the scene's
-              own, and a blurred copy of the cover laid over a live render of
-              the same cover is the same picture twice. */}
-          <div
-            aria-hidden
-            className={`pointer-events-none absolute inset-x-0 -top-16 h-[560px] overflow-hidden ${
-              stage === "shelf" ? "hidden" : ""
-            }`}
-          >
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-16 h-[560px] overflow-hidden">
             {/**
              * Turned up, because at 30% it was a rumour.
              *
@@ -423,65 +395,16 @@ export default function RecordSheet({
              * disc belongs to the 3D stack, where it is the real thing rather
              * than an impression of one.
              */}
-            {/**
-             * The sleeve — or the room where the real one already is.
-             *
-             * Over the shelf this draws nothing. The 3D record is behind this
-             * screen, centred and turned to face you by the same tap that
-             * opened it, so the only correct thing to put here is the space it
-             * occupies. Anything else is a photograph of an object you can
-             * see.
-             */}
-            {stage === "shelf" ? (
-              /**
-               * Room for the record, measured against the screen rather than
-               * against this column.
-               *
-               * The 3D sleeve is placed by the camera, not by this layout, and
-               * it lands around the middle of the display — so a square the
-               * width of the text column would have left the words on top of
-               * it. The space is a fraction of the viewport, which is the same
-               * thing the camera is working in.
-               */
-              <div aria-hidden className="h-[62svh]" />
-            ) : (
-              <div className="relative mx-auto mt-3 w-[76%]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={coverFor(vinyl)}
-                  alt={`Portada de ${vinyl.title}`}
-                  className="relative aspect-square w-full rounded-[3px] object-cover shadow-[0_26px_60px_rgba(0,0,0,0.62)]"
-                />
-              </div>
-            )}
+            <div className="relative mx-auto mt-3 w-[76%]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverFor(vinyl)}
+                alt={`Portada de ${vinyl.title}`}
+                className="relative aspect-square w-full rounded-[3px] object-cover shadow-[0_26px_60px_rgba(0,0,0,0.62)]"
+              />
+            </div>
 
             <div ref={sentinel} aria-hidden />
-
-            {/**
-             * Everything that is not the record, arriving from underneath it.
-             *
-             * Over the shelf this is the only thing that moves: the sleeve was
-             * already placed by the tap that opened the screen, so what is
-             * left is the words rising into the bottom of the frame a beat
-             * later — long enough for the pile to have cleared and the record
-             * to have settled, short enough that it reads as one movement
-             * rather than two screens.
-             *
-             * It carries its own ground. Transparent where it meets the
-             * record, opaque by the time there is anything to read, and
-             * full-bleed because a column of colour down the middle of a dark
-             * screen is a shape nobody meant to draw.
-             */}
-            <motion.div
-              initial={stage === "shelf" ? { opacity: 0, y: 34 } : false}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.34, ease: [0.16, 1, 0.3, 1] }}
-              className={
-                stage === "shelf"
-                  ? "-mx-5 bg-gradient-to-b from-transparent via-surface-raised/94 via-[18%] to-surface-raised px-5 pt-10"
-                  : ""
-              }
-            >
 
             <h2 className="mt-7 text-title font-medium leading-tight text-paper">{vinyl.title}</h2>
             {/* The artist is a door, not a caption. It is the most obvious
@@ -728,7 +651,6 @@ export default function RecordSheet({
                 </Card>
               )}
             </div>
-            </motion.div>
           </div>
         </div>
 

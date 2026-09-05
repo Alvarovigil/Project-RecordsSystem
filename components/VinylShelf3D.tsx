@@ -138,21 +138,6 @@ type Props = {
    * scenery. A plain prop crosses that boundary.
    */
   handleRef?: { current: VinylShelfHandle | null };
-  /**
-   * Which record is open, as a prop rather than as a command.
-   *
-   * The desktop drives this through the imperative handle, which works there
-   * because the shelf and the screen are the same component. The phone opens a
-   * record from one component and draws the screen in another, and threading a
-   * ref through `next/dynamic`, a `memo` and a `forwardRef` to fire a method at
-   * exactly the right moment is three chances to end up holding null — which is
-   * what happened: the sleeve never moved and the record screen laid its words
-   * over an untouched pile.
-   *
-   * A number is not a moment. It can arrive late, it can arrive twice, and the
-   * shelf ends up in the same pose either way.
-   */
-  openIndex?: number | null;
 };
 
 /** Everything about the light that is worth arguing over. */
@@ -181,17 +166,6 @@ export type VinylShelfHandle = {
 };
 
 
-
-/**
- * Scratch vectors for the selected-record pose.
- *
- * Module-level and reused: this runs inside the frame loop, and allocating
- * three vectors sixty times a second is how a phone's garbage collector ends
- * up stuttering a scene that is otherwise cheap.
- */
-const TMP_FWD = new THREE.Vector3();
-const TMP_UP = new THREE.Vector3();
-const TMP_POS = new THREE.Vector3();
 
 const SLEEVE_W = 3;
 const SLEEVE_H = 3;
@@ -424,7 +398,6 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     onActiveChange,
     onCoverHalfWidth,
     ambient = false,
-    openIndex = undefined,
     vertical = false,
     rig,
     drift = 0.09,
@@ -670,30 +643,6 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     [vinilos.length],
   );
 
-  /**
-   * Selecting a record, done as cheaply as it can be done.
-   *
-   * The first version of this drove the shelf's full open pose from here: the
-   * pile dropping away, the camera rising to meet the sleeve, the sleeve
-   * flipping to face it. It looked right on a laptop and it is three animated
-   * systems at once on a phone that is also rendering a WebGL scene, and this
-   * app has to stay usable on a handset somebody has had for four years.
-   *
-   * So the whole thing is one property: everything that is not the selected
-   * record fades out. No camera move, no flip, no strip drop — the shelf
-   * scrolls the record to the middle exactly as it does when you swipe, and
-   * the rest stop being drawn. Opacity is the cheapest thing in a renderer,
-   * and "the others are gone" is the entire idea anyway.
-   */
-  const focusRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (openIndex === undefined) return;
-    focusRef.current = openIndex;
-    if (openIndex !== null) goToIdx(openIndex);
-    // goToIdx only reads refs and the list length
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openIndex]);
-
   const containerRef = useRef<HTMLDivElement>(null);
   // keep the latest list length in a ref so the input handlers (mounted once
   // on first effect) always read the up-to-date value after a collection
@@ -724,9 +673,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     let snapTimer: ReturnType<typeof setTimeout> | null = null;
     const snapToNearest = () => {
       snapTimer = null;
-      // locked while a record is selected: the shelf is not a list you are
-      // browsing at that moment, it is one object you are looking at
-      if (openTarget.current > 0 || focusRef.current !== null) return;
+      if (openTarget.current > 0) return;
       target.current = clampToList(Math.round(target.current));
     };
     const scheduleSnap = () => {
@@ -741,9 +688,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       if (tag === "INPUT" || tag === "TEXTAREA") return;
       // let scrolling pass through inside any overlay that opts in
       if (t.closest("[data-scrollable]")) return;
-      // locked while a record is selected: the shelf is not a list you are
-      // browsing at that moment, it is one object you are looking at
-      if (openTarget.current > 0 || focusRef.current !== null) return;
+      if (openTarget.current > 0) return;
       e.preventDefault();
       const delta = vertical
         ? e.deltaY
@@ -767,9 +712,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     let lastPos = 0;
     let lastAt = 0;
     const onDown = (e: PointerEvent) => {
-      // locked while a record is selected: the shelf is not a list you are
-      // browsing at that moment, it is one object you are looking at
-      if (openTarget.current > 0 || focusRef.current !== null) return; // no drag while opened
+      if (openTarget.current > 0) return; // no drag while opened
       dragging.current = true;
       velocity.current = 0; // catching a moving shelf stops it, like a list
       /**
@@ -857,9 +800,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     window.addEventListener("pointercancel", onUp);
 
     const onKey = (e: KeyboardEvent) => {
-      // locked while a record is selected: the shelf is not a list you are
-      // browsing at that moment, it is one object you are looking at
-      if (openTarget.current > 0 || focusRef.current !== null) return;
+      if (openTarget.current > 0) return;
       const fwd = vertical ? "ArrowDown" : "ArrowRight";
       const back = vertical ? "ArrowUp" : "ArrowLeft";
       if (e.key === fwd) target.current = clampToList(Math.round(target.current) + 1);
@@ -964,7 +905,6 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
         <Suspense fallback={null}>
           <Strip
             ambient={ambient}
-            focusRef={focusRef}
             draggingRef={dragging}
             velocityRef={velocity}
             vertical={vertical}
@@ -1009,7 +949,6 @@ export default memo(VinylShelf3D);
 
 function Strip({
   ambient,
-  focusRef,
   draggingRef,
   velocityRef,
   vertical,
@@ -1054,8 +993,6 @@ function Strip({
   currentRef: React.MutableRefObject<number>;
   openTargetRef: React.MutableRefObject<number>;
   openProgressRef: React.MutableRefObject<number>;
-  /** which sleeve is selected, or null: the others fade out */
-  focusRef: React.MutableRefObject<number | null>;
   onSettle: (idx: number) => void;
   onClick: (v: Vinyl) => void;
   stripY: number;
@@ -1303,11 +1240,9 @@ function Strip({
             wheelStep={wheelStep}
             wheelLean={wheelLean}
             baseIndex={i + c * N}
-            listIndex={i}
             modulus={modulus}
             currentRef={currentRef}
             openProgressRef={openProgressRef}
-            focusRef={focusRef}
             spacing={spacing}
             visibleX={visibleX}
             fanStrength={fanStrength}
@@ -1333,8 +1268,6 @@ function Strip({
 
 function Sleeve({
   vinyl,
-  focusRef,
-  listIndex,
   vertical,
   wheelR,
   wheelStep,
@@ -1369,9 +1302,6 @@ function Sleeve({
   modulus: number;
   currentRef: React.MutableRefObject<number>;
   openProgressRef: React.MutableRefObject<number>;
-  focusRef: React.MutableRefObject<number | null>;
-  /** position in the list, not in the carousel: the strip repeats the list */
-  listIndex: number;
   spacing: number;
   visibleX: number;
   fanStrength: number;
@@ -1489,12 +1419,8 @@ function Sleeve({
   const revealRef = useRef(0);
   const revealStartRef = useRef<number | null>(null);
   const transparentRef = useRef(false);
-  /** 1 while this sleeve is wanted on screen, 0 once another one is selected */
-  const dimRef = useRef(1);
-  /** 1 while this sleeve IS the selected one: it takes the reading pose */
-  const poseRef = useRef(0);
 
-  useFrame((state) => {
+  useFrame(() => {
     if (!meshGroupRef.current) return;
     // wrap the position to [-modulus/2, modulus/2) so the vinyl quietly loops
     let delta = (baseIndex - currentRef.current) % modulus;
@@ -1515,29 +1441,7 @@ function Sleeve({
       );
       revealRef.current = EASINGS.easeOutCubic(p);
     }
-    /**
-     * Everything that is not the selected record, on its way out.
-     *
-     * Eased in the frame loop rather than tweened by a library: it is one
-     * number per sleeve per frame, it stops the moment it arrives, and it
-     * reuses the transparency the reveal already sets up — so selecting a
-     * record costs the renderer nothing it was not already doing when the
-     * shelf first appeared.
-     */
-    const focus = focusRef.current;
-    const wanted = focus === null || focus === listIndex ? 1 : 0;
-    // Slower than it was: at 0.16 a frame the record arrived in a quarter of a
-    // second, which on something this large reads as a snap rather than as a
-    // movement. Half that is around half a second — long enough to be watched,
-    // short enough that nobody is waiting for it.
-    dimRef.current += (wanted - dimRef.current) * 0.075;
-    if (Math.abs(wanted - dimRef.current) < 0.004) dimRef.current = wanted;
-
-    const wantPose = focus !== null && focus === listIndex ? 1 : 0;
-    poseRef.current += (wantPose - poseRef.current) * 0.075;
-    if (Math.abs(wantPose - poseRef.current) < 0.004) poseRef.current = wantPose;
-
-    const reveal = revealRef.current * dimRef.current;
+    const reveal = revealRef.current;
     if (reveal < 1) {
       // Fading in, but STILL writing depth: three.js draws transparent meshes
       // back-to-front without it, so the fanned sleeves showed through each
@@ -1674,49 +1578,6 @@ function Sleeve({
       meshGroupRef.current.position.y = lift;
       meshGroupRef.current.position.z = 0;
     }
-    /**
-     * The selected record, taken out of the wheel and held up to be read.
-     *
-     * Blended over the pose the wheel just computed rather than replacing it,
-     * so the movement starts wherever the sleeve happened to be and there is
-     * no jump at either end.
-     *
-     * The target is derived from the camera instead of written down: a point
-     * a fixed distance in front of it, raised along its own up vector, facing
-     * it exactly. That is what "perpendicular to the camera" means, and doing
-     * it with the camera's own quaternion is both shorter and correct on any
-     * screen shape — a hardcoded rotation is right for one handset and wrong
-     * for the next.
-     *
-     * Only in the pile: the desktop rack has its own open pose and is driven
-     * by the imperative handle it has always used.
-     */
-    if (vertical && poseRef.current > 0.001) {
-      const cam = state.camera;
-      const t = EASINGS.easeInOutCubic(poseRef.current);
-      TMP_FWD.set(0, 0, -1).applyQuaternion(cam.quaternion);
-      TMP_UP.set(0, 1, 0).applyQuaternion(cam.quaternion);
-      /**
-       * Framed, not bled.
-       *
-       * A fixed 9.6 put the sleeve nearer the lens than the pile sits, so it
-       * filled the width and ran off both edges — a record cropped by the
-       * screen reads as a background image rather than as an object being
-       * held up. Both numbers are relative to the camera's own distance
-       * instead: 1.22 of it leaves a margin down each side on any screen
-       * shape, and raising it by an eighth of that distance puts it in the top
-       * third, which is where the screen underneath leaves its room.
-       */
-      const dist = cam.position.length() * 1.22;
-      TMP_POS.copy(cam.position)
-        .addScaledVector(TMP_FWD, dist)
-        .addScaledVector(TMP_UP, dist * 0.115);
-      const parent = meshGroupRef.current.parent;
-      if (parent) parent.worldToLocal(TMP_POS);
-      meshGroupRef.current.position.lerp(TMP_POS, t);
-      meshGroupRef.current.quaternion.slerp(cam.quaternion, t);
-    }
-
     const s = 0.97 + reveal * 0.03;
     meshGroupRef.current.scale.set(s, s, 1);
 
