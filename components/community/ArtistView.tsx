@@ -7,6 +7,7 @@ import { Cover } from "@/components/ui/Avatar";
 import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonCovers } from "@/components/ui/Skeleton";
 import CatalogueSheet, { type CatalogueItem } from "@/components/CatalogueSheet";
+import { RecordGround } from "@/components/record/RecordHero";
 import RecordSheet from "@/components/mobile/RecordSheet";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useToast } from "@/components/ui/Toast";
@@ -115,6 +116,34 @@ export default function ArtistView({ slug }: { slug: string }) {
     };
   }, [name, anchor, group, lib.releases]);
 
+  /**
+   * De dónde sale el color del fondo.
+   *
+   * Del retrato si lo hay, y si no de la portada de uno de sus discos: lo que
+   * no puede pasar es que la cabecera se quede en negro plano mientras la
+   * ficha de cualquiera de esos discos sí tiene fondo. Una funda vacía es el
+   * último recurso, el mismo que usa el resto de la aplicación.
+   */
+  const heroImage =
+    portrait?.image ??
+    (group?.records[0] ? coverFor(group.records[0]) : null) ??
+    "/sleeve-vacio.jpg";
+
+  /** Compartir es la única acción que tiene sentido aquí, y es la del disco. */
+  const share = async () => {
+    const url = typeof window === "undefined" ? "" : window.location.href;
+    const title = portrait?.name || name;
+    try {
+      if (navigator.share) await navigator.share({ title, url });
+      else {
+        await navigator.clipboard.writeText(url);
+        toast.show("Enlace copiado");
+      }
+    } catch {
+      /* cancelar el diálogo del sistema no es un error */
+    }
+  };
+
   const save = async (item: CatalogueItem) => {
     if (!mine) return;
     setSaving(item.id);
@@ -143,45 +172,110 @@ export default function ArtistView({ slug }: { slug: string }) {
 
   return (
     <Page width="full">
-      <header className="pb-9 pt-2">
-        <button
-          onClick={() => router.back()}
-          className="pressable mb-7 flex items-center gap-2 text-sub text-content-muted transition hover:text-paper"
-        >
-          <span aria-hidden>←</span> Atrás
-        </button>
+      {/**
+       * La misma cabecera que un disco, con una persona dentro.
+       *
+       * Era un encabezado de documento: una miniatura de 92px, la palabra
+       * «Artista» en versalitas y un título a la izquierda. La ficha de un
+       * disco, a dos pantallas de distancia, es una portada grande sobre su
+       * propio color con el nombre centrado debajo — y las dos son la misma
+       * clase de página: una cosa del catálogo que has ido a mirar.
+       *
+       * Así que el retrato hace de portada, con su propio fondo difuminado, y
+       * lo que cambia es lo que cambia de verdad: es redondo, porque es una
+       * cara, y debajo van los números que sí se pueden contar de un artista
+       * en lugar de los chips de una edición.
+       */}
+      <header
+        className="relative -mx-5 mb-2 pb-8 sm:-mx-8"
+        style={{ marginTop: "calc(-1 * max(1.5rem, var(--safe-top)))" }}
+      >
+        <RecordGround cover={heroImage} />
 
-        {/**
-         * A face, when there is one.
-         *
-         * An artist without a portrait is a heading, and a page of headings is
-         * a directory. The picture comes from the same catalogue as everything
-         * else here and through the same proxy as the sleeves — Discogs
-         * refuses to serve its images to another site.
-         *
-         * When there is no photograph the space is not held open with a grey
-         * circle: the name simply takes the top of the page, which is what it
-         * would have done anyway.
-         */}
-        <div className="flex items-end gap-5">
-          {portrait?.image && (
+        <div className="relative flex h-16 items-center justify-between px-4">
+          <button
+            onClick={() => router.back()}
+            aria-label="Atrás"
+            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-paper/[0.10] text-paper backdrop-blur-xl transition-colors hover:bg-paper/20"
+          >
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden>
+              <path
+                d="M11.5 3.5 L5.5 9 L11.5 14.5"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+
+          <button
+            onClick={share}
+            aria-label={`Compartir a ${portrait?.name || name}`}
+            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-paper/[0.10] text-paper backdrop-blur-xl transition-colors hover:bg-paper/20"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path
+                d="M8 10.5V2.6 M5 5.4 L8 2.4 L11 5.4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M3.2 9.4v3.2a1 1 0 0 0 1 1h7.6a1 1 0 0 0 1-1V9.4"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div className="relative mx-auto w-full max-w-[440px] px-5 text-center">
+          {/* Redondo y del mismo tamaño que la funda de un disco en su ficha:
+              el retrato ocupa el sitio de la portada, así que si midiera otra
+              cosa las dos pantallas dejarían de rimar. */}
+          {portrait?.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={portrait.image}
               alt=""
-              className="h-[92px] w-[92px] shrink-0 rounded-full object-cover sm:h-[120px] sm:w-[120px]"
+              className="mx-auto aspect-square w-[62%] max-w-[240px] rounded-full object-cover shadow-[0_26px_60px_rgba(0,0,0,0.62)]"
             />
+          ) : (
+            /* Sin foto no se deja un círculo gris esperando: el catálogo tiene
+               fichas sin retrato y un hueco de relleno se lee como un fallo de
+               carga. El nombre se queda con la parte de arriba, que es lo que
+               habría hecho igualmente. */
+            <div className="h-6" />
           )}
-          <div className="min-w-0">
-            <p className="text-caption uppercase tracking-label text-content-muted">Artista</p>
-            <h1 className="mt-2 text-display font-medium leading-tight text-paper">
-              {portrait?.name || name}
-            </h1>
-            <p className="mt-2 text-sub text-content-muted">
-              {owned.length === 0
-                ? "Todavía no tienes ninguno suyo."
-                : `${owned.length} ${owned.length === 1 ? "disco" : "discos"} en tu colección`}
+
+          <h1 className="mt-7 text-title font-medium leading-tight text-paper">
+            {portrait?.name || name}
+          </h1>
+
+          <ul className="mt-4 flex flex-wrap justify-center gap-1.5">
+            <li className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary">
+              Artista
+            </li>
+            {owned.length > 0 && (
+              <li className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary">
+                {owned.length} {owned.length === 1 ? "disco tuyo" : "discos tuyos"}
+              </li>
+            )}
+            {more !== null && more.length > 0 && (
+              <li className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary">
+                {more.length} por descubrir
+              </li>
+            )}
+          </ul>
+
+          {owned.length === 0 && (
+            <p className="mt-4 text-sub text-content-muted">
+              Todavía no tienes ninguno suyo.
             </p>
-          </div>
+          )}
         </div>
       </header>
 

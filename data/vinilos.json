@@ -3698,5 +3698,86 @@
         "duration": "2:25"
       }
     ]
+  },
+  {
+    "id": "ariana-grande-thank-u-next-14567209",
+    "title": "Thank U, Next",
+    "artist": "Ariana Grande",
+    "year": 2019,
+    "genre": "Hip Hop",
+    "label": "Republic Records",
+    "country": "USA & Europe",
+    "palette": [
+      "#888",
+      "#666",
+      "#444",
+      "#222",
+      "#000"
+    ],
+    "discogsId": 14567209,
+    "cover": "/covers/ariana-grande-thank-u-next-14567209.jpg",
+    "previewUrl": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/a0/d7/e8/a0d7e88e-3a96-18c1-6360-53160b185732/mzaf_11851770940343250582.plus.aac.p.m4a",
+    "tracklist": [
+      {
+        "position": "A1",
+        "title": "Imagine",
+        "duration": ""
+      },
+      {
+        "position": "A2",
+        "title": "Needy",
+        "duration": ""
+      },
+      {
+        "position": "A3",
+        "title": "NASA",
+        "duration": ""
+      },
+      {
+        "position": "B1",
+        "title": "Bloodline",
+        "duration": ""
+      },
+      {
+        "position": "B2",
+        "title": "Fake Smile",
+        "duration": ""
+      },
+      {
+        "position": "B3",
+        "title": "Bad Idea",
+        "duration": ""
+      },
+      {
+        "position": "C1",
+        "title": "Make Up",
+        "duration": ""
+      },
+      {
+        "position": "C2",
+        "title": "Ghostin",
+        "duration": ""
+      },
+      {
+        "position": "C3",
+        "title": "In My Head",
+        "duration": ""
+      },
+      {
+        "position": "D1",
+        "title": "7 Rings",
+        "duration": ""
+      },
+      {
+        "position": "D2",
+        "title": "Thank U, Next",
+        "duration": ""
+      },
+      {
+        "position": "D3",
+        "title": "Break Up With Your Girlfriend, I'm Bored",
+        "duration": ""
+      }
+    ]
   }
 ]
