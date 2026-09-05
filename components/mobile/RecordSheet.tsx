@@ -77,7 +77,17 @@ function Panel({
            * clock and the island. The inset belongs to the frame, which does
            * not scroll; the scroller lives inside it and is clipped by it.
            */
-          className="fixed inset-0 z-[60] bg-surface-raised"
+          /**
+           * Black, not the lifted grey.
+           *
+           * `--surface-raised` is #101010 — a step up from the app's ground so
+           * that a panel over a page reads as being on top of it. This screen
+           * is not on top of anything: it takes the whole display, and the
+           * subject is a square of printed artwork. Any grey behind that is a
+           * value competing with the cover, and it is exactly what the wash
+           * was fading into and giving away.
+           */
+          className="fixed inset-0 z-[60] bg-ink"
           style={{ paddingTop: "var(--safe-top)", paddingBottom: "var(--safe-bottom)" }}
         >
           <div className="scroll-y h-full overflow-y-auto">{children}</div>
@@ -280,7 +290,7 @@ export default function RecordSheet({
          */}
         <div className="sticky top-0 z-30 h-14">
           <div
-            className={`absolute inset-0 border-b border-line bg-surface-raised transition-opacity duration-base ease-out ${
+            className={`absolute inset-0 border-b border-line bg-ink transition-opacity duration-base ease-out ${
               scrolled ? "opacity-100" : "opacity-0"
             }`}
           />
@@ -351,28 +361,32 @@ export default function RecordSheet({
               faded out. It costs nothing — the image is already downloaded —
               and it is what stops a black page with a square in the middle
               from looking like a file browser. */}
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-16 h-[560px] overflow-hidden">
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-16 h-[78svh] overflow-hidden">
             {/**
-             * Turned up, because at 30% it was a rumour.
+             * Loud, and measured against the screen rather than in pixels.
              *
-             * The colour of the sleeve is the only thing that makes this
-             * screen belong to *this* record rather than to the template, and
-             * it was so faint that a dark cover produced no screen at all. At
-             * 55% it is light in the room; the blur is what keeps it from ever
-             * being a picture, and the gradient below is what keeps it from
-             * ending in a line.
+             * This started at 30% of a 520px box, which on a dark sleeve
+             * produced nothing at all. The colour of the cover is the only
+             * thing that makes this screen belong to *this* record instead of
+             * to the template, so it is worth spending real light on: 80%, a
+             * good deal more saturated, blown up further so the corners of the
+             * artwork never show as corners, and reaching most of the way down
+             * the display.
+             *
+             * The blur is what keeps it from ever being a picture, and the
+             * gradient is what keeps it from ending in a horizontal line — the
+             * one thing it must not do.
              */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={coverFor(vinyl)}
               alt=""
-              className="h-full w-full scale-150 object-cover opacity-55 blur-3xl saturate-150"
+              className="h-full w-full scale-[1.7] object-cover opacity-80 blur-3xl saturate-[1.7]"
             />
-            {/* Faded to nothing well before the edge of the box: a wash still
-                5% visible where it stops draws a horizontal line across the
-                screen, which is the one thing it must not do. The top stays
-                clear so the colour reaches the very top of the display. */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-surface-raised/55 via-[62%] to-surface-raised" />
+            {/* Holds its colour through the top half and then goes to black
+                fast, so the title and everything under it are read on the app's
+                own ground rather than on a bright sleeve. */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/45 via-[56%] to-ink" />
           </div>
 
           {/* The wash starts at the very top of the screen — the column it
