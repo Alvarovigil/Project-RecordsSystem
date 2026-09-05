@@ -804,9 +804,6 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           vinyl={open}
           stage={openStage}
           onClose={() => {
-            // the sleeve goes back into the pile before the screen leaves, so
-            // the two movements read as one
-            phoneShelfRef.current?.close();
             setOpen(null);
           }}
           collections={resolvedCollections}

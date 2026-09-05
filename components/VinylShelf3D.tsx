@@ -660,20 +660,26 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   );
 
   /**
-   * The declarative half of the same state. Only ever active when the prop is
-   * actually passed, so the desktop's imperative path is untouched.
+   * Selecting a record, done as cheaply as it can be done.
+   *
+   * The first version of this drove the shelf's full open pose from here: the
+   * pile dropping away, the camera rising to meet the sleeve, the sleeve
+   * flipping to face it. It looked right on a laptop and it is three animated
+   * systems at once on a phone that is also rendering a WebGL scene, and this
+   * app has to stay usable on a handset somebody has had for four years.
+   *
+   * So the whole thing is one property: everything that is not the selected
+   * record fades out. No camera move, no flip, no strip drop — the shelf
+   * scrolls the record to the middle exactly as it does when you swipe, and
+   * the rest stop being drawn. Opacity is the cheapest thing in a renderer,
+   * and "the others are gone" is the entire idea anyway.
    */
+  const focusRef = useRef<number | null>(null);
   useEffect(() => {
     if (openIndex === undefined) return;
-    if (openIndex === null) {
-      openTarget.current = 0;
-      setOpenIdx(null);
-      return;
-    }
-    goToIdx(openIndex);
-    openTarget.current = 1;
-    setOpenIdx(openIndex);
-    // goToIdx is stable enough for this: it only reads refs and the list length
+    focusRef.current = openIndex;
+    if (openIndex !== null) goToIdx(openIndex);
+    // goToIdx only reads refs and the list length
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openIndex]);
 
@@ -939,6 +945,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
         <Suspense fallback={null}>
           <Strip
             ambient={ambient}
+            focusRef={focusRef}
             draggingRef={dragging}
             velocityRef={velocity}
             vertical={vertical}
@@ -983,6 +990,7 @@ export default memo(VinylShelf3D);
 
 function Strip({
   ambient,
+  focusRef,
   draggingRef,
   velocityRef,
   vertical,
@@ -1027,6 +1035,8 @@ function Strip({
   currentRef: React.MutableRefObject<number>;
   openTargetRef: React.MutableRefObject<number>;
   openProgressRef: React.MutableRefObject<number>;
+  /** which sleeve is selected, or null: the others fade out */
+  focusRef: React.MutableRefObject<number | null>;
   onSettle: (idx: number) => void;
   onClick: (v: Vinyl) => void;
   stripY: number;
@@ -1274,9 +1284,11 @@ function Strip({
             wheelStep={wheelStep}
             wheelLean={wheelLean}
             baseIndex={i + c * N}
+            listIndex={i}
             modulus={modulus}
             currentRef={currentRef}
             openProgressRef={openProgressRef}
+            focusRef={focusRef}
             spacing={spacing}
             visibleX={visibleX}
             fanStrength={fanStrength}
@@ -1302,6 +1314,8 @@ function Strip({
 
 function Sleeve({
   vinyl,
+  focusRef,
+  listIndex,
   vertical,
   wheelR,
   wheelStep,
@@ -1336,6 +1350,9 @@ function Sleeve({
   modulus: number;
   currentRef: React.MutableRefObject<number>;
   openProgressRef: React.MutableRefObject<number>;
+  focusRef: React.MutableRefObject<number | null>;
+  /** position in the list, not in the carousel: the strip repeats the list */
+  listIndex: number;
   spacing: number;
   visibleX: number;
   fanStrength: number;
@@ -1453,6 +1470,8 @@ function Sleeve({
   const revealRef = useRef(0);
   const revealStartRef = useRef<number | null>(null);
   const transparentRef = useRef(false);
+  /** 1 while this sleeve is wanted on screen, 0 once another one is selected */
+  const dimRef = useRef(1);
 
   useFrame(() => {
     if (!meshGroupRef.current) return;
@@ -1475,7 +1494,21 @@ function Sleeve({
       );
       revealRef.current = EASINGS.easeOutCubic(p);
     }
-    const reveal = revealRef.current;
+    /**
+     * Everything that is not the selected record, on its way out.
+     *
+     * Eased in the frame loop rather than tweened by a library: it is one
+     * number per sleeve per frame, it stops the moment it arrives, and it
+     * reuses the transparency the reveal already sets up — so selecting a
+     * record costs the renderer nothing it was not already doing when the
+     * shelf first appeared.
+     */
+    const focus = focusRef.current;
+    const wanted = focus === null || focus === listIndex ? 1 : 0;
+    dimRef.current += (wanted - dimRef.current) * 0.16;
+    if (Math.abs(wanted - dimRef.current) < 0.004) dimRef.current = wanted;
+
+    const reveal = revealRef.current * dimRef.current;
     if (reveal < 1) {
       // Fading in, but STILL writing depth: three.js draws transparent meshes
       // back-to-front without it, so the fanned sleeves showed through each
