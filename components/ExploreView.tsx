@@ -64,7 +64,6 @@ export default function ExploreView() {
   const params = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
   /** only the phone pill cares: it stays open while the cursor is in it */
-  const [focused, setFocused] = useState(false);
 
   const [query, setQuery] = useState("");
   const [scope, setScope] = useState<Scope>("all");
@@ -302,27 +301,25 @@ export default function ExploreView() {
            thing that floats, and it can only look like it floats if what is
            behind it goes past it. A scrim across the full width would have
            made the blur decorative. */}
-      <div className="sticky top-0 z-20 -mx-5 px-5 pb-3 pt-1 sm:static sm:mx-0 sm:px-0 sm:pb-7 sm:pt-0">
+      <div className="sticky top-0 z-20 -mx-5 bg-surface/95 px-5 pb-3 pt-1 backdrop-blur-md sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-7 sm:pt-0 sm:backdrop-blur-none">
         <div className="mx-auto w-full max-w-[560px]">
           {/**
-           * On a phone this is the same bubble as the list selector on the
-           * shelf: a dark pill with the background blurred through it. That
-           * pairing is the point — one floating control per screen, always the
-           * same object, so the search reads as part of the app's furniture
-           * and not as a web page's form.
+           * Un campo, del ancho de la página.
            *
-           * And it opens. Collapsed it is a button-sized pill saying Buscar,
-           * because with nothing typed the field is a promise, not a workspace;
-           * touched, it takes the full width so the words have room. The width
-           * animates in CSS off `focus-within`, which means it is right on the
-           * very first paint — no hook, no hydration flash on the one screen
-           * where the field is the first thing you see.
+           * Era una píldora que crecía: en reposo medía nueve caracteres y se
+           * quedaba flotando en mitad del ancho, gorda y centrada, con un
+           * palmo de negro a cada lado y otro por encima. La animación era
+           * bonita de describir y el resultado era un botón perdido en medio
+           * de una pantalla vacía — nada más entrar, que es justo cuando hay
+           * que ver qué se puede hacer aquí.
+           *
+           * Ahora es lo que es: un campo, alineado con todo lo demás, del
+           * ancho del contenido y de la altura de un control. Sin sombra ni
+           * aro — está sobre el fondo de la aplicación, no flotando sobre
+           * nada — y sin animación, porque no cambia de tamaño.
            */}
           <div
-            className={`relative mx-auto flex h-12 items-center gap-2 rounded-full bg-paper/[0.07] px-4 shadow-overlay ring-1 ring-inset ring-paper/[0.07] backdrop-blur-xl transition-[width] duration-slow ease-out ${
-              searching || focused ? "w-full" : "w-[9.5rem]"
-            } sm:h-auto sm:w-full sm:gap-0 sm:rounded-none sm:border-b sm:border-line sm:bg-transparent sm:px-0 sm:shadow-none sm:ring-0 sm:backdrop-blur-none sm:transition-colors sm:focus-within:border-line-strong`}
-          >
+            className="relative flex h-11 w-full items-center gap-2.5 rounded-full bg-fill-subtle px-4 transition-colors focus-within:bg-fill sm:h-auto sm:gap-0 sm:rounded-none sm:border-b sm:border-line sm:bg-transparent sm:px-0 sm:focus-within:bg-transparent sm:focus-within:border-line-strong">
             {/* the magnifier lives on the phone only: collapsed to a pill the
                 field has no shape of its own to explain what it is, which is
                 exactly the job the icon exists for — and exactly why the wide
@@ -334,7 +331,7 @@ export default function ExploreView() {
               viewBox="0 0 16 16"
               fill="none"
               aria-hidden
-              className="shrink-0 text-content-faint sm:hidden"
+              className="shrink-0 text-content-muted sm:hidden"
             >
               <circle cx="7" cy="7" r="4.6" stroke="currentColor" strokeWidth="1.4" />
               <path d="M10.4 10.4 L14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -343,11 +340,7 @@ export default function ExploreView() {
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => setFocused(true)}
-              onBlur={() => {
-                setFocused(false);
-                remember(query);
-              }}
+              onBlur={() => remember(query)}
               enterKeyHint="search"
               type="search"
               autoCapitalize="none"
