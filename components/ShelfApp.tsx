@@ -560,6 +560,9 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
    * is the one that was there before.
    */
   const [openStage, setOpenStage] = useState<"shelf" | "flat">("flat");
+  /** which of the phone's two views is showing, so this can tell whether the
+   *  3D shelf is the thing behind an open record */
+  const [phoneView, setPhoneView] = useState<"shelf" | "grid">("shelf");
 
   // a record picked in the grid opens once the shelf has mounted
   const pendingOpenRef = useRef<string | null>(null);
@@ -755,12 +758,12 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           nowPlayingId={nowPlaying?.id}
           isPlaying={playing}
           onOpen={(v) => {
-            const on3d = Boolean(phoneShelfRef.current);
-            const idx = vinilos.findIndex((x) => x.id === v.id);
-            if (on3d && idx >= 0) phoneShelfRef.current?.open(idx);
-            setOpenStage(on3d ? "shelf" : "flat");
+            // the shelf is behind this only in the 3D view; the grid mounts no
+            // canvas, and a record opened there gets the flat screen
+            setOpenStage(phoneView === "shelf" ? "shelf" : "flat");
             setOpen(v);
           }}
+          onViewChange={setPhoneView}
           onActivate={handleActivateCollection}
           onSearch={() => openSearch()}
           onPlay={(v) => (nowPlaying?.id === v.id ? audio.toggleCurrent() : playPreview(v))}
@@ -780,6 +783,11 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           onAcquire={handleAcquire}
           loading={!lib.ready}
           shelfHandle={phoneShelfRef}
+          openIndex={
+            open && phoneView === "shelf"
+              ? (vinilos.findIndex((x) => x.id === open.id) ?? null)
+              : null
+          }
           recordOpen={Boolean(open)}
           readOnly={readOnly}
           onUnsaveList={(id) => {

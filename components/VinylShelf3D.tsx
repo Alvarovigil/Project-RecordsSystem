@@ -138,6 +138,21 @@ type Props = {
    * scenery. A plain prop crosses that boundary.
    */
   handleRef?: { current: VinylShelfHandle | null };
+  /**
+   * Which record is open, as a prop rather than as a command.
+   *
+   * The desktop drives this through the imperative handle, which works there
+   * because the shelf and the screen are the same component. The phone opens a
+   * record from one component and draws the screen in another, and threading a
+   * ref through `next/dynamic`, a `memo` and a `forwardRef` to fire a method at
+   * exactly the right moment is three chances to end up holding null — which is
+   * what happened: the sleeve never moved and the record screen laid its words
+   * over an untouched pile.
+   *
+   * A number is not a moment. It can arrive late, it can arrive twice, and the
+   * shelf ends up in the same pose either way.
+   */
+  openIndex?: number | null;
 };
 
 /** Everything about the light that is worth arguing over. */
@@ -398,6 +413,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     onActiveChange,
     onCoverHalfWidth,
     ambient = false,
+    openIndex = undefined,
     vertical = false,
     rig,
     drift = 0.09,
@@ -642,6 +658,24 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
     }),
     [vinilos.length],
   );
+
+  /**
+   * The declarative half of the same state. Only ever active when the prop is
+   * actually passed, so the desktop's imperative path is untouched.
+   */
+  useEffect(() => {
+    if (openIndex === undefined) return;
+    if (openIndex === null) {
+      openTarget.current = 0;
+      setOpenIdx(null);
+      return;
+    }
+    goToIdx(openIndex);
+    openTarget.current = 1;
+    setOpenIdx(openIndex);
+    // goToIdx is stable enough for this: it only reads refs and the list length
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openIndex]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   // keep the latest list length in a ref so the input handlers (mounted once

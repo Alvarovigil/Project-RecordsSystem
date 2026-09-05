@@ -87,6 +87,8 @@ export default function MobileShelf({
   onAcquire,
   loading = false,
   shelfHandle,
+  openIndex = null,
+  onViewChange,
   recordOpen = false,
   readOnly = false,
 }: {
@@ -126,6 +128,11 @@ export default function MobileShelf({
    * continuation of this one rather than a picture laid over it.
    */
   shelfHandle?: { current: VinylShelfHandle | null };
+  /** which record is open on the shelf, or null — see VinylShelf3D */
+  openIndex?: number | null;
+  /** the shelf owns which of its two views is showing; the app needs to know
+   *  because it decides whether an opened record has the 3D behind it */
+  onViewChange?: (v: "shelf" | "grid") => void;
   /** a record is open: the shelf is the subject, so its chrome gets out */
   recordOpen?: boolean;
   /** the shelf is showing somebody else's list, so it cannot be edited */
@@ -145,6 +152,10 @@ export default function MobileShelf({
    * the wrong one.
    */
   const [view, setView] = useState<"shelf" | "grid">("shelf");
+  // the app above needs this to know what is behind an opened record
+  useEffect(() => {
+    onViewChange?.(view);
+  }, [view, onViewChange]);
   const [switching, setSwitching] = useState(false);
   /**
    * Same order as the desktop panel: the two you always have, a rule, then the
@@ -281,6 +292,7 @@ export default function MobileShelf({
           <VinylShelf3D
             vertical
             handleRef={shelfHandle}
+            openIndex={openIndex}
             rig={lab ? rig : undefined}
             vinilos={vinilos}
             onOpen={onOpen}
