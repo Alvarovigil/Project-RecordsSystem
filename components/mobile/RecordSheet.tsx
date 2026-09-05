@@ -312,35 +312,34 @@ export default function RecordSheet({
          */}
         <div className="sticky top-0 z-30 h-16">
           {/**
-           * Frosted, not a slab.
+           * The same bar as the player at the foot of the app.
            *
-           * It was flat ink with a hairline under it, which is a toolbar — the
-           * thing a document has. A bar that lets the record's own colour
-           * through it and blurs what passes underneath belongs to the object
-           * you are looking at, and it is what every music app on a phone has
-           * taught people a "now looking at this" bar looks like.
+           * There were two designs for one object: down there a square sleeve
+           * with the artist set in mono capitals and an outlined circle for
+           * play; up here a rounded thumbnail, sentence case and a filled
+           * circle. Both were fine and together they said the app was built by
+           * two people. This is the player's design, with a back button on the
+           * left and pinned to the top instead of the bottom — which is the
+           * whole of the difference, and the only part of it that is a
+           * difference in *job*.
            *
-           * The rule under it is a gradient rather than a border. A 1px line
-           * across a translucent bar is the one place the trick gives itself
-           * away: the line is opaque where nothing else is.
+           * It keeps its own glass rather than the player's flat ink, because
+           * a bar at the top of a record has that record's artwork moving
+           * underneath it and a solid one would be a lid.
            */}
           <div
             className={`absolute inset-0 transition-opacity duration-base ease-out ${
               scrolled ? "opacity-100" : "opacity-0"
             }`}
           >
-            <div className="absolute inset-0 bg-ink/70 backdrop-blur-2xl backdrop-saturate-150" />
-            <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-paper/12 to-transparent" />
+            <div className="absolute inset-0 bg-ink/88 backdrop-blur-2xl" />
+            <div className="absolute inset-x-0 bottom-0 h-px bg-line" />
           </div>
 
-          <div className="relative flex h-16 items-center gap-3 px-3">
+          <div className="relative flex h-16 items-center gap-3 px-4">
             <button
               onClick={onClose}
               aria-label="Cerrar"
-              /* Glass in both states now. It used to drop its background once
-                 the bar arrived, on the grounds that a pill on a panel is one
-                 shape too many — but the bar is glass too, and a bare glyph on
-                 it reads as unfinished next to the play button opposite. */
               className="pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-paper/[0.10] text-paper backdrop-blur-xl transition-colors hover:bg-paper/20"
             >
               <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden>
@@ -356,11 +355,7 @@ export default function RecordSheet({
 
             {/* Once the artwork has scrolled away, the title and the transport
                 come with you. Reading a tracklist and having to scroll back up
-                to press play is the whole reason people close these.
-
-                It arrives from a little below rather than simply appearing:
-                the same movement the sleeve made going out of frame, so the
-                two read as one thing replacing another. */}
+                to press play is the whole reason people close these. */}
             <div
               className={`flex min-w-0 flex-1 items-center gap-3 transition-[opacity,transform] duration-base ease-out ${
                 scrolled
@@ -368,37 +363,31 @@ export default function RecordSheet({
                   : "pointer-events-none translate-y-1.5 opacity-0"
               }`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={coverFor(vinyl)}
-                alt=""
-                className="h-10 w-10 shrink-0 rounded-[3px] object-cover shadow-[0_4px_14px_rgba(0,0,0,0.55)]"
-              />
+              {/* square and unrounded, like the player's: a sleeve is square */}
+              <span className="h-10 w-10 shrink-0 overflow-hidden bg-paper/[0.06]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={coverFor(vinyl)} alt="" className="h-full w-full object-cover" />
+              </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sub font-medium leading-tight text-paper">
-                  {vinyl.title}
-                </span>
-                <span className="mt-0.5 block truncate text-caption leading-tight text-content-muted">
+                <span className="block truncate text-[13px] text-paper">{vinyl.title}</span>
+                <span className="mono block truncate text-[10px] uppercase tracking-[0.16em] text-paper/40">
                   {cleanArtist(vinyl.artist)}
                 </span>
               </span>
-              {/* Filled, like the one on the record itself. An outlined circle
-                  here and a filled one below are two different buttons for the
-                  same act. */}
               <button
                 onClick={() => onTogglePlay(vinyl)}
                 disabled={!vinyl.previewUrl}
                 aria-label={playing ? "Pausar" : `Escuchar ${vinyl.title}`}
-                className="pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-paper text-ink disabled:opacity-30"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-paper/25 text-paper transition hover:border-paper/60 disabled:opacity-30"
               >
                 {playing ? (
-                  <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden>
-                    <rect x="3" y="2" width="3" height="10" rx="0.6" fill="currentColor" />
-                    <rect x="8" y="2" width="3" height="10" rx="0.6" fill="currentColor" />
+                  <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden>
+                    <rect x="3" y="2" width="3" height="10" fill="currentColor" />
+                    <rect x="8" y="2" width="3" height="10" fill="currentColor" />
                   </svg>
                 ) : (
-                  <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden className="translate-x-[1px]">
-                    <path d="M3 1.8 L12 7 L3 12.2 Z" fill="currentColor" />
+                  <svg width="12" height="12" viewBox="0 0 14 14" aria-hidden className="translate-x-[1px]">
+                    <path d="M3 2 L12 7 L3 12 Z" fill="currentColor" />
                   </svg>
                 )}
               </button>
