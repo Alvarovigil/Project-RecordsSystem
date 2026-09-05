@@ -1,12 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Page } from "@/components/app/AppShell";
-import Avatar, { Cover } from "@/components/ui/Avatar";
+import Avatar from "@/components/ui/Avatar";
 import Button from "@/components/ui/Button";
 import Sheet from "@/components/ui/Sheet";
-import { Tabs } from "@/components/ui/Segmented";
 import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonRackGrid } from "@/components/ui/Skeleton";
 import FollowButton from "./FollowButton";
@@ -17,6 +15,10 @@ import { useRepository } from "@/hooks/useRepository";
 import { useRelationship } from "@/hooks/useRelationship";
 import type { ListWithRecord, Profile, ProfileStats, SavedList } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
+import { portraitOf, standoutsOf } from "@/lib/collection-portrait";
+import { InCommon, PortraitCard, Regulars, Standouts } from "./ProfileShowcase";
+import RecordSheet from "@/components/mobile/RecordSheet";
+import { coverFor } from "@/lib/cover";
 import Loading from "@/components/ui/Loading";
 import Verified from "@/components/ui/Verified";
 
@@ -58,7 +60,6 @@ export default function ProfileView({
   const [saved, setSaved] = useState<SavedList[]>([]);
   const [releases, setReleases] = useState<Vinyl[]>([]);
   const [covers, setCovers] = useState<Record<string, string[]>>({});
-  const [tab, setTab] = useState<"lists" | "records" | "saved">("lists");
   const [people, setPeople] = useState<"followers" | "following" | null>(null);
   const [editing, setEditing] = useState(false);
 
@@ -110,96 +111,248 @@ export default function ProfileView({
 
   const coversOf = useCallback((l: ListWithRecord) => covers[l.id] ?? [], [covers]);
 
-  const tabs = [
-    { value: "lists" as const, label: "Racks", count: stats?.lists },
-    ...(isYou
-      ? [
-          { value: "records" as const, label: "Discos", count: stats?.records },
-          { value: "saved" as const, label: "Guardadas", count: saved.length },
-        ]
-      : []),
-  ];
+  /**
+   * Los discos de esta persona, que es de lo que va todo lo demás.
+   *
+   * Para ti salen de la biblioteca, que ya está cargada. Para quien visitas
+   * hay que leerlos de sus racks públicos — hasta ocho, que es de sobra para
+   * hacer un retrato y acotado para no barrer la comunidad entera por una
+   * visita. De paso se cuenta en cuántos racks aparece cada disco, que es de
+   * donde salen los destacados: lo que alguien ha colocado tres veces le
+   * importa tres veces.
+   */
+  const [theirs, setTheirs] = useState<Vinyl[] | null>(null);
+  const [timesFiled, setTimesFiled] = useState<Map<string, number>>(new Map());
+
+  const listKey = (lists ?? []).slice(0, 8).map((l) => l.id).join(",");
+  useEffect(() => {
+    if (!listKey) {
+      if (lists !== null) setTheirs(isYou ? releases : []);
+      return;
+    }
+    let alive = true;
+    Promise.all(
+      listKey.split(",").map((id) => repo.releasesOfList(id).catch(() => [] as Vinyl[])),
+    ).then((buckets) => {
+      if (!alive) return;
+      const filed = new Map<string, number>();
+      const byId = new Map<string, Vinyl>();
+      for (const bucket of buckets)
+        for (const v of bucket) {
+          byId.set(v.id, v);
+          filed.set(v.id, (filed.get(v.id) ?? 0) + 1);
+        }
+      setTimesFiled(filed);
+      /* Tu propia biblioteca manda sobre tus racks: un disco tuyo que no está
+         en ningún rack sigue siendo tuyo. */
+      setTheirs(isYou ? mergeById(releases, [...byId.values()]) : [...byId.values()]);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [listKey, repo, isYou, releases, lists]);
+
+  const portrait = useMemo(() => portraitOf(theirs ?? []), [theirs]);
+  const standouts = useMemo(
+    () => standoutsOf(theirs ?? [], timesFiled),
+    [theirs, timesFiled],
+  );
+
+  /** lo que tenéis los dos, que es la razón de que esta pantalla exista */
+  const [mineIds, setMineIds] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    if (isYou) return setMineIds(null);
+    repo
+      .listReleases()
+      .then((rs) => setMineIds(new Set(rs.map((v) => v.id))))
+      .catch(() => setMineIds(new Set()));
+  }, [repo, isYou]);
+
+  const shared = useMemo(
+    () => (mineIds ? (theirs ?? []).filter((v) => mineIds.has(v.id)) : []),
+    [theirs, mineIds],
+  );
+
+  /** lo último que ha entrado, que es lo que hace que alguien vuelva */
+  const latest = useMemo(() => (theirs ?? []).slice(-12).reverse(), [theirs]);
+
+  const [openRecord, setOpenRecord] = useState<Vinyl | null>(null);
+
+  /**
+   * El fondo lo pone su propia estantería.
+   *
+   * La portada del disco que más ha colocado, difuminada: cada pantalla de la
+   * aplicación se pinta con aquello de lo que habla, y una colección son sus
+   * discos. Si no hay ninguno todavía, no se inventa nada — queda el relleno
+   * de la aplicación, que es honesto: esa estantería está vacía.
+   */
+  const backdrop = standouts[0] ? coverFor(standouts[0]) : null;
 
   return (
     <Page width={900}>
-      <header className="pb-7">
-        <div className="flex items-start gap-4 sm:gap-5">
-          <Avatar
-            name={profile?.displayName ?? "?"}
-            handle={profile?.username}
-            src={profile?.avatarUrl}
-            size="lg"
+      {/**
+       * La misma cabecera que un disco o un artista, con una persona dentro.
+       *
+       * Fondo hecho con sus propias portadas, difuminado y llevado a negro, y
+       * encima el retrato, el nombre y los datos. No es decoración: el fondo de
+       * la ficha de un disco es su portada, el de un artista su foto, y el de
+       * una colección son los discos que tiene. Cada pantalla se pinta con
+       * aquello de lo que habla.
+       */}
+      <header
+        className="relative -mx-5 mb-8 pb-2 sm:-mx-6"
+        style={{ marginTop: "calc(-1 * max(1.5rem, var(--safe-top)))" }}
+      >
+        <div className="relative h-[34svh] max-h-[300px] w-full overflow-hidden">
+          {backdrop ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={backdrop}
+              alt=""
+              className="h-full w-full scale-125 object-cover blur-2xl"
+            />
+          ) : (
+            <div className="h-full w-full bg-fill-subtle" />
+          )}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(to bottom," +
+                "rgba(10,10,10,0.45) 0%," +
+                "rgba(10,10,10,0.30) 30%," +
+                "rgba(10,10,10,0.48) 55%," +
+                "rgba(10,10,10,0.80) 76%," +
+                "rgba(10,10,10,0.95) 90%," +
+                "#0a0a0a 100%)",
+            }}
           />
-          <div className="min-w-0 flex-1">
-            <h1 className="flex items-center gap-2 text-title font-medium text-paper sm:text-display">
-              <span className="truncate">{profile?.displayName ?? "…"}</span>
-              {profile?.verified && (
-                <span className="shrink-0 text-accent">
-                  <Verified size={20} />
-                </span>
-              )}
-            </h1>
-            <p className="mono mt-0.5 truncate text-sub text-content-muted">
-              @{profile?.username ?? ""}
-            </p>
+        </div>
+
+        <div className="relative -mt-24 px-5 text-center sm:px-6">
+          <div className="mx-auto w-[104px]">
+            <Avatar
+              name={profile?.displayName ?? "?"}
+              handle={profile?.username}
+              src={profile?.avatarUrl}
+              size="xl"
+            />
           </div>
-          {/* The action sits at the top on desktop where there is room, and
-              moves below the stats on a phone — full width, reachable, and not
-              competing with the name for the same 40px. */}
-          <div className="hidden shrink-0 items-center gap-2.5 sm:flex">
+
+          <h1 className="mt-4 flex items-center justify-center gap-2 text-title font-medium text-paper">
+            <span className="truncate">{profile?.displayName ?? "…"}</span>
+            {profile?.verified && (
+              <span className="shrink-0 text-accent">
+                <Verified size={18} />
+              </span>
+            )}
+          </h1>
+          <p className="mono mt-1 truncate text-sub text-content-muted">
+            @{profile?.username ?? ""}
+          </p>
+
+          {profile?.bio && (
+            <p className="mx-auto mt-3 max-w-[46ch] text-sub leading-relaxed text-content-secondary">
+              {profile.bio}
+            </p>
+          )}
+
+          {/* Las cifras siguen siendo la navegación hacia la gente — nadie
+              busca un menú llamado «seguidores» — pero ya no abren la pantalla:
+              ahora son el pie de lo que hay arriba y no su titular. */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            <Stat n={stats?.records} label="discos" />
+            <Stat n={stats?.lists} label="racks" />
+            <Stat n={stats?.followers} label="seguidores" onClick={() => setPeople("followers")} />
+            <Stat n={stats?.following} label="siguiendo" onClick={() => setPeople("following")} />
+          </div>
+
+          <div className="mx-auto mt-5 flex max-w-[420px] gap-2.5">
             {isYou ? (
               <>
-                <Button variant="secondary" onClick={() => setEditing(true)}>
+                <Button variant="secondary" block onClick={() => setEditing(true)}>
                   Editar perfil
                 </Button>
-                <Button variant="ghost" href="/ajustes">
+                <Button variant="secondary" block href="/ajustes">
                   Ajustes
                 </Button>
               </>
             ) : (
-              <FollowButton profileId={profileId} displayName={profile?.displayName ?? ""} />
+              <FollowButton
+                profileId={profileId}
+                displayName={profile?.displayName ?? ""}
+                block
+              />
             )}
           </div>
         </div>
-
-        {profile?.bio && (
-          <p className="mt-4 max-w-[56ch] text-body leading-relaxed text-content-secondary">
-            {profile.bio}
-          </p>
-        )}
-
-        {/* the counts ARE the navigation into the people */}
-        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2">
-          <Stat n={stats?.records} label="discos" />
-          <Stat n={stats?.lists} label="racks" />
-          <Stat n={stats?.followers} label="seguidores" onClick={() => setPeople("followers")} />
-          <Stat n={stats?.following} label="siguiendo" onClick={() => setPeople("following")} />
-        </div>
-
-        {/* Ajustes had no door on a phone at all. The account menu that holds
-            it on a desktop does not exist under a thumb — there is a tab bar
-            instead — so the settings for an account live where the account
-            does: on your own profile, next to editing it. */}
-        <div className="mt-5 sm:hidden">
-          {isYou ? (
-            <div className="flex gap-2.5">
-              <Button variant="secondary" block onClick={() => setEditing(true)}>
-                Editar perfil
-              </Button>
-              <Button variant="secondary" block href="/ajustes">
-                Ajustes
-              </Button>
-            </div>
-          ) : (
-            <FollowButton profileId={profileId} displayName={profile?.displayName ?? ""} block />
-          )}
-        </div>
       </header>
 
-      <Tabs segments={tabs} value={tab} onChange={setTab} />
+      {/**
+       * Dos caras de la misma pantalla, y la diferencia es a quién le habla.
+       *
+       * A quien visita se le enseña una vitrina: tres discos, qué tenéis en
+       * común, cómo suena esa estantería, de quién no se baja nunca. Todo eso
+       * responde a la única pregunta que trae a alguien aquí — «¿me interesa
+       * esta persona?» — y ninguna de esas respuestas es un número.
+       *
+       * A ti se te enseña un panel: el retrato de lo que has reunido, lo
+       * último que entró y tus racks. Tú ya sabes lo que tienes; lo que no
+       * sabes es qué forma tiene, y eso es lo que esta pantalla puede darte
+       * que ninguna otra da.
+       *
+       * Lo que desaparece de las dos: las pestañas Racks / Discos / Guardadas.
+       * Eran tres nombres para una sola cosa — tu colección — y obligaban a
+       * elegir una antes de enseñar nada.
+       */}
+      {!isYou && shared.length > 0 && (
+        <InCommon records={shared} onOpen={setOpenRecord} />
+      )}
 
-      <div className="mt-6">
-        {tab === "lists" && (
+      <Standouts
+        records={standouts}
+        onOpen={setOpenRecord}
+        title={isYou ? "Los que más colocas" : "Los que más coloca"}
+      />
+
+      <PortraitCard portrait={portrait} records={(theirs ?? []).length} />
+
+      <Regulars records={theirs ?? []} />
+
+      {isYou && latest.length > 0 && (
+        <section className="pb-10">
+          <h2 className="text-caption uppercase tracking-label text-content-muted">
+            Lo último que entró
+          </h2>
+          <ul className="rail rail-page mt-3.5 flex gap-3 pb-2">
+            {latest.map((v) => (
+              <li key={v.id} className="w-[112px] shrink-0 snap-start">
+                <button
+                  onClick={() => setOpenRecord(v)}
+                  className="pressable block w-full text-left"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={coverFor(v)}
+                    alt=""
+                    loading="lazy"
+                    className="aspect-square w-full rounded-[3px] object-cover"
+                  />
+                  <span className="mt-2 block truncate text-caption text-content-secondary">
+                    {v.title}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section className="pb-10">
+        <h2 className="text-caption uppercase tracking-label text-content-muted">
+          {isYou ? "Tus racks" : "Sus racks"}
+        </h2>
+        <div className="mt-4">
           <ListGrid
             lists={lists}
             mine={isYou}
@@ -214,55 +367,41 @@ export default function ProfileView({
               ) : (
                 <EmptyState
                   title={`${profile?.displayName ?? "Esta persona"} no tiene racks públicos`}
-                  body="Cuando publique alguna aparecerá aquí. Mientras tanto, puedes seguirle para enterarte."
+                  body="Cuando publique alguno aparecerá aquí. Mientras tanto, puedes seguirle para enterarte."
                   action={{ label: "Explorar otras colecciones", href: "/explorar" }}
                 />
               )
             }
           />
-        )}
+        </div>
+      </section>
 
-        {tab === "records" && (
-          <>
-            {releases.length === 0 ? (
-              <EmptyState
-                title="Tu biblioteca está vacía"
-                body="Busca un disco por título, artista o código de barras y quedará guardado aquí."
-                action={{ label: "Buscar discos", href: "/explorar?buscar=1" }}
-              />
-            ) : (
-              <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-                {releases.map((v) => (
-                  <li key={v.id}>
-                    <Link href="/coleccion" className="pressable block">
-                      <Cover vinyl={v} alt={v.title} />
-                      <span className="mt-2 block truncate text-sub text-paper">{v.title}</span>
-                      <span className="block truncate text-caption text-content-muted">
-                        {v.artist}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
+      {/* Los racks de otra gente que has guardado son tuyos de otra manera —
+          los usas, no los has hecho — así que van al final y con su nombre
+          puesto, en vez de disputarle una pestaña a los tuyos. */}
+      {isYou && saved.length > 0 && (
+        <section className="pb-10">
+          <h2 className="text-caption uppercase tracking-label text-content-muted">
+            Guardados de otra gente
+          </h2>
+          <div className="mt-4">
+            <ListGrid lists={saved} mine={false} coversOf={coversOf} empty={null} />
+          </div>
+        </section>
+      )}
 
-        {tab === "saved" && (
-          <ListGrid
-            lists={saved}
-            mine={false}
-            coversOf={coversOf}
-            empty={
-              <EmptyState
-                title="No has guardado ningún rack"
-                body="Cuando guardes el rack de otra persona vivirá aquí y en tu colección, siempre con su nombre encima. Sigue siendo suya: si la cambia, cambia la tuya."
-                action={{ label: "Ver racks de la comunidad", href: "/explorar" }}
-              />
-            }
-          />
-        )}
-      </div>
+      <RecordSheet
+        vinyl={openRecord}
+        onClose={() => setOpenRecord(null)}
+        canEdit={false}
+        collections={[]}
+        activeListId=""
+        playing={false}
+        onTogglePlay={() => {}}
+        onAddTo={() => {}}
+        onRemoveFromActive={() => {}}
+        onDelete={() => {}}
+      />
 
       <PeopleSheet
         which={people}
@@ -284,6 +423,12 @@ export default function ProfileView({
       )}
     </Page>
   );
+}
+
+/** tus discos primero, y los de tus racks detrás, sin repetir */
+function mergeById(a: Vinyl[], b: Vinyl[]) {
+  const seen = new Set(a.map((v) => v.id));
+  return [...a, ...b.filter((v) => !seen.has(v.id))];
 }
 
 function Stat({ n, label, onClick }: { n?: number; label: string; onClick?: () => void }) {
