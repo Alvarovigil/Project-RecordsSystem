@@ -39,28 +39,89 @@ async function fileExists(p: string) {
   }
 }
 
-async function searchItunesPreview(artist: string, album: string): Promise<string | null> {
+/**
+ * The album on iTunes: a preview, and the cover the label actually published.
+ *
+ * The artwork is the reason this returns two things now. Discogs images are
+ * photographs of somebody's own sleeve — that is the point of the archive, and
+ * it is why they are often shot on a kitchen table, at an angle, with the
+ * shrink-wrap still on and a window reflected in it. Fine as a record of an
+ * object; poor as the thing this app draws at full width on a phone.
+ *
+ * Apple's is the press artwork: square, straight, high resolution, and the
+ * same picture the album has everywhere else. So it is preferred where it can
+ * be trusted, and Discogs remains the fallback.
+ *
+ * **Trusted means matched, not merely returned.** The preview can afford
+ * `results[0]` — a wrong thirty seconds is an annoyance. A wrong cover is a
+ * different record on your shelf, so the artwork only travels when the album
+ * name and the artist both survive normalisation.
+ */
+async function searchItunesAlbum(
+  artist: string,
+  album: string,
+): Promise<{ preview: string | null; artwork: string | null }> {
+  const empty = { preview: null, artwork: null };
   try {
     const term = encodeURIComponent(`${artist} ${album}`);
-    const url = `https://itunes.apple.com/search?term=${term}&entity=album&limit=3`;
+    // ten rather than three: Apple ranks singles above albums often enough
+    // that the record you actually asked for can sit fourth
+    const url = `https://itunes.apple.com/search?term=${term}&entity=album&limit=10`;
     const r = await fetch(url);
-    if (!r.ok) return null;
+    if (!r.ok) return empty;
     const data = await r.json();
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const norm = (s: string) =>
+      s
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
     const target = norm(album);
-    const match =
-      (data.results ?? []).find((c: any) => norm(c.collectionName ?? "").includes(target)) ??
-      data.results?.[0];
-    if (!match?.collectionId) return null;
+    const wantArtist = norm(artist);
+
+    const results = data.results ?? [];
+    const loose =
+      results.find((c: any) => norm(c.collectionName ?? "").includes(target)) ?? results[0];
+    if (!loose?.collectionId) return empty;
+
+    /**
+     * The stricter test, for the picture only — and exactness first.
+     *
+     * "Rumours" comes back alongside "Rumours (Live)" and "Rumours (Super
+     * Deluxe Edition)", and a contains-test would take whichever Apple
+     * happened to rank first. A deluxe edition's artwork is usually the same
+     * picture and sometimes is not, so the plain name wins when there is one.
+     */
+    const artistOk = (c: any) => {
+      const by = norm(c.artistName ?? "");
+      return by.includes(wantArtist) || wantArtist.includes(by);
+    };
+    const strict =
+      results.find((c: any) => norm(c.collectionName ?? "") === target && artistOk(c)) ??
+      results.find((c: any) => {
+        const name = norm(c.collectionName ?? "");
+        return (name.includes(target) || target.includes(name)) && artistOk(c);
+      });
+
+    /**
+     * 100×100 is what the search returns and it is a thumbnail. The size lives
+     * in the filename, so asking for a bigger one is a string replacement —
+     * undocumented, stable for a decade, and the difference between a cover
+     * that survives a phone screen and one that does not.
+     */
+    const artwork: string | null = strict?.artworkUrl100
+      ? String(strict.artworkUrl100).replace(/\/\d+x\d+bb\./, "/1000x1000bb.")
+      : null;
+
     const tracksRes = await fetch(
-      `https://itunes.apple.com/lookup?id=${match.collectionId}&entity=song&limit=5`,
+      `https://itunes.apple.com/lookup?id=${loose.collectionId}&entity=song&limit=5`,
     );
-    if (!tracksRes.ok) return null;
+    if (!tracksRes.ok) return { preview: null, artwork };
     const tracksData = await tracksRes.json();
     const songs = (tracksData.results ?? []).filter((r: any) => r.wrapperType === "track");
-    return songs[0]?.previewUrl ?? null;
+    return { preview: songs[0]?.previewUrl ?? null, artwork };
   } catch {
-    return null;
+    return empty;
   }
 }
 
@@ -113,9 +174,32 @@ export async function POST(req: NextRequest) {
   const canWriteToDisk = !process.env.VERCEL;
 
   if (canWriteToDisk) await mkdir(COVERS_DIR, { recursive: true });
+
+  /**
+   * The album is looked up before the cover is chosen, because it holds one.
+   *
+   * It was already being called for the preview; the artwork was sitting in
+   * the same response and being thrown away. Asking once and using both is the
+   * cheapest improvement available here — no extra request, and the match has
+   * already been established by the thing we came for.
+   */
+  const itunes = await searchItunesAlbum(artist, title);
+
   let coverPath: string | null = null;
-  const imgUrl: string | undefined =
+  const discogsImg: string | undefined =
     release.images?.find((i: any) => i.type === "primary")?.uri ?? release.images?.[0]?.uri;
+  /**
+   * Apple's press artwork wins when there is any.
+   *
+   * A Discogs image is a photograph of one person's copy — angled, lit by a
+   * kitchen window, sometimes still in its shrink-wrap. That is exactly right
+   * for an archive of pressings and wrong for the picture this app draws at
+   * full width on a phone. Where the two disagree the cost is that a sleeve
+   * with genuinely different art — an obi strip, a colour variant, a regional
+   * cover — shows the digital release's picture instead. That is the trade,
+   * and it is one line to reverse if it ever stops being worth it.
+   */
+  const imgUrl: string | undefined = itunes.artwork ?? discogsImg;
   if (imgUrl && !canWriteToDisk) {
     coverPath = `/api/cover?url=${encodeURIComponent(imgUrl)}`;
   } else if (imgUrl) {
@@ -133,7 +217,7 @@ export async function POST(req: NextRequest) {
   }
 
   // preview: iTunes first, then Deezer (downloaded locally — its URLs expire)
-  let previewUrl = await searchItunesPreview(artist, title);
+  let previewUrl = itunes.preview;
   if (!previewUrl && canWriteToDisk) {
     await mkdir(PREVIEWS_DIR, { recursive: true });
     const dest = resolve(PREVIEWS_DIR, `${slug}.mp3`);
