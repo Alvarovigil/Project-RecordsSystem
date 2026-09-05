@@ -429,8 +429,8 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
    * the surfaces that had no feedback at all (creating a list, deleting a
    * record) get the same treatment as the ones that did.
    */
-  const handleCreateCollection = async (name: string) => {
-    const id = await lib.createList(name);
+  const handleCreateCollection = async (name: string, description?: string) => {
+    const id = await lib.createList(description ? { title: name, description } : name);
     toast.show(`«${name}» creada`, { media: { icon: ToastIcon.list } });
     return id;
   };
@@ -764,6 +764,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           onRemoveFromList={(v) => handleRemoveVinylFromActive(v.id)}
           onOpenSaved={(l) => void openForeign(l)}
           onRemoveRecordFromList={(listId, vinylId) => handleToggleVinyl(listId, vinylId)}
+          onAddRecordToList={(listId, v) => handleSaveToList(v, listId)}
           onAcquire={handleAcquire}
           loading={!lib.ready}
           readOnly={readOnly}

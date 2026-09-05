@@ -226,10 +226,21 @@ export function Chevron() {
  */
 export function NewRackRow({
   onCreate,
+  onOpen,
   hint,
   placeholder = "El turno de noche",
 }: {
-  onCreate: (name: string) => void | Promise<unknown>;
+  /** escribir el nombre aquí mismo, donde el rack es un paso de otra cosa */
+  onCreate?: (name: string) => void | Promise<unknown>;
+  /**
+   * Abrir la pantalla de crear, donde el rack es la cosa.
+   *
+   * En la hoja de guardar un disco, el rack nuevo es un medio: escribir el
+   * nombre en la propia fila es exactamente lo que hace falta. En la
+   * estantería es un fin — se está montando algo — y ahí hace falta sitio para
+   * el nombre, la descripción y los discos.
+   */
+  onOpen?: () => void;
   /** la línea pequeña: qué va a pasar con el disco que tienes delante */
   hint?: string;
   placeholder?: string;
@@ -241,7 +252,7 @@ export function NewRackRow({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const clean = name.trim();
-    if (!clean || busy) return;
+    if (!clean || busy || !onCreate) return;
     setBusy(true);
     try {
       await onCreate(clean);
@@ -252,10 +263,10 @@ export function NewRackRow({
     }
   };
 
-  if (!writing)
+  if (!writing || onOpen)
     return (
       <button
-        onClick={() => setWriting(true)}
+        onClick={() => (onOpen ? onOpen() : setWriting(true))}
         className="pressable flex w-full items-center gap-3 rounded-md bg-fill-subtle py-2.5 pl-3 pr-3 text-left transition hover:bg-fill"
       >
         <EmptyCrate />

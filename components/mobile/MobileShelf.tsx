@@ -22,6 +22,8 @@ import dynamic from "next/dynamic";
  */
 const VinylShelf3D = dynamic(() => import("@/components/VinylShelf3D"), { ssr: false });
 import RackRow, { NewRackRow } from "@/components/community/RackRow";
+import NewRackSheet from "./NewRackSheet";
+import RackInfoSheet from "./RackInfoSheet";
 import { rackOfCollection, rackOfList } from "@/lib/rack";
 import { coverFor } from "@/lib/cover";
 import { useImagesReady } from "@/hooks/useImagesReady";
@@ -82,6 +84,7 @@ export default function MobileShelf({
   onUnsaveList,
   onOpenSaved,
   onRemoveRecordFromList,
+  onAddRecordToList,
   onAcquire,
   loading = false,
   readOnly = false,
@@ -99,7 +102,7 @@ export default function MobileShelf({
   onActivate: (listId: string) => void;
   onSearch: () => void;
   onPlay: (v: Vinyl) => void;
-  onCreateList: (name: string) => Promise<string>;
+  onCreateList: (name: string, description?: string) => Promise<string>;
   onRenameList: (id: string, name: string) => void;
   onDeleteList: (id: string) => void;
   onSetSort: (id: string, sortBy: SortMode) => void;
@@ -113,6 +116,8 @@ export default function MobileShelf({
   onOpenSaved: (list: SavedList) => void;
   /** take a record out of a list from the list's own editor */
   onRemoveRecordFromList: (listId: string, vinylId: string) => void;
+  /** meter un disco en un rack: lo usa la pantalla de crear uno */
+  onAddRecordToList: (listId: string, v: Vinyl) => void;
   /** "ya lo tengo", from the wishlist grid — absent means don't offer it */
   onAcquire?: (v: Vinyl) => void;
   /** the library has not answered yet: draw the shape of it, not a void */
@@ -150,6 +155,8 @@ export default function MobileShelf({
      es la que más probablemente reconozcas */
   const coverOfId = (id: string) => allVinilos.find((v) => v.id === id)?.cover ?? null;
 
+  const [creatingRack, setCreatingRack] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [editing, setEditing] = useState<Collection | null>(null);
   /**
    * The kept list whose ⋯ is open.
@@ -233,7 +240,7 @@ export default function MobileShelf({
                * at 62% of the screen it has to give, and a name too long to
                * read at a glance starts moving instead of being cut.
                */
-              className="pressable flex h-12 max-w-[62vw] items-center gap-1.5 rounded-full bg-ink/72 px-4 text-paper/90 backdrop-blur-xl"
+              className="pressable flex h-12 max-w-[48vw] items-center gap-1.5 rounded-full bg-ink/72 px-4 text-paper/90 backdrop-blur-xl"
             >
               <MarqueeText className="min-w-0 text-sub font-medium">
                 {activeName}
@@ -251,6 +258,17 @@ export default function MobileShelf({
               </svg>
             </button>
           </div>
+
+          {/* Qué hay dentro de este rack. La versión de escritorio lleva esta
+              tabla desde siempre en su panel lateral y el teléfono no tenía
+              ninguna puerta a ella — en la aplicación que vive en el teléfono. */}
+          <RoundButton label="Ver la ficha del rack" onClick={() => setInfoOpen(true)}>
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <circle cx="8" cy="8" r="6.2" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M8 7.2v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="8" cy="4.9" r="0.85" fill="currentColor" />
+            </svg>
+          </RoundButton>
 
           <RoundButton label="Buscar" onClick={onSearch}>
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -343,13 +361,11 @@ export default function MobileShelf({
         </ul>
         <div className="px-3 pb-1">
           <div>
-            <NewRackRow
-              onCreate={async (name) => {
-                const id = await onCreateList(name);
-                onActivate(id);
-                setSwitching(false);
-              }}
-            />
+            {/* Hacer un rack es una pantalla, no un campo de texto: se le
+                pone nombre, se dice por qué existe y se mete dentro lo que ya
+                tienes — que es justo lo que se está mirando cuando a alguien
+                se le ocurre un rack. */}
+            <NewRackRow onOpen={() => setCreatingRack(true)} />
           </div>
         </div>
         {savedLists.length > 0 && (
@@ -396,6 +412,38 @@ export default function MobileShelf({
           </>
         )}
       </Sheet>
+
+      <RackInfoSheet
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+        title={activeName}
+        records={vinilos}
+        onEdit={
+          readOnly
+            ? undefined
+            : () => {
+                setInfoOpen(false);
+                const c = collections.find((x) => x.id === activeListId);
+                if (c) setEditing(c);
+              }
+        }
+      />
+
+      <NewRackSheet
+        open={creatingRack}
+        onClose={() => setCreatingRack(false)}
+        records={allVinilos}
+        onCreate={async ({ title, description, vinylIds }) => {
+          const id = await onCreateList(title, description);
+          for (const vid of vinylIds) {
+            const v = allVinilos.find((x) => x.id === vid);
+            if (v) onAddRecordToList(id, v);
+          }
+          onActivate(id);
+          setSwitching(false);
+          return id;
+        }}
+      />
 
       {/* the same three doors as the desktop hover card, in the same order and
           with the same words: a menu that disagrees with itself across devices
