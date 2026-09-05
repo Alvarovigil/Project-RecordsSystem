@@ -8,6 +8,7 @@ import { Cover } from "@/components/ui/Avatar";
 import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonRackRail } from "@/components/ui/Skeleton";
 import CatalogueNotice from "@/components/ui/CatalogueNotice";
+import WantedRail, { type WantedRow } from "@/components/explore/WantedRail";
 import PersonRow from "@/components/community/PersonRow";
 import PersonCard from "@/components/community/PersonCard";
 import ListCard from "@/components/community/ListCard";
@@ -99,6 +100,47 @@ export default function ExploreView() {
     localVinilos: library,
     allVinilos: library,
   });
+  /**
+   * The genre this shelf is mostly made of.
+   *
+   * It is what makes the second rail personal rather than a second chart: the
+   * suggestion comes from what somebody actually owns, counted, instead of
+   * from a guess about them. Below four records there is nothing to count and
+   * the rail simply does not appear — a recommendation drawn from two albums
+   * is a coin toss wearing a heading.
+   */
+  const topGenre = useMemo(() => {
+    if (lib.releases.length < 4) return null;
+    const tally = new Map<string, number>();
+    for (const v of lib.releases) {
+      const g = (v.genre ?? "").trim();
+      if (g) tally.set(g, (tally.get(g) ?? 0) + 1);
+    }
+    const best = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
+    return best && best[1] >= 2 ? best[0] : null;
+  }, [lib.releases]);
+
+  const ownedDiscogsIds = useMemo(
+    () => new Set(lib.releases.map((v) => v.discogsId).filter(Boolean) as number[]),
+    [lib.releases],
+  );
+
+  const [wantedSaving, setWantedSaving] = useState<number | null>(null);
+  const [wantedSaved, setWantedSaved] = useState<Set<number>>(new Set());
+
+  /** the same door every catalogue row uses, so a save here behaves like a
+   *  save anywhere else — including the undo the library hands back */
+  const saveWanted = async (row: WantedRow) => {
+    setWantedSaving(row.id);
+    const v = await catalogue.addFromCatalogue(row, lib.activeListId, (vinyl, listId) =>
+      void lib.saveToList(vinyl, listId),
+    );
+    setWantedSaving(null);
+    if (!v) return toast.show("No se pudo añadir ese disco.", { tone: "error" });
+    setWantedSaved((s) => new Set(s).add(row.id));
+    toast.show(`${v.title} · guardado`, { media: { src: row.thumb ?? coverFor(v) } });
+  };
+
   const records = catalogue.localResults;
   const addable = catalogue.addable;
 
@@ -454,6 +496,39 @@ export default function ExploreView() {
               </ul>
             )}
           </Section>
+
+          {/**
+           * The two rails Discogs makes possible, under the club rather than
+           * over it.
+           *
+           * Explorar is about the people here first — what they have made and
+           * who they are — and a chart of the world's most wanted records
+           * would swamp that if it opened the page. Underneath, it is the
+           * answer to "and what else is there", which on a quiet week is the
+           * whole reason somebody scrolled this far.
+           */}
+          <WantedRail
+            title="En tendencia"
+            subtitle={`Los vinilos de ${new Date().getFullYear()} que más gente está buscando, según Discogs.`}
+            ownedIds={ownedDiscogsIds}
+            targetName={lib.activeList?.title ?? "Mi Colección"}
+            onSave={saveWanted}
+            savingId={wantedSaving}
+            savedIds={wantedSaved}
+          />
+
+          {topGenre && (
+            <WantedRail
+              title="Podrían interesarte"
+              genre={topGenre}
+              subtitle={`Tu estantería tira a ${topGenre.toLowerCase()}. Esto es lo más buscado del género, sin lo que ya tienes.`}
+              ownedIds={ownedDiscogsIds}
+              targetName={lib.activeList?.title ?? "Mi Colección"}
+              onSave={saveWanted}
+              savingId={wantedSaving}
+              savedIds={wantedSaved}
+            />
+          )}
 
           <Section title="Gente que colecciona">
             {/* The same rail as the crates above, for the same reason: this is
