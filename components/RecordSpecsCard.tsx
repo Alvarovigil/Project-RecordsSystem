@@ -16,14 +16,12 @@ import type { RecordSpecs } from "@/lib/types";
  * only one of them is asked every time — which is why it is folded away behind
  * a line you press.
  *
- * **It is blocks, not a table.** The first version was a definition list:
- * label left, value right, eleven rows of it. Everything was there and nobody
- * would ever read it — a spec sheet is what a database prints, not what a shop
- * hands you. So it is stacked cards with one subject each, the way a listening
- * app lays out what is playing: a heading you can skim, air around it, and the
- * photographs of the actual object doing the work eleven rows of grey type
- * could not. It is long, and that is fine. Scrolling is free; reading a table
- * is not.
+ * **It is one list, in one card.** It went the other way first — a block per
+ * subject, chips, tiles, a gallery of the object — and stacking four shapes
+ * made the sheet read as a second record screen rather than as the footnote it
+ * is. Cut back to the eight lines somebody would actually look for, one list is
+ * the honest shape: short enough to take in at a glance, and it stops
+ * competing with the record above it.
  *
  * It loads when it opens, never before. The data is a request to somebody
  * else's API, and spending it on every record somebody merely glances at would
@@ -177,8 +175,7 @@ export function RecordSpecsContent({
       {state === "limit" && (
         <Block>
           <Note>
-            Discogs ha cortado las consultas por un momento — el límite lo compartimos
-            entre todos. Vuelve a abrirla en un minuto.
+            Hay demasiadas consultas ahora mismo. Vuelve a abrirla en un minuto.
           </Note>
         </Block>
       )}
@@ -235,41 +232,37 @@ function Note({ children }: { children: React.ReactNode }) {
 function Skeleton() {
   return (
     <div aria-label="Cargando la ficha">
-      <Block>
-        <div className="skeleton h-[132px] rounded-[3px]" />
-      </Block>
-      <Block>
-        <div className="skeleton h-6 w-40 rounded-full" />
-        <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i}>
-              <div className="skeleton h-2 w-14 rounded-full" />
-              <div className="skeleton mt-2 h-3 w-2/3 rounded-full" />
-            </div>
-          ))}
-        </div>
-      </Block>
+      <Card>
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div
+            key={i}
+            className="flex items-center justify-between gap-5 border-b border-line py-3.5 last:border-b-0"
+          >
+            <div className="skeleton h-2 w-16 rounded-full" />
+            <div className="skeleton h-3 w-24 rounded-full" />
+          </div>
+        ))}
+      </Card>
     </div>
   );
 }
 
 /**
- * A fact, as a tile rather than as a row of a definition list.
+ * One fact, as a row.
  *
- * `dt` over `dd` in a two-column grid is how a spec sheet is printed, and it
- * reads as printing: four labels down the left, four values beside them, all
- * one weight, nothing to look at. Given a surface of its own each fact becomes
- * an object — the eye can land on one and skip three, which is the whole
- * difference between a screen you scan and a page you read.
- *
- * A shade lighter than the card holding them, because a tile the same colour
- * as its container is not a tile.
+ * The tiles were the second attempt and the grid was the first, and both had
+ * the same problem: they cut the sheet into subjects, so reading it meant
+ * changing shape four times. A record's technical sheet is one subject — this
+ * pressing — and a list is what one subject looks like. Label left, value
+ * right, a hairline between, in the order somebody holding the sleeve would
+ * ask: what it is, when, where, who put it out, what it is called on the
+ * spine, and then whether anybody else is chasing it.
  */
-function Fact({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="min-w-0 rounded-[10px] bg-fill px-4 py-3">
-      <dt className="text-micro uppercase tracking-label text-content-faint">{label}</dt>
-      <dd className="mt-1.5 truncate text-body leading-snug text-paper">{value}</dd>
+    <div className="flex items-baseline justify-between gap-5 border-b border-line py-3.5 last:border-b-0">
+      <dt className="shrink-0 text-caption uppercase tracking-label text-content-faint">{label}</dt>
+      <dd className="min-w-0 truncate text-right text-body leading-snug text-paper">{value}</dd>
     </div>
   );
 }
@@ -283,156 +276,44 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
  * reading is somebody who buys records rather than catalogues them.
  *
  * So the question for every line is not "is it true" but "would somebody
- * holding this sleeve ever look for it". Almost nothing survives that.
+ * holding this sleeve ever look for it". Almost nothing survives that: gone
+ * the run-out groove, the credits, the edition notes, the pressing plant, the
+ * styles, and the barcode you scanned to get here.
  *
- * **Gone: the run-out groove.** The etching between the last track and the
- * label is how a specialist tells an original from a repress, and it is the
- * single most connoisseur field there is. It was given a plate of its own and
- * a paragraph explaining what it was — which is the tell: a fact that needs
- * teaching before it can be read belongs to the archive, not to the shelf.
+ * **Gone too: the photographs of the object.** They were the pleasure of this
+ * card and they were also the reason it read as a second record screen — a
+ * gallery under a cover, two sets of images about the same sleeve. The sheet
+ * is the facts; the pictures belong to the record above it.
  *
- * **Gone: the credits.** Twenty names, of which two are the ones anybody
- * means, and no way to know which two without reading all of them.
- *
- * **Gone: the edition notes.** Sometimes "limited to 500 numbered copies";
- * more often nine paragraphs of English about a licensing arrangement. What
- * was worth having in them — 180g, gatefold, coloured — is already in the
- * format chips.
- *
- * **Gone: the pressing plant, the styles, and the barcode**, the last of which
- * you scanned to get here.
- *
- * What is left is the two things a person actually opens this for: the photos
- * of the object, which are the only part of a technical sheet that is a
- * pleasure rather than a reference — and the handful of facts that place a
- * record at a glance. Then the two numbers that say whether anybody else is
- * chasing it.
+ * And **gone: the link out.** Everything worth reading is already here, and a
+ * button that hands the reader to somebody else's site is the shelf admitting
+ * it is a front end for a catalogue.
  */
 function Specs({ specs: s }: { specs: RecordSpecs }) {
-  const market = s.have !== null || s.want !== null || s.lowestPrice !== null;
   const formats = s.formats.join(", ").split(", ").filter(Boolean);
+  const price =
+    s.lowestPrice === null
+      ? null
+      : s.forSale
+        ? `${s.forSale} a la venta, desde ${Math.round(s.lowestPrice)} €`
+        : `Desde ${Math.round(s.lowestPrice)} €`;
+  const num = (n: number | null) => (n === null ? null : n.toLocaleString("es-ES"));
 
   return (
-    <>
-      {/**
-       * The object, photographed — and first, because it is the reason to open
-       * this at all. The back, the gatefold, the inner sleeves, a scan of each
-       * label: the things you turn a record over to look at.
-       */}
-      {s.images.length > 0 && (
-        <Block title="Esta edición, por dentro">
-          <div className="rail -mx-5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-5 pb-1">
-            {s.images.map((img, i) => (
-              <a
-                key={i}
-                href={img.full}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pressable shrink-0 snap-start"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={img.thumb}
-                  alt=""
-                  loading="lazy"
-                  className={`skeleton h-[160px] rounded-[3px] object-cover ${
-                    img.wide ? "w-[288px]" : "w-[160px]"
-                  }`}
-                />
-              </a>
-            ))}
-          </div>
-        </Block>
-      )}
-
-      {/**
-       * What kind of object it is.
-       *
-       * The format goes first and as chips, because "2×", "LP", "Album" and
-       * "Gatefold" are four separate facts about the thing in your hands and
-       * reading them as one comma sentence hides the one you were looking for.
-       * Everything under it is a caption to that.
-       */}
-      <Block title="La edición">
-        {formats.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5">
-            {formats.map((f, i) => (
-              <li
-                key={`${f}-${i}`}
-                className="rounded-full bg-fill px-3.5 py-1.5 text-sub text-content-secondary"
-              >
-                {f}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <dl className={`grid grid-cols-2 gap-x-4 gap-y-5 ${formats.length > 0 ? "mt-6" : ""}`}>
-          {s.released && <Fact label="Publicada" value={String(s.released).slice(0, 4)} />}
-          {s.country && <Fact label="País" value={s.country} />}
-          {s.label && <Fact label="Sello" value={s.label} />}
-          {/* The one specialist field that stays, and demoted to a fact among
-              facts: it is the only thing here that identifies one pressing out
-              of forty, which is what you read out to a shop before paying
-              original money for a repress. */}
-          {s.catno && <Fact label="Referencia" value={<span className="mono">{s.catno}</span>} />}
-        </dl>
-      </Block>
-
-      {/**
-       * The two numbers, last and on purpose.
-       *
-       * How many people have it and how many want it is the first thing a
-       * collector looks at — and leading with it turns a shelf into a
-       * portfolio. Side by side rather than as separate facts, because they
-       * only mean anything against each other.
-       */}
-      {market && (
-        <Block title="Quién lo tiene">
-          <div className="flex items-stretch gap-2.5">
-            <Count n={s.have} label="lo tienen" />
-            <Count n={s.want} label="lo quieren" />
-          </div>
-
-          {s.lowestPrice !== null && (
-            <p className="mt-4 text-sub text-content-muted">
-              {s.forSale
-                ? `${s.forSale} a la venta, desde ${Math.round(s.lowestPrice)} €`
-                : `La más barata, ${Math.round(s.lowestPrice)} €`}
-            </p>
-          )}
-
-          <a
-            href={s.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="pressable mt-5 flex h-11 items-center justify-center gap-2 rounded-full border border-line-strong text-sub text-paper transition-colors hover:border-paper/40"
-          >
-            Ver la ficha completa
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
-              <path
-                d="M2 8 L8 2 M3.6 2 H8 V6.4"
-                stroke="currentColor"
-                strokeWidth="1.3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </a>
-        </Block>
-      )}
-    </>
-  );
-}
-
-/** one of the two numbers that only mean anything beside each other */
-function Count({ n, label }: { n: number | null; label: string }) {
-  return (
-    <div className="flex-1 rounded-[10px] bg-fill px-4 py-3.5">
-      <p className="text-heading leading-none text-paper" style={{ fontVariantNumeric: "tabular-nums" }}>
-        {n === null ? "—" : n.toLocaleString("es-ES")}
-      </p>
-      <p className="mt-1.5 text-caption text-content-muted">{label}</p>
-    </div>
+    <Card>
+      <dl>
+        {formats.length > 0 && <Row label="Formato" value={formats.join(" · ")} />}
+        {s.released && <Row label="Publicada" value={String(s.released).slice(0, 4)} />}
+        {s.country && <Row label="País" value={s.country} />}
+        {s.label && <Row label="Sello" value={s.label} />}
+        {/* The one specialist field that stays: it is the only thing here that
+            identifies one pressing out of forty, which is what you read out to
+            a shop before paying original money for a repress. */}
+        {s.catno && <Row label="Referencia" value={<span className="mono">{s.catno}</span>} />}
+        {s.have !== null && <Row label="Lo tienen" value={num(s.have)} />}
+        {s.want !== null && <Row label="Lo quieren" value={num(s.want)} />}
+        {price && <Row label="Se vende" value={price} />}
+      </dl>
+    </Card>
   );
 }
