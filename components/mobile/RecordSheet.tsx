@@ -351,17 +351,28 @@ export default function RecordSheet({
               faded out. It costs nothing — the image is already downloaded —
               and it is what stops a black page with a square in the middle
               from looking like a file browser. */}
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-16 h-[520px] overflow-hidden">
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-16 h-[560px] overflow-hidden">
+            {/**
+             * Turned up, because at 30% it was a rumour.
+             *
+             * The colour of the sleeve is the only thing that makes this
+             * screen belong to *this* record rather than to the template, and
+             * it was so faint that a dark cover produced no screen at all. At
+             * 55% it is light in the room; the blur is what keeps it from ever
+             * being a picture, and the gradient below is what keeps it from
+             * ending in a line.
+             */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={coverFor(vinyl)}
               alt=""
-              className="h-full w-full scale-150 object-cover opacity-30 blur-3xl"
+              className="h-full w-full scale-150 object-cover opacity-55 blur-3xl saturate-150"
             />
             {/* Faded to nothing well before the edge of the box: a wash still
                 5% visible where it stops draws a horizontal line across the
-                screen, which is the one thing it must not do. */}
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-surface-raised/70 to-surface-raised" />
+                screen, which is the one thing it must not do. The top stays
+                clear so the colour reaches the very top of the display. */}
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-surface-raised/55 via-[62%] to-surface-raised" />
           </div>
 
           {/* The wash starts at the very top of the screen — the column it
@@ -369,28 +380,22 @@ export default function RecordSheet({
               header's height back, or the sleeve would begin under the back
               button. */}
           <div className="relative mx-auto w-full max-w-[440px] px-5 pt-14">
-            {/* The record, half out of its sleeve — the same object the shelf
-                is made of rather than a thumbnail of it. The disc is a couple
-                of gradients, not an image: at this size nobody is reading a
-                label, and a real one would be another download. */}
+            {/**
+             * The sleeve, and nothing behind it.
+             *
+             * There was a record sliding out of the right-hand side — two
+             * radial gradients standing in for a disc. It was a nice drawing
+             * and it was doing damage: it pushed the cover off the centre
+             * line, so the one square image this screen is about sat slightly
+             * left of where the title, the artist and everything under them
+             * are aligned, and the eye reads that as a mistake before it reads
+             * it as an object.
+             *
+             * A record shown by its sleeve is what a shelf looks like. The
+             * disc belongs to the 3D stack, where it is the real thing rather
+             * than an impression of one.
+             */}
             <div className="relative mx-auto mt-3 w-[76%]">
-              <span
-                aria-hidden
-                className="absolute right-[-15%] top-[5%] aspect-square w-[94%] rounded-full"
-                style={{
-                  background:
-                    "radial-gradient(circle at 50% 50%, #2a2a2a 0 17%, #101010 17.4% 18.5%, #1a1a1a 19% 100%)",
-                  boxShadow: "0 18px 40px rgba(0,0,0,0.6)",
-                }}
-              />
-              <span
-                aria-hidden
-                className="absolute right-[-15%] top-[5%] aspect-square w-[94%] rounded-full opacity-40"
-                style={{
-                  background:
-                    "repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0 1px, transparent 1px 3px)",
-                }}
-              />
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={coverFor(vinyl)}
