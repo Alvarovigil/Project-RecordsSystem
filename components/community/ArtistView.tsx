@@ -219,7 +219,7 @@ export default function ArtistView({ slug }: { slug: string }) {
           <button
             onClick={() => router.back()}
             aria-label="Atrás"
-            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-ink/55 text-paper backdrop-blur-xl transition-colors hover:bg-ink/75"
+            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
           >
             <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden>
               <path
@@ -235,7 +235,7 @@ export default function ArtistView({ slug }: { slug: string }) {
           <button
             onClick={share}
             aria-label={`Compartir a ${portrait?.name || name}`}
-            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-ink/55 text-paper backdrop-blur-xl transition-colors hover:bg-ink/75"
+            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
               <path
