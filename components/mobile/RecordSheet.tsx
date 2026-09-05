@@ -478,32 +478,52 @@ export default function RecordSheet({
                 ))}
             </ul>
 
-            {/* The two things you came for, plus the way out. Listening is the
-                only filled button on the screen: one thing is the obvious
-                thing to do here, and it should look like it. */}
-            <div className="mt-6 flex items-center gap-2.5">
+            {/**
+             * Play, as a play button.
+             *
+             * It was a wide capsule with the word "Escuchar" in it, which is
+             * the shape a form's submit button has. Nothing else in music
+             * labels this control: a filled circle with a triangle in it is
+             * understood by everyone who has ever used a phone, it reads at a
+             * glance instead of being read, and it stops the row from looking
+             * like a toolbar of three equal things.
+             *
+             * Bigger than the two beside it on purpose. It stays the only
+             * filled control on the screen — one thing here is the obvious
+             * thing to do, and it should look like it — and the size is what
+             * carries the hierarchy now that the word is gone.
+             *
+             * The label survives for anyone not looking at it, and it says
+             * what will happen rather than what the button is.
+             */}
+            <div className="mt-6 flex items-center gap-3">
               <button
                 onClick={() => onTogglePlay(vinyl)}
                 disabled={!vinyl.previewUrl}
-                className="pressable flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-paper text-body font-medium text-ink disabled:opacity-35"
+                aria-label={
+                  playing
+                    ? "Pausar"
+                    : vinyl.previewUrl
+                      ? `Escuchar ${vinyl.title}`
+                      : "Este disco no tiene fragmento"
+                }
+                className="pressable flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-paper text-ink shadow-[0_8px_24px_rgba(0,0,0,0.45)] disabled:opacity-30 disabled:shadow-none"
               >
                 {playing ? (
-                  <>
-                    <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden>
-                      <rect x="3" y="2" width="3" height="10" fill="currentColor" />
-                      <rect x="8" y="2" width="3" height="10" fill="currentColor" />
-                    </svg>
-                    Pausar
-                  </>
+                  <svg width="17" height="17" viewBox="0 0 14 14" aria-hidden>
+                    <rect x="3" y="2" width="3" height="10" rx="0.6" fill="currentColor" />
+                    <rect x="8" y="2" width="3" height="10" rx="0.6" fill="currentColor" />
+                  </svg>
                 ) : (
-                  <>
-                    <svg width="13" height="13" viewBox="0 0 14 14" aria-hidden>
-                      <path d="M3 2 L12 7 L3 12 Z" fill="currentColor" />
-                    </svg>
-                    {vinyl.previewUrl ? "Escuchar" : "Sin preview"}
-                  </>
+                  /* nudged right by a hair: a triangle centred on its bounding
+                     box looks off-centre inside a circle, which is why every
+                     play button ever drawn is offset */
+                  <svg width="18" height="18" viewBox="0 0 14 14" aria-hidden className="translate-x-[1px]">
+                    <path d="M3 1.8 L12 7 L3 12.2 Z" fill="currentColor" />
+                  </svg>
                 )}
               </button>
+
               <IconButton label="Guardar en un rack" onClick={() => setPicking(true)}>
                 <path
                   d="M4.5 2.5h7a.5.5 0 0 1 .5.5v10.2L8 10.8l-4 2.4V3a.5.5 0 0 1 .5-.5Z"
