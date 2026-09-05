@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { coverFor } from "@/lib/cover";
+import { coverFor, paletteCoverDataUri } from "@/lib/cover";
 
 /**
  * A person, at four sizes and never at a fifth.
@@ -113,7 +113,18 @@ export function Cover({
   /** for the first screenful: skip the lazy round trip */
   eager?: boolean;
 }) {
-  const url = src ?? (vinyl ? coverFor(vinyl) : null);
+  const [failed, setFailed] = useState(false);
+  /**
+   * The last line of defence against an empty square.
+   *
+   * If the image cannot be fetched at all — both hosts down, a URL that has
+   * stopped answering — and this is a record rather than a bare src, the
+   * sleeve is drawn from the record's own palette instead. `coverFor` has
+   * always been able to do that; nothing was ever asking it to after a
+   * failure.
+   */
+  const given = src ?? (vinyl ? coverFor(vinyl) : null);
+  const url = failed && vinyl ? paletteCoverDataUri(vinyl) : given;
   const [shown, setShown] = useState(false);
 
   /**
@@ -152,7 +163,10 @@ export function Cover({
           loading={eager ? "eager" : "lazy"}
           decoding="async"
           onLoad={() => setShown(true)}
-          onError={() => setShown(true)}
+          onError={() => {
+            if (vinyl && !failed) setFailed(true);
+            else setShown(true);
+          }}
           // cached images can be complete before React ever attaches onLoad
           ref={(el) => {
             if (el?.complete && el.naturalWidth > 0) setShown(true);

@@ -201,7 +201,16 @@ export async function POST(req: NextRequest) {
    */
   const imgUrl: string | undefined = itunes.artwork ?? discogsImg;
   if (imgUrl && !canWriteToDisk) {
-    coverPath = `/api/cover?url=${encodeURIComponent(imgUrl)}`;
+    /**
+     * Both, so the record can never end up without a picture.
+     *
+     * The proxy tries the first and falls back to the second, so a Discogs
+     * image is carried along behind Apple's for the life of the record. If
+     * Apple's URL ever stops answering — a catalogue change, a withdrawn
+     * album — the sleeve is still drawn instead of leaving a hole.
+     */
+    const other = itunes.artwork && discogsImg ? `&alt=${encodeURIComponent(discogsImg)}` : "";
+    coverPath = `/api/cover?url=${encodeURIComponent(imgUrl)}${other}`;
   } else if (imgUrl) {
     try {
       const imgRes = await fetch(imgUrl, { headers: { "User-Agent": DISCOGS_UA } });

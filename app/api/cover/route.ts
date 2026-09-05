@@ -21,26 +21,52 @@ const ALLOWED_HOSTS = ["i.discogs.com", "img.discogs.com", "st.discogs.com"];
  */
 const MZSTATIC = /^is\d+-ssl\.mzstatic\.com$/;
 
-export async function GET(req: NextRequest) {
-  const raw = req.nextUrl.searchParams.get("url");
-  if (!raw) return new Response("missing url", { status: 400 });
+/**
+ * Never nothing.
+ *
+ * A cover now comes from Apple where the album could be matched and from
+ * Discogs otherwise — see the release route. That choice is made once, at
+ * import, and stored; if the URL it picked ever stops answering, the record
+ * would draw an empty square for the rest of its life.
+ *
+ * So the caller can pass the other one as `alt`, and this tries them in order.
+ * It costs nothing when the first works, which is almost always, and it means
+ * the only way to end up with no picture is for both hosts to be down at once
+ * — at which point `coverFor` still draws the sleeve from the record's own
+ * palette, and there is still no empty square.
+ */
+async function pull(url: string) {
+  try {
+    const r = await fetch(url, {
+      headers: { "User-Agent": "RackrClub/1.0 +https://rackr.club" },
+    });
+    return r.ok ? r : null;
+  } catch {
+    return null;
+  }
+}
 
+function permitted(raw: string | null): URL | null {
+  if (!raw) return null;
   let target: URL;
   try {
     target = new URL(raw);
   } catch {
-    return new Response("bad url", { status: 400 });
+    return null;
   }
   const allowed =
     ALLOWED_HOSTS.includes(target.hostname) || MZSTATIC.test(target.hostname);
-  if (target.protocol !== "https:" || !allowed) {
-    return new Response("host not allowed", { status: 403 });
-  }
+  return target.protocol === "https:" && allowed ? target : null;
+}
 
-  const upstream = await fetch(target.toString(), {
-    headers: { "User-Agent": "RackrClub/1.0 +https://rackr.club" },
-  });
-  if (!upstream.ok) return new Response("upstream error", { status: 502 });
+export async function GET(req: NextRequest) {
+  const target = permitted(req.nextUrl.searchParams.get("url"));
+  if (!target) return new Response("bad url", { status: 400 });
+
+  const alt = permitted(req.nextUrl.searchParams.get("alt"));
+
+  const upstream = (await pull(target.toString())) ?? (alt ? await pull(alt.toString()) : null);
+  if (!upstream) return new Response("upstream error", { status: 502 });
 
   return new Response(upstream.body, {
     status: 200,
