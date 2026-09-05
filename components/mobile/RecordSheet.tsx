@@ -360,7 +360,7 @@ export default function RecordSheet({
           {/* The sleeve behind the sleeve. It costs nothing — the image is
               already downloaded — and it is what stops a black page with a
               square in the middle from looking like a file browser. */}
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-16 h-[78svh] overflow-hidden">
+          <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-16 h-[94svh] overflow-hidden">
             {/**
              * The cover itself, softened and taken to black.
              *
@@ -385,7 +385,35 @@ export default function RecordSheet({
               alt=""
               className="h-full w-full scale-125 object-cover blur-2xl"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/55 via-[42%] to-ink" />
+            {/**
+             * Six stops instead of three, and the black arrives late.
+             *
+             * A gradient with one midpoint ramps in a straight line, and a
+             * straight ramp against a blurred image has a visible middle — the
+             * eye finds the exact height where the picture "starts going
+             * dark". These stops are eased: almost nothing for the first
+             * third, so the artwork is simply the artwork; then a curve that
+             * accelerates, which is how light actually falls off; then black
+             * with room to spare before the words.
+             *
+             * Written out rather than composed from utility classes because
+             * the point is the shape of the curve, and three stops cannot make
+             * one.
+             */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(to bottom," +
+                  "rgba(10,10,10,0) 0%," +
+                  "rgba(10,10,10,0.04) 30%," +
+                  "rgba(10,10,10,0.16) 46%," +
+                  "rgba(10,10,10,0.42) 60%," +
+                  "rgba(10,10,10,0.74) 73%," +
+                  "rgba(10,10,10,0.93) 84%," +
+                  "#0a0a0a 94%)",
+              }}
+            />
           </div>
 
           {/* The wash starts at the very top of the screen — the column it
