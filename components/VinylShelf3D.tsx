@@ -441,7 +441,25 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
          * above to keep the edges of the stack readable, and the second lamp
          * only fills the shadow it casts.
          */
-        ambient: 0.75,
+        /**
+         * Rebalanced, because the pile was reading dark.
+         *
+         * The grazing lamp from below stays and is the reason this shelf looks
+         * like a stack of objects rather than a column of pictures — it catches
+         * the printed edge of every sleeve and separates it from the one under
+         * it. What was missing is anything actually lighting the *faces*: the
+         * second lamp was a weak fill and the covers were being read almost
+         * entirely by ambient, which is flat by definition and dark once ACES
+         * has rolled it off.
+         *
+         * So the fill becomes a proper key from in front and above, the
+         * grazing lamp keeps its job at a slightly higher level, and ambient
+         * only fills the shadows rather than doing the work. Exposure comes up
+         * with them; the tone mapping is filmic, so the extra light lands in
+         * the roll-off instead of clipping — which is the difference between
+         * brighter and burnt.
+         */
+        ambient: 0.9,
         // From below and to the right, which is not where a lamp goes and is
         // exactly why it works here: lighting a stack from above flattens the
         // top edges into the covers, and grazing it from underneath is what
@@ -449,11 +467,14 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
         light1X: 4.5,
         light1Y: -12,
         light1Z: 8,
-        light1Intensity: 1.5,
-        light2X: -4,
-        light2Y: 5,
-        light2Z: 10,
-        light2Intensity: 0.9,
+        light1Intensity: 1.9,
+        // In front of the pile and above it: the lamp that actually prints the
+        // covers. Closer to the camera than the old one so the light arrives
+        // roughly along the line of sight and the artwork reads flat and true.
+        light2X: -3.5,
+        light2Y: 7,
+        light2Z: 12,
+        light2Intensity: 2.3,
       }
     : {
     ambient: 1.6,
@@ -859,7 +880,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
         dpr={[1, 1.5]}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: rig?.exposure ?? (vertical ? 0.64 : 1.2),
+          toneMappingExposure: rig?.exposure ?? (vertical ? 0.95 : 1.2),
           powerPreference: "high-performance",
           antialias: true,
         }}
@@ -893,6 +914,21 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
           toPos={[-7.5, 0.5, 14]}
           toIntensity={2}
         />
+        {/**
+         * The rim, and the only light here that is not adjustable.
+         *
+         * Behind and above the pile, aimed back at the camera. It touches
+         * nothing but the top edges of the sleeves and the sliver of cardboard
+         * under each one, which is exactly what stops a stack of dark covers
+         * from dissolving into a black screen — the thing that makes the 3D
+         * read as 3D rather than as a flat collage.
+         *
+         * Fixed rather than exposed in the light lab because it is structural:
+         * there is no version of this scene that is better without it, and a
+         * panel with five sliders is a panel nobody finishes tuning.
+         */}
+        {vertical && <directionalLight position={[0, 7, -9]} intensity={1.35} />}
+
         <CameraRig
           openProgressRef={openProgress}
           baseZ={zoom}
