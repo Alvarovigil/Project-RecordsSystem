@@ -165,7 +165,7 @@ export async function GET(req: NextRequest) {
     const { data } = await sbPeek
       .from("discogs_search_cache")
       .select("results")
-      .eq("query", `artist:${id}`)
+      .eq("query", `artist:v2:${id}`)
       .maybeSingle();
     return Response.json(data?.results ?? { artist: null, releases: [] });
   }
@@ -177,7 +177,9 @@ export async function GET(req: NextRequest) {
   if (!ident) return Response.json({ artist: null, releases: [] });
 
   const sb = getSupabaseAdminClient();
-  const key = `artist:${ident.id}`;
+  /* La versión en la clave: lo guardado se filtró con la regla vieja, la que
+     dejaba pasar los EP digitales y el vídeo. */
+  const key = `artist:v2:${ident.id}`;
   if (sb) {
     const { data } = await sb
       .from("discogs_search_cache")
@@ -210,19 +212,25 @@ export async function GET(req: NextRequest) {
     /**
      * Records, not files.
      *
-     * A modern artist's Discogs page is mostly digital singles — "3×File,
-     * AAC" — which are not things anybody puts on a shelf. Anything that says
-     * File, CD or Cassette and does not also say vinyl is dropped; a master
-     * has no format at all and is kept, because a master is the album rather
-     * than one of its pressings.
+     * La página de un artista actual es sobre todo lanzamientos digitales —
+     * «3×File, AAC» — y vídeo, que no son cosas que nadie ponga en una
+     * estantería. Se descarta todo lo que nombre un soporte que no es un
+     * disco y no nombre además uno que sí; un master no trae formato y se
+     * queda, porque un master es el álbum y no una de sus prensadas.
      */
     .filter((r) => {
       const f = String(r.format ?? "");
       if (!f) return true;
       // no word boundary before the noun: Discogs writes "3xFile" and
       // "2xCD", and `\bFile` does not match the first of those
-      const digital = /(File|CDr|CD|Cassette|DVD|Blu-ray)/i.test(f);
-      const vinyl = /(Vinyl|\bLP\b|\bEP\b|7"|10"|12")/i.test(f);
+      const digital =
+        /(File|CDr|CD|Cassette|DVD|Blu-ray|VHS|Video|Laserdisc|Betamax|Minidisc|SACD|8-Track|All Media)/i.test(
+          f,
+        );
+      /* «EP» no estaba aquí por casualidad y era el agujero: un EP digital
+         dice «File, AAC, EP», así que la palabra lo colaba entero. EP es un
+         tipo de publicación, no un soporte. */
+      const vinyl = /(Vinyl|\bLP\b|7"|10"|12"|Shellac|Flexi|Acetate)/i.test(f);
       return vinyl || !digital;
     })
     .filter((r) => {

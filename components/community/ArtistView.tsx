@@ -166,15 +166,16 @@ export default function ArtistView({ slug }: { slug: string }) {
         body: JSON.stringify({ releaseId: item.id }),
       });
       const payload = await res.json();
-      if (!payload.vinyl) throw new Error("no vinyl");
+      if (!payload.vinyl) throw new Error(payload.message ?? "no vinyl");
       await lib.saveToList(payload.vinyl, mine.id);
       setSaved((s) => ({ ...s, [item.id]: true }));
       kept = payload.vinyl as Vinyl;
       toast.show(`${payload.vinyl.title} → ${mine.name}`, {
         media: { src: coverFor(payload.vinyl) },
       });
-    } catch {
-      toast.show("No se pudo añadir ese disco.", { tone: "error" });
+    } catch (e) {
+      const why = e instanceof Error && e.message !== "no vinyl" ? e.message : null;
+      toast.show(why ?? "No se pudo añadir ese disco.", { tone: "error" });
     } finally {
       setSaving(null);
     }

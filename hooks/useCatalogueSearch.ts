@@ -169,6 +169,9 @@ export function useCatalogueSearch({
    * Returns the vinyl so the caller can say its name in a toast — "Guardado"
    * on its own leaves you wondering what was.
    */
+  /** el porqué del último «no», en las palabras del servidor */
+  const lastError = useRef<string | null>(null);
+
   const addFromCatalogue = useCallback(
     async (
       r: DiscogsResult,
@@ -183,7 +186,14 @@ export function useCatalogueSearch({
           body: JSON.stringify({ releaseId: r.id, isMaster: r.isMaster }),
         });
         const data = await res.json();
-        if (!data.vinyl) return null;
+        if (!data.vinyl) {
+          /* El servidor sabe por qué ha dicho que no — «esto no es un vinilo,
+             es un Blu-ray» — y esa frase vale mucho más que «no se pudo». Se
+             guarda aquí para que quien haya llamado la enseñe. */
+          lastError.current = typeof data.message === "string" ? data.message : null;
+          return null;
+        }
+        lastError.current = null;
         // whether it was new decides what undo has to do: leave the list, or
         // leave the library entirely
         const wasNew = !allVinilos.some((v) => v.id === data.vinyl.id);
@@ -258,6 +268,7 @@ export function useCatalogueSearch({
     addable,
     artists,
     artistPhotos,
+    lastError,
     people,
     communityLists,
     loading,

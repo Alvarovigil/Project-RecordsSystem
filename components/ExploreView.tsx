@@ -138,7 +138,10 @@ export default function ExploreView() {
       void lib.saveToList(vinyl, listId),
     );
     setWantedSaving(null);
-    if (!v) return toast.show("No se pudo añadir ese disco.", { tone: "error" });
+    if (!v)
+      return toast.show(catalogue.lastError.current ?? "No se pudo añadir ese disco.", {
+        tone: "error",
+      });
     setWantedSaved((s) => new Set(s).add(row.id));
     toast.show(`${v.title} · guardado`, { media: { src: row.thumb ?? coverFor(v) } });
     return v;

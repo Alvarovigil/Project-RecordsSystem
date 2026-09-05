@@ -122,7 +122,10 @@ export default function MobileSearch({
 
   const saveCatalogue = async (r: DiscogsResult) => {
     const v = await search.addFromCatalogue(r, targetId, onSaveToList);
-    if (!v) return toast.show("No se pudo añadir ese disco.", { tone: "error" });
+    if (!v)
+      return toast.show(search.lastError.current ?? "No se pudo añadir ese disco.", {
+        tone: "error",
+      });
     const saved = search.savedIn[`d${r.id}`];
     toast.undo(
       `${v.title} → ${target?.name ?? "tu colección"}`,

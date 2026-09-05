@@ -163,6 +163,34 @@ export async function POST(req: NextRequest) {
   if (!r.ok) return Response.json({ error: `discogs ${r.status}` }, { status: r.status });
   const release = await r.json();
 
+  /**
+   * La última puerta: aquí no entra lo que no es un disco.
+   *
+   * Los filtros de la búsqueda y de la ficha de un artista trabajan con lo
+   * que el catálogo cuenta en el listado, que a veces no cuenta nada — y por
+   * ese hueco se coló un Blu-ray de un concierto hasta la colección de
+   * alguien. Esta ruta sí tiene la ficha completa delante, con sus formatos
+   * exactos, así que es el sitio donde la regla se puede aplicar de verdad.
+   *
+   * Y es el sitio correcto además porque es el único gesto que importa: mirar
+   * cualquier cosa está bien, guardarla en una estantería de vinilos no.
+   */
+  const formats: string[] = (release.formats ?? []).flatMap(
+    (f: { name?: string; descriptions?: string[] }) => [f.name, ...(f.descriptions ?? [])],
+  );
+  const fmt = formats.filter(Boolean).join(" ");
+  const isRecord = /(Vinyl|\bLP\b|7"|10"|12"|Shellac|Flexi|Acetate)/i.test(fmt);
+  if (fmt && !isRecord) {
+    return Response.json(
+      {
+        error: "not-a-record",
+        // lo que se le enseña a quien lo intenta, en sus palabras
+        message: `Esto no es un vinilo: es ${formats[0] ?? "otro formato"}.`,
+      },
+      { status: 422 },
+    );
+  }
+
   // build a Vinyl entry — strip Discogs' (N) disambiguators
   const cleanName = (s: string) => s.replace(/\s\(\d+\)/g, "").trim();
   const artist = cleanName(release.artists?.[0]?.name ?? "Unknown");
