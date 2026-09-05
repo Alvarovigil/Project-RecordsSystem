@@ -190,6 +190,7 @@ export default function RecordSheet({
   const [sharing, setSharing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [toWishlist, setToWishlist] = useState(false);
   /**
    * Whether the artwork has scrolled out of the way.
    *
@@ -764,39 +765,53 @@ export default function RecordSheet({
 
       </Panel>
 
-      {/* The secondary verbs. Destructive last and in the danger colour, with
-          a rule above it, because a menu where everything looks the same is a
-          menu where the wrong row gets pressed. */}
-      <Sheet
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        title={vinyl.title}
-        subtitle={cleanArtist(vinyl.artist)}
-        size="auto"
-        width={380}
-      >
-        <div className="py-1">
+      {/**
+       * The secondary verbs, and only the ones that are not already on screen.
+       *
+       * It had "Guardar en un rack" and "Compartir" in it, which are the two
+       * controls sitting three centimetres above it — a menu whose first job
+       * is to repeat the toolbar is a menu nobody trusts to hold anything
+       * else. And it opened with the record's name, which you have just been
+       * looking at, on a screen that is entirely about that record.
+       *
+       * What is left is the two things that change where a record lives, with
+       * room around them: at this size a menu row is a target for a thumb, not
+       * a line of a list.
+       */}
+      <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} size="auto" width={380}>
+        <div className="py-3">
+          {!wished && (
+            <SheetRow
+              icon={
+                <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
+                  <path
+                    d="M9 15.2S2.4 11.3 2.4 6.9a3.4 3.4 0 0 1 6.6-1.2 3.4 3.4 0 0 1 6.6 1.2c0 4.4-6.6 8.3-6.6 8.3Z"
+                    stroke="currentColor"
+                    strokeWidth="1.3"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              }
+              label="Mover a la lista de deseos"
+              onClick={() => {
+                setMenuOpen(false);
+                setToWishlist(true);
+              }}
+            />
+          )}
+          <div className="my-2 h-px bg-line" />
           <SheetRow
-            label="Guardar en un rack"
-            onClick={() => {
-              setMenuOpen(false);
-              setPicking(true);
-            }}
-          />
-          <SheetRow
-            label="Compartir"
-            onClick={() => {
-              setMenuOpen(false);
-              setSharing(true);
-            }}
-          />
-          <SheetRow
-            label="Ver a este artista"
-            href={`/artista/${artistSlug(vinyl.artist)}`}
-            onClick={onClose}
-          />
-          <div className="my-1.5 h-px bg-line" />
-          <SheetRow
+            icon={
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
+                <path
+                  d="M3.6 5.2h10.8M7.2 5.2V3.6h3.6v1.6M5 5.2l.7 9.2h6.6l.7-9.2"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            }
             label="Borrar de mi colección"
             danger
             onClick={() => {
@@ -806,6 +821,32 @@ export default function RecordSheet({
           />
         </div>
       </Sheet>
+
+      {/**
+       * Moving to the wishlist is not a small edit, so it is confirmed.
+       *
+       * Owned and wanted are exclusive in this app: saving a record into the
+       * wishlist takes it out of the collection *and* out of every rack you
+       * had put it in. That is the correct behaviour and it is invisible from
+       * the outside — somebody who has spent an evening sorting a record into
+       * three racks would lose all three to one press. The same double step as
+       * deleting, for the same reason: the consequence is not in the label.
+       */}
+      <Confirm
+        open={toWishlist}
+        onClose={() => setToWishlist(false)}
+        title="Pasará a tus deseos"
+        body={`${vinyl.title} saldrá de tu colección y de los racks en los que lo tengas guardado. Un disco está en una cosa o en la otra, nunca en las dos.`}
+        confirmLabel="Mover a deseos"
+        danger={false}
+        onConfirm={() => {
+          setToWishlist(false);
+          if (wishlist) onAddTo(wishlist.id, vinyl);
+          toast.show(`${vinyl.title} → Lista de deseos`, {
+            media: { src: coverFor(vinyl) },
+          });
+        }}
+      />
 
       {/* Sharing: its own sheet on top, so the record is still there behind
           it when the share is cancelled — which it often is. */}

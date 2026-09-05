@@ -278,7 +278,10 @@ export function SheetRow({
    * at — which is what makes a menu feel like it is made of pieces rather than
    * printed on a page.
    */
-  const cls = `pressable mx-2 flex w-[calc(100%-1rem)] items-center gap-3.5 rounded-[10px] px-3 py-3 text-left text-body transition-colors ${
+  /* py-3.5 rather than py-3, and a wider gap: a menu row is a target for a
+     thumb before it is a line of a list, and 48px is where one stops being a
+     coin toss. */
+  const cls = `pressable mx-2 flex w-[calc(100%-1rem)] items-center gap-4 rounded-[10px] px-3.5 py-3.5 text-left text-body transition-colors ${
     danger ? "text-[#ff6b57] hover:bg-[#ff6b57]/10" : "text-content/90 hover:bg-fill"
   }`;
   const inner = (
