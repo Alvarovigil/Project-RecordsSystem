@@ -217,17 +217,22 @@ function Header({
   grabber?: boolean;
 }) {
   return (
-    <div className="sticky top-0 z-10 shrink-0 bg-surface-raised/95 backdrop-blur-sm">
+    /* Un filete bajo la cabecera, y aire suficiente.
+       Sin él el título de la hoja se lee como una fila más de la lista que hay
+       debajo — misma medida, mismo peso, misma sangría — y «Guardar en» pasaba
+       por ser el nombre de un rack. Es la única línea de la hoja que no es una
+       opción, así que tiene que verse que no lo es. */
+    <div className="sticky top-0 z-10 shrink-0 border-b border-line bg-surface-raised/95 backdrop-blur-sm">
       {grabber && (
         <div className="flex justify-center pb-1 pt-2.5">
           <span className="sheet-grabber" aria-hidden />
         </div>
       )}
       {(title || action || onClose) && (
-        <div className="flex items-start justify-between gap-4 px-5 pb-2.5 pt-4">
+        <div className="flex items-start justify-between gap-4 px-5 pb-3.5 pt-4">
           <div className="min-w-0">
             {title && (
-              <h2 id={id} className="truncate text-body font-medium leading-tight text-paper">
+              <h2 id={id} className="truncate text-heading font-medium leading-tight text-paper">
                 {title}
               </h2>
             )}

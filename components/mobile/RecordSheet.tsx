@@ -60,6 +60,7 @@ export default function RecordSheet({
   onDelete,
   onRemoveFromList,
   coverOf,
+  onCreateList,
   nowPlayingId,
   onPlayTrack,
   canEdit = true,
@@ -86,6 +87,8 @@ export default function RecordSheet({
   onRemoveFromList?: (listId: string, v: Vinyl) => void;
   /** resolves a record id to a cover, so a rack can show what is inside it */
   coverOf?: (vinylId: string) => string | null;
+  /** crear un rack desde la hoja de guardar, con este disco dentro */
+  onCreateList?: (name: string) => Promise<string> | string;
   /** which record — or which track of it — is sounding right now */
   nowPlayingId?: string;
   /** play one track: a synthetic record, so the player learns nothing new */
@@ -596,6 +599,7 @@ export default function RecordSheet({
        * take it out of there — unanswerable.
        */}
       <SaveSheet
+        onCreateList={onCreateList}
         open={picking}
         onClose={() => {
           setPicking(false);

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Sheet from "@/components/ui/Sheet";
-import RackRow from "@/components/community/RackRow";
+import RackRow, { NewRackRow } from "@/components/community/RackRow";
 import { rackOfCollection } from "@/lib/rack";
 import type { Collection } from "@/lib/collections";
 import type { Vinyl } from "@/lib/types";
@@ -37,7 +37,7 @@ export default function SaveSheet({
   coverOf,
   onAdd,
   onRemove,
-  onCreate,
+  onCreateList,
 }: {
   open: boolean;
   onClose: () => void;
@@ -46,7 +46,8 @@ export default function SaveSheet({
   coverOf?: (vinylId: string) => string | null;
   onAdd: (listId: string) => void;
   onRemove: (listId: string) => void;
-  onCreate?: () => void;
+  /** crea el rack y devuelve su id: este disco entra con él */
+  onCreateList?: (name: string) => Promise<string> | string;
 }) {
   const [filter, setFilter] = useState("");
 
@@ -117,16 +118,6 @@ export default function SaveSheet({
       subtitle={vinyl.title}
       size="tall"
       width={420}
-      action={
-        onCreate && (
-          <button
-            onClick={onCreate}
-            className="pressable text-sub font-medium text-paper transition-colors hover:text-paper/80"
-          >
-            Rack nuevo
-          </button>
-        )
-      }
     >
       {/* No scroller of its own: PhoneSheet already wraps its children in one,
           and a second inside it is two things that can be dragged. */}
@@ -169,6 +160,28 @@ export default function SaveSheet({
           <p className="px-5 py-8 text-sub text-content-muted">
             Ningún rack con ese nombre.
           </p>
+        )}
+
+        {/**
+         * Crear un rack desde aquí, con este disco ya dentro.
+         *
+         * Era un enlace en la esquina de la cabecera que te sacaba a otra
+         * pantalla, y el disco que tenías delante se quedaba atrás: había que
+         * crear el rack, volver a buscarlo y guardarlo. El sitio de esta fila
+         * es el final de la lista, porque es lo que se hace cuando ninguno de
+         * los de arriba valía — y el disco entra con ella, que es la razón de
+         * estar creándola.
+         */}
+        {onCreateList && (
+          <div className="px-3 pt-3">
+            <NewRackRow
+              hint={`Se creará con ${vinyl.title} dentro`}
+              onCreate={async (name) => {
+                const id = await onCreateList(name);
+                if (id) onAdd(id);
+              }}
+            />
+          </div>
         )}
       </div>
     </Sheet>

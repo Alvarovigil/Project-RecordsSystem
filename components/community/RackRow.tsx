@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import SharedMark from "@/components/ui/SharedMark";
 import { rackCaption, type RackView } from "@/lib/rack";
@@ -189,6 +190,121 @@ export function Chevron() {
           strokeLinecap="round"
           strokeLinejoin="round"
         />
+      </svg>
+    </span>
+  );
+}
+
+/**
+ * La fila de crear un rack, que es una fila de rack.
+ *
+ * Estaba escrita dos veces y ninguna se parecía a lo que había encima: en la
+ * estantería era una línea de menú a ras de página, sin marca y con la
+ * tipografía de un ajuste, justo debajo de seis cajas; en la hoja de guardar
+ * directamente no estaba, así que para hacer un rack nuevo había que salir,
+ * crearlo y volver a buscar el disco.
+ *
+ * Es la misma fila que las demás, con la caja vacía y de trazo discontinuo:
+ * un rack que todavía no existe. Al pulsarla el nombre se escribe en el mismo
+ * sitio donde estaría el título, y no en un cuadro de diálogo aparte — lo que
+ * se está haciendo es rellenar esta fila.
+ */
+export function NewRackRow({
+  onCreate,
+  hint,
+  placeholder = "El turno de noche",
+}: {
+  onCreate: (name: string) => void | Promise<unknown>;
+  /** la línea pequeña: qué va a pasar con el disco que tienes delante */
+  hint?: string;
+  placeholder?: string;
+}) {
+  const [writing, setWriting] = useState(false);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = name.trim();
+    if (!clean || busy) return;
+    setBusy(true);
+    try {
+      await onCreate(clean);
+      setName("");
+      setWriting(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!writing)
+    return (
+      <button
+        onClick={() => setWriting(true)}
+        className="pressable flex w-full items-center gap-3 rounded-md bg-fill-subtle py-2.5 pl-3 pr-3 text-left transition hover:bg-fill"
+      >
+        <EmptyCrate />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-body text-paper">Rack nuevo</span>
+          <span className="mt-0.5 block truncate text-caption text-content-muted">
+            {hint ?? "Agrupa discos a tu manera"}
+          </span>
+        </span>
+        <span
+          aria-hidden
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line-strong text-content-secondary"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 2.5v9M2.5 7h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
+        </span>
+      </button>
+    );
+
+  return (
+    <form onSubmit={submit} className="flex items-center gap-3 rounded-md bg-fill py-2.5 pl-3 pr-3">
+      <EmptyCrate />
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onBlur={() => !name.trim() && setWriting(false)}
+        placeholder={placeholder}
+        enterKeyHint="done"
+        aria-label="Nombre del rack nuevo"
+        className="min-w-0 flex-1 bg-transparent text-body text-paper outline-none placeholder:text-content-faint"
+      />
+      <button
+        type="submit"
+        disabled={!name.trim() || busy}
+        className="pressable flex h-8 shrink-0 items-center rounded-full bg-paper px-3.5 text-caption font-medium text-ink transition-opacity disabled:opacity-40"
+      >
+        Crear
+      </button>
+    </form>
+  );
+}
+
+/** la misma caja, vacía y de trazo discontinuo: un rack que aún no existe */
+function EmptyCrate() {
+  return (
+    <span
+      aria-hidden
+      className="flex h-11 w-11 shrink-0 items-end justify-center overflow-hidden rounded-sm bg-fill-subtle"
+    >
+      <svg viewBox="0 0 100 62" className="w-full" preserveAspectRatio="xMidYMax meet">
+        <rect
+          x="7"
+          y="16"
+          width="86"
+          height="40"
+          rx="4"
+          className="stroke-line-strong"
+          fill="none"
+          strokeWidth="2"
+          strokeDasharray="7 6"
+        />
+        <rect x="38" y="26" width="24" height="7" rx="3.5" className="fill-line-strong/60" />
       </svg>
     </span>
   );

@@ -13,7 +13,7 @@ import { useLibrary } from "@/hooks/useLibrary";
 import { useToast } from "@/components/ui/Toast";
 import { coverFor } from "@/lib/cover";
 import { artistSlug, cleanArtist, findArtist } from "@/lib/artist";
-import { findCollection, resolveCollections } from "@/lib/collections";
+import { findCollection, findWishlist, resolveCollections } from "@/lib/collections";
 import type { Vinyl } from "@/lib/types";
 
 /**
@@ -144,8 +144,9 @@ export default function ArtistView({ slug }: { slug: string }) {
     }
   };
 
-  const save = async (item: CatalogueItem) => {
-    if (!mine) return;
+  const save = async (item: CatalogueItem): Promise<Vinyl | null> => {
+    if (!mine) return null;
+    let kept: Vinyl | null = null;
     setSaving(item.id);
     try {
       const res = await fetch("/api/discogs/release", {
@@ -157,6 +158,7 @@ export default function ArtistView({ slug }: { slug: string }) {
       if (!payload.vinyl) throw new Error("no vinyl");
       await lib.saveToList(payload.vinyl, mine.id);
       setSaved((s) => ({ ...s, [item.id]: true }));
+      kept = payload.vinyl as Vinyl;
       toast.show(`${payload.vinyl.title} → ${mine.name}`, {
         media: { src: coverFor(payload.vinyl) },
       });
@@ -164,7 +166,28 @@ export default function ArtistView({ slug }: { slug: string }) {
       toast.show("No se pudo añadir ese disco.", { tone: "error" });
     } finally {
       setSaving(null);
+    }
+    return kept;
+  };
+
+  const wish = async (item: CatalogueItem) => {
+    const list = findWishlist(collections);
+    if (!list) return;
+    try {
+      const res = await fetch("/api/discogs/release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ releaseId: item.id }),
+      });
+      const payload = await res.json();
+      if (!payload.vinyl) throw new Error("no vinyl");
+      await lib.saveToList(payload.vinyl, list.id);
+      toast.show(`${payload.vinyl.title} → ${list.name}`, {
+        media: { src: coverFor(payload.vinyl) },
+      });
       setLooking(null);
+    } catch {
+      toast.show("No se pudo apuntar ese disco.", { tone: "error" });
     }
   };
 
@@ -196,7 +219,7 @@ export default function ArtistView({ slug }: { slug: string }) {
           <button
             onClick={() => router.back()}
             aria-label="Atrás"
-            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-paper/[0.10] text-paper backdrop-blur-xl transition-colors hover:bg-paper/20"
+            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-ink/55 text-paper ring-1 ring-inset ring-paper/15 backdrop-blur-xl transition-colors hover:bg-ink/75"
           >
             <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden>
               <path
@@ -212,7 +235,7 @@ export default function ArtistView({ slug }: { slug: string }) {
           <button
             onClick={share}
             aria-label={`Compartir a ${portrait?.name || name}`}
-            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-paper/[0.10] text-paper backdrop-blur-xl transition-colors hover:bg-paper/20"
+            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-ink/55 text-paper ring-1 ring-inset ring-paper/15 backdrop-blur-xl transition-colors hover:bg-ink/75"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
               <path
@@ -357,7 +380,15 @@ export default function ArtistView({ slug }: { slug: string }) {
         targetName={mine?.name ?? "Mi Colección"}
         saved={Boolean(looking && saved[looking.id])}
         busy={saving === looking?.id}
-        onSave={() => looking && void save(looking)}
+        onSave={() => (looking ? save(looking) : null)}
+        onWish={() => looking && void wish(looking)}
+        collections={collections}
+        coverOf={(id) => {
+          const v = lib.releases.find((x) => x.id === id);
+          return v ? coverFor(v) : null;
+        }}
+        onAddToList={(listId, v) => void lib.saveToList(v, listId)}
+        onRemoveFromList={(listId, v) => void lib.removeFromList(listId, v.id)}
       />
 
       <RecordSheet

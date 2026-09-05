@@ -6,7 +6,6 @@ import ShareSheet from "@/components/ShareSheet";
 import { SITE_URL } from "@/lib/site";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import MarqueeText from "@/components/MarqueeText";
-import Button from "@/components/ui/Button";
 import ListEditSheet from "./ListEditSheet";
 import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
@@ -22,7 +21,7 @@ import dynamic from "next/dynamic";
  * thing wearing its name.
  */
 const VinylShelf3D = dynamic(() => import("@/components/VinylShelf3D"), { ssr: false });
-import RackRow from "@/components/community/RackRow";
+import RackRow, { NewRackRow } from "@/components/community/RackRow";
 import { rackOfCollection, rackOfList } from "@/lib/rack";
 import { coverFor } from "@/lib/cover";
 import { useImagesReady } from "@/hooks/useImagesReady";
@@ -198,8 +197,6 @@ export default function MobileShelf({
       alive = false;
     };
   }, [repo, savedLists]);
-  const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState("");
 
   return (
     <div className="relative min-h-screen-d bg-surface">
@@ -344,37 +341,16 @@ export default function MobileShelf({
             );
           })}
         </ul>
-        <div className="pb-1">
-
-          {creating ? (
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const clean = newName.trim();
-                if (!clean) return;
-                const id = await onCreateList(clean);
-                setNewName("");
-                setCreating(false);
+        <div className="px-3 pb-1">
+          <div>
+            <NewRackRow
+              onCreate={async (name) => {
+                const id = await onCreateList(name);
                 onActivate(id);
                 setSwitching(false);
               }}
-              className="flex gap-2 px-5 py-3"
-            >
-              <input
-                autoFocus
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="El turno de noche"
-                enterKeyHint="done"
-                className="h-11 flex-1 rounded-control border border-line-strong bg-transparent px-3 text-body text-paper outline-none placeholder:text-content-faint focus:border-line-focus"
-              />
-              <Button type="submit" variant="primary" disabled={!newName.trim()}>
-                Crear
-              </Button>
-            </form>
-          ) : (
-            <SheetRow label="Rack nuevo" onClick={() => setCreating(true)} />
-          )}
+            />
+          </div>
         </div>
         {savedLists.length > 0 && (
           <>

@@ -2,16 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import RackRow, { Chevron } from "@/components/community/RackRow";
+import RackRow, { Chevron, NewRackRow } from "@/components/community/RackRow";
 import PersonRow from "@/components/community/PersonRow";
-import { rackOfList } from "@/lib/rack";
+import { rackOfCollection, rackOfList } from "@/lib/rack";
 import Avatar from "@/components/ui/Avatar";
 import Segmented from "@/components/ui/Segmented";
-import Sheet, { SheetRow } from "@/components/ui/Sheet";
+import Sheet from "@/components/ui/Sheet";
 import EmptyState from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { useCatalogueSearch, type DiscogsResult } from "@/hooks/useCatalogueSearch";
 import BarcodeScanner, { useCanScan } from "@/components/BarcodeScanner";
+import { findWishlist } from "@/lib/collections";
 import type { Collection } from "@/lib/collections";
 import type { Vinyl } from "@/lib/types";
 import CatalogueNotice from "@/components/ui/CatalogueNotice";
@@ -108,6 +109,16 @@ export default function MobileSearch({
       ? search.localResults.length === 0 && search.addable.length === 0
       : search.people.length === 0 && search.communityLists.length === 0);
 
+  /** apuntar un disco que no tienes, sin meterlo en la colección */
+  const wishCatalogue = async (r: DiscogsResult) => {
+    const list = findWishlist(collections);
+    if (!list) return;
+    const v = await search.addFromCatalogue(r, list.id, onSaveToList);
+    if (!v) return toast.show("No se pudo apuntar ese disco.", { tone: "error" });
+    toast.show(`${v.title} → ${list.name}`, { media: { src: r.thumb } });
+    setLooking(null);
+  };
+
   const saveCatalogue = async (r: DiscogsResult) => {
     const v = await search.addFromCatalogue(r, targetId, onSaveToList);
     if (!v) return toast.show("No se pudo añadir ese disco.", { tone: "error" });
@@ -122,6 +133,7 @@ export default function MobileSearch({
       },
       { media: { src: r.thumb } },
     );
+    return v;
   };
 
   return (
@@ -402,24 +414,24 @@ export default function MobileSearch({
 
       {/* changing the destination: a sheet over the search, which stays put */}
       <Sheet open={picking} onClose={() => setPicking(false)} title="Guardar en" size="auto" width={380}>
-        <div className="py-1">
+        <div className="flex flex-col gap-1 px-3 py-3">
           {collections.map((c) => (
-            <SheetRow
+            <RackRow
               key={c.id}
-              label={c.name}
-              detail={c.id === targetId ? "✓" : `${c.vinylIds.length}`}
+              rack={rackOfCollection(c, (id) => allVinilos.find((v) => v.id === id)?.cover ?? null, {
+                note: c.id === targetId ? "aquí ahora" : undefined,
+              })}
+              active={c.id === targetId}
               onClick={() => {
                 setTargetId(c.id);
                 setPicking(false);
               }}
             />
           ))}
-          <SheetRow
-            label="Rack nuevo…"
-            onClick={async () => {
-              const name = window.prompt("Nombre del rack");
-              if (!name?.trim()) return;
-              const id = await onCreateList(name.trim());
+          <NewRackRow
+            hint="Y guardar aquí lo que encuentres"
+            onCreate={async (name) => {
+              const id = await onCreateList(name);
               setTargetId(id);
               setPicking(false);
             }}
@@ -433,10 +445,12 @@ export default function MobileSearch({
         targetName={target?.name ?? "Mi Colección"}
         saved={Boolean(looking && search.savedIn[`d${looking.id}`])}
         busy={search.adding === looking?.id}
-        onSave={() => {
-          if (!looking) return;
-          void saveCatalogue(looking);
-        }}
+        onSave={() => (looking ? saveCatalogue(looking) : null)}
+        onWish={() => looking && void wishCatalogue(looking)}
+        collections={collections}
+        coverOf={(id) => allVinilos.find((v) => v.id === id)?.cover ?? null}
+        onAddToList={(listId, v) => onSaveToList(v, listId)}
+        onRemoveFromList={(listId, v) => onRemoveFromList(v.id, listId)}
       />
 
       <BarcodeScanner
