@@ -251,7 +251,7 @@ export default function ArtistView({ slug }: { slug: string }) {
        * edición.
        */}
       <header
-        className="relative -mx-5 mb-2 pb-6 sm:-mx-8"
+        className="relative -mx-5 mb-8 pb-2 sm:-mx-8"
         style={{ marginTop: "calc(-1 * max(1.5rem, var(--safe-top)))" }}
       >
         <div className="relative z-10 flex h-16 items-center justify-between px-4">
@@ -400,15 +400,30 @@ export default function ArtistView({ slug }: { slug: string }) {
         }
       >
         {owned.length > 0 && (
-          <section className="pb-12">
-            <h2 className="text-body font-medium text-paper">En tu colección</h2>
-            <ul className="mt-5 grid grid-cols-3 gap-x-4 gap-y-7 sm:grid-cols-4 lg:grid-cols-6">
+          /**
+           * Lo tuyo, en un carrusel; lo que te falta, en rejilla.
+           *
+           * No es una inconsistencia: son dos cosas distintas. Lo que ya
+           * tienes es un recordatorio — normalmente tres o cuatro discos — y
+           * una rejilla de tres columnas con una fila y media pide una
+           * pantalla entera para decir algo que cabe en un vistazo. Lo que te
+           * falta es un catálogo para recorrer, y eso sí es una rejilla.
+           */
+          <section className="pb-10">
+            <SectionTitle>En tu colección</SectionTitle>
+            <ul className="rail -mx-5 mt-4 flex snap-x snap-mandatory gap-3.5 overflow-x-auto px-5 pb-1 sm:-mx-8 sm:px-8">
               {owned.map((v, i) => (
-                <li key={v.id}>
+                <li key={v.id} className="w-[136px] shrink-0 snap-start sm:w-[160px]">
                   <button onClick={() => setOpen(v)} className="pressable block w-full text-left">
-                    <Cover src={coverFor(v)} eager={i < 6} className="aspect-square w-full rounded-[3px]" />
-                    <span className="mt-2 block truncate text-sub font-medium text-paper">{v.title}</span>
-                    <span className="block truncate text-caption text-content-muted">
+                    <Cover
+                      src={coverFor(v)}
+                      eager={i < 4}
+                      className="aspect-square w-full rounded-[3px]"
+                    />
+                    <span className="mt-2.5 block truncate text-sub font-medium text-paper">
+                      {v.title}
+                    </span>
+                    <span className="mt-0.5 block truncate text-caption text-content-muted">
                       {v.year || ""}
                     </span>
                   </button>
@@ -418,15 +433,18 @@ export default function ArtistView({ slug }: { slug: string }) {
           </section>
         )}
 
-        <section className="border-t border-line pb-16 pt-10">
-          <h2 className="text-body font-medium text-paper">
+        <section className="border-t border-line pb-16 pt-8">
+          <SectionTitle
+            note={
+              owned.length > 0
+                ? "Del catálogo, sin lo que ya tienes."
+                : "Del catálogo. Toca uno para ver su ficha."
+            }
+          >
             {owned.length > 0 ? "Lo que te falta" : `Discos de ${name}`}
-          </h2>
-          <p className="mt-1.5 text-sub text-content-muted">
-            Del catálogo, sin lo que ya tienes. Toca uno para ver su ficha.
-          </p>
+          </SectionTitle>
 
-          <div className="mt-6">
+          <div className="mt-5">
             {more === null ? (
               <SkeletonCovers n={12} cols="grid-cols-3 sm:grid-cols-4 lg:grid-cols-6" gap="gap-x-4 gap-y-7" />
             ) : more.length === 0 ? (
@@ -515,6 +533,22 @@ export default function ArtistView({ slug }: { slug: string }) {
         onDelete={(v) => void lib.deleteRelease(v.id)}
       />
     </Page>
+  );
+}
+
+/**
+ * El título de una sección, con su misma medida en las dos que hay.
+ *
+ * Estaban escritos a mano y con distinto aire encima y debajo, y el primero se
+ * comía el degradado de la cabecera. Uno solo, con su nota opcional debajo, y
+ * el ritmo lo fija la sección y no la frase.
+ */
+function SectionTitle({ children, note }: { children: React.ReactNode; note?: string }) {
+  return (
+    <div>
+      <h2 className="text-heading font-medium leading-tight text-paper">{children}</h2>
+      {note && <p className="mt-1.5 text-sub text-content-muted">{note}</p>}
+    </div>
   );
 }
 
