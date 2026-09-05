@@ -74,10 +74,10 @@ export default function WantedRail({
 
   return (
     <section className="mt-9">
-      <div className="border-b border-line pb-2">
-        <h2 className="text-caption uppercase tracking-label text-content-muted">{title}</h2>
-      </div>
-      <p className="mt-2.5 text-sub text-content-muted">{subtitle}</p>
+      {/* El mismo encabezado que las demás secciones de Explorar: un título que
+          se lee y una línea que dice por qué mirar. */}
+      <h2 className="text-heading font-medium leading-tight text-paper">{title}</h2>
+      <p className="mt-1.5 text-sub text-content-muted">{subtitle}</p>
 
       {/* The same rail as the racks above it: this is something to skim past,
           and it bleeds off the right edge so the row says there is more. */}

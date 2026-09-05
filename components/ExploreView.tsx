@@ -505,13 +505,21 @@ export default function ExploreView() {
            * siguen ahí, abajo, que es donde responden a «¿y qué más hay?».
            */}
           {pulse !== null && pulse.length > 0 && (
-            <Section title="Ahora mismo">
+            <Section
+              title="Se está moviendo"
+              note="Lo que otros acaban de colocar en sus estanterías."
+              href="/actividad"
+              linkLabel="Ver todo"
+            >
               <PulseRail events={pulse} />
             </Section>
           )}
 
           {lists.length > 0 && (
-            <Section title="En sus estanterías, no en la tuya">
+            <Section
+              title="Lo tienen ellos, tú no"
+              note="Discos sacados de los racks de aquí abajo. Ábrelos y verás quién más los tiene."
+            >
               <FromOthersRail
                 lists={lists}
                 ownedIds={ownedIds}
@@ -520,7 +528,10 @@ export default function ExploreView() {
             </Section>
           )}
 
-          <Section title="Racks destacados">
+          <Section
+            title="Cajones que vale la pena abrir"
+            note="Colecciones que alguien ha montado con criterio, no carpetas."
+          >
             {loading && lists.length === 0 ? (
               <SkeletonRackRail n={5} />
             ) : lists.length === 0 ? (
@@ -563,7 +574,10 @@ export default function ExploreView() {
             )}
           </Section>
 
-          <Section title="Usuarios que coleccionan">
+          <Section
+            title="Coleccionan como tú"
+            note="Puede que os solapéis más de lo que crees."
+          >
             {/* The same rail as the crates above, for the same reason: this is
                 something to skim past, not a directory to work through. And
                 the cards are shelves rather than faces — see PersonCard. */}
@@ -591,8 +605,8 @@ export default function ExploreView() {
            * llegado hasta aquí abajo.
            */}
           <WantedRail
-            title="En tendencia"
-            subtitle={`Los vinilos de ${new Date().getFullYear()} que más gente está buscando ahora mismo.`}
+            title="Lo que todo el mundo busca"
+            subtitle={`Los vinilos de ${new Date().getFullYear()} más perseguidos ahora mismo. Sin lo que ya tienes.`}
             ownedIds={ownedDiscogsIds}
             targetName={lib.activeList?.title ?? "Mi Colección"}
             onSave={saveWanted}
@@ -606,9 +620,9 @@ export default function ExploreView() {
 
           {topGenre && (
             <WantedRail
-              title="Podrían interesarte"
+              title={`Tu estantería tira a ${topGenre.toLowerCase()}`}
               genre={topGenre}
-              subtitle={`Tu estantería tira a ${topGenre.toLowerCase()}. Esto es lo más buscado del género, sin lo que ya tienes.`}
+              subtitle="Lo más perseguido del género, sin lo que ya tienes."
               ownedIds={ownedDiscogsIds}
               targetName={lib.activeList?.title ?? "Mi Colección"}
               onSave={saveWanted}

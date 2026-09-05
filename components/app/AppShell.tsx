@@ -166,19 +166,37 @@ export function PageHeader({
 /** A titled region inside a page, optionally with a way out of it. */
 export function Section({
   title,
+  note,
   href,
   linkLabel = "Ver todo",
   children,
 }: {
   title: string;
+  /**
+   * La frase que dice por qué mirar esto.
+   *
+   * Un rótulo en versalitas sobre un filete es una etiqueta de archivo: dice
+   * cómo se llama el cajón, no qué hay dentro ni por qué te importaría. Con
+   * una línea debajo, la sección deja de nombrarse a sí misma y se dirige a
+   * quien la está mirando.
+   */
+  note?: string;
   href?: string;
   linkLabel?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="mt-9 first:mt-0">
-      <div className="flex items-baseline justify-between border-b border-line pb-2">
-        <h2 className="text-caption uppercase tracking-label text-content-muted">{title}</h2>
+      <div className={`flex items-baseline justify-between ${note ? "" : "border-b border-line pb-2"}`}>
+        <h2
+          className={
+            note
+              ? "text-heading font-medium leading-tight text-paper"
+              : "text-caption uppercase tracking-label text-content-muted"
+          }
+        >
+          {title}
+        </h2>
         {href && (
           <a
             href={href}
@@ -188,6 +206,7 @@ export function Section({
           </a>
         )}
       </div>
+      {note && <p className="mt-1.5 text-sub text-content-muted">{note}</p>}
       <div className="mt-4">{children}</div>
     </section>
   );
