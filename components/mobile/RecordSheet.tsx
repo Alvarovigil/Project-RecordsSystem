@@ -8,6 +8,12 @@ import { useDevice } from "@/hooks/useDevice";
 import Avatar from "@/components/ui/Avatar";
 import Confirm from "@/components/ui/Confirm";
 import RecordSpecsCard from "@/components/RecordSpecsCard";
+import {
+  CrateIcon,
+  IconButton,
+  RecordGround,
+  RecordHero,
+} from "@/components/record/RecordHero";
 import SaveSheet from "./SaveSheet";
 import Tracklist from "./Tracklist";
 import Card from "@/components/ui/Card";
@@ -98,29 +104,6 @@ function Panel({
         </motion.div>
       )}
     </AnimatePresence>
-  );
-}
-
-/** A round control that is only an icon: 44px of tap area, no label. */
-function IconButton({
-  label,
-  onClick,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={label}
-      className="pressable flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-fill text-paper transition-colors hover:bg-fill-strong"
-    >
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-        {children}
-      </svg>
-    </button>
   );
 }
 
@@ -408,139 +391,22 @@ export default function RecordSheet({
           {/* The sleeve behind the sleeve. It costs nothing — the image is
               already downloaded — and it is what stops a black page with a
               square in the middle from looking like a file browser. */}
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-16 h-[94svh] overflow-hidden">
-            {/**
-             * The cover itself, softened and taken to black.
-             *
-             * It was a light: blown up 1.7×, saturated past the artwork's own
-             * colours and blurred until nothing of the image survived — a
-             * coloured glow that happened to have been made from the sleeve.
-             * This is the sleeve. Enough blur that it is a ground and never
-             * competes with the record printed sharply on top of it, and no
-             * saturation of its own, so the colour on screen is the colour of
-             * the cover rather than a version of it.
-             *
-             * The gradient is the other half: it holds the artwork through the
-             * top of the screen and is fully black well before the words, so
-             * everything under the title is read on the app's own ground. And
-             * it must never end in a visible line, which is the whole reason
-             * it goes all the way to black inside its own box rather than
-             * stopping at the edge of it.
-             */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={coverFor(vinyl)}
-              alt=""
-              className="h-full w-full scale-125 object-cover blur-2xl"
-            />
-            {/**
-             * Six stops instead of three, and the black arrives late.
-             *
-             * A gradient with one midpoint ramps in a straight line, and a
-             * straight ramp against a blurred image has a visible middle — the
-             * eye finds the exact height where the picture "starts going
-             * dark". These stops are eased: almost nothing for the first
-             * third, so the artwork is simply the artwork; then a curve that
-             * accelerates, which is how light actually falls off; then black
-             * with room to spare before the words.
-             *
-             * Written out rather than composed from utility classes because
-             * the point is the shape of the curve, and three stops cannot make
-             * one.
-             */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background:
-                  "linear-gradient(to bottom," +
-                  "rgba(10,10,10,0) 0%," +
-                  "rgba(10,10,10,0.04) 30%," +
-                  "rgba(10,10,10,0.16) 46%," +
-                  "rgba(10,10,10,0.42) 60%," +
-                  "rgba(10,10,10,0.74) 73%," +
-                  "rgba(10,10,10,0.93) 84%," +
-                  "#0a0a0a 94%)",
-              }}
-            />
-          </div>
+          <RecordGround cover={coverFor(vinyl)} />
 
           {/* The wash starts at the very top of the screen — the column it
               lives in is pulled up under the header — so the content puts the
               header's height back, or the sleeve would begin under the back
               button. */}
           <div className="relative mx-auto w-full max-w-[440px] px-5 pt-16">
-            {/**
-             * The sleeve, and nothing behind it.
-             *
-             * There was a record sliding out of the right-hand side — two
-             * radial gradients standing in for a disc. It was a nice drawing
-             * and it was doing damage: it pushed the cover off the centre
-             * line, so the one square image this screen is about sat slightly
-             * left of where the title, the artist and everything under them
-             * are aligned, and the eye reads that as a mistake before it reads
-             * it as an object.
-             *
-             * A record shown by its sleeve is what a shelf looks like. The
-             * disc belongs to the 3D stack, where it is the real thing rather
-             * than an impression of one.
-             */}
-            <div className="relative mx-auto mt-3 w-[76%]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={coverFor(vinyl)}
-                alt={`Portada de ${vinyl.title}`}
-                className="relative aspect-square w-full rounded-[3px] object-cover shadow-[0_26px_60px_rgba(0,0,0,0.62)]"
-              />
-            </div>
-
-            <div ref={sentinel} aria-hidden />
-
-            {/**
-             * The caption, centred under a centred sleeve.
-             *
-             * Left-aligned it read as the start of a document — a heading with
-             * a body under it — while the object it names sits in the middle
-             * of the screen. Centred, the name belongs to the record above it
-             * rather than to the page.
-             *
-             * The chips come with it: they are the same block, and a centred
-             * title over a left-aligned row of facts is two decisions where
-             * there should be one.
-             */}
-            <div className="text-center">
-              <h2 className="mt-7 text-title font-medium leading-tight text-paper">
-                {vinyl.title}
-              </h2>
-              {/* The artist is a door, not a caption. No arrow beside it: the
-                  underline on press already says it leads somewhere, and an
-                  arrow after a centred name pulls the whole line off centre by
-                  its own width. */}
-              <Link
-                href={`/artista/${artistSlug(vinyl.artist)}`}
-                onClick={onClose}
-                className="pressable mt-1.5 inline-block text-body text-content-secondary underline-offset-4 transition hover:text-paper hover:underline"
-              >
-                {cleanArtist(vinyl.artist)}
-              </Link>
-
-              {/* Year, genre and label as chips under the name rather than as a
-                  four-cell table. They are how you place a record at a glance —
-                  a caption, not data — and the table that held them made four
-                  different kinds of fact look like one form to fill in. The
-                  full set is one press away in the technical sheet. */}
-              <ul className="mt-4 flex flex-wrap justify-center gap-1.5">
-                {[vinyl.year ? String(vinyl.year) : null, vinyl.genre, vinyl.label, vinyl.country]
-                  .filter(Boolean)
-                  .map((f) => (
-                    <li
-                      key={f as string}
-                      className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary"
-                    >
-                      {f}
-                    </li>
-                  ))}
-              </ul>
-            </div>
+            <RecordHero
+              cover={coverFor(vinyl)}
+              title={vinyl.title}
+              artist={cleanArtist(vinyl.artist)}
+              artistHref={`/artista/${artistSlug(vinyl.artist)}`}
+              facts={[vinyl.year, vinyl.genre, vinyl.label, vinyl.country]}
+              onNavigate={onClose}
+              sentinel={sentinel}
+            />
 
             {/**
              * Play, as a play button.
@@ -616,19 +482,9 @@ export default function RecordSheet({
                     : "border border-line-strong text-content hover:border-line-focus"
                 }`}
               >
-                {/* A crate, not a bookmark. A bookmark is what you put in a
-                    book you are coming back to; this app keeps records in
-                    boxes, and it is the object every other screen already
-                    draws — the crate in Explorar, the one on a rack's page. */}
-                <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden className="shrink-0">
-                  <path
-                    d="M2.6 4.4h10.8l-.85 8.5a.7.7 0 0 1-.7.6H4.15a.7.7 0 0 1-.7-.6L2.6 4.4Z"
-                    stroke="currentColor"
-                    strokeWidth="1.3"
-                    strokeLinejoin="round"
-                  />
-                  <path d="M6.3 7.1h3.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                </svg>
+                {/* Una caja, no un marcador: es el objeto que dibuja el
+                    resto de la aplicación para decir «guardado». */}
+                <CrateIcon />
                 <span className="truncate">{savedLabel ?? "Guardar"}</span>
               </button>
 

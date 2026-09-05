@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Sheet from "@/components/ui/Sheet";
 import RecordSpecsCard from "@/components/RecordSpecsCard";
+import { CrateIcon, RecordGround, RecordHero } from "@/components/record/RecordHero";
+import { artistFromCatalogueTitle, artistSlug } from "@/lib/artist";
 
 /**
  * A record from the catalogue, read rather than taken.
@@ -20,10 +22,18 @@ import RecordSpecsCard from "@/components/RecordSpecsCard";
  * found: the row opens this, the button beside it saves. Neither can be
  * reached by accident from the other.
  *
- * The sheet leads with the pressing rather than with the album, because that
- * is the question that brought somebody here — `RecordSpecsCard` opens by
- * default for the same reason, where on your own record screen it stays folded
- * away behind a line you press.
+ * **Es la misma pantalla que la de un disco tuyo**, y no una versión reducida
+ * de ella: la misma portada sobre su propio color, el mismo título centrado,
+ * los mismos chips, la misma fila de acciones. Era una miniatura de 104px con
+ * un botón al lado, y eso hacía que un disco encontrado pareciera el resultado
+ * de una consulta en vez de un disco. Tener uno o no tenerlo es un estado, no
+ * otra clase de cosa.
+ *
+ * Lo que cambia es lo único que debe cambiar: el botón dice guardar en vez de
+ * decir dónde está, y no hay tarjetas de comunidad porque todavía no hay nada
+ * que contar. Y la ficha técnica se abre sola, porque aquí es la pregunta que
+ * ha traído a alguien hasta esta pantalla — donde en un disco tuyo se queda
+ * plegada tras una línea que se pulsa.
  *
  * **Nothing here writes anything until the button is pressed.** That is the
  * point of the screen, and the reason the button says where it is going.
@@ -66,65 +76,61 @@ export default function CatalogueSheet({
   // open by default, but still closable: a panel that cannot be folded is a
   // panel the reader is not allowed to finish with
   const [specs, setSpecs] = useState(true);
-  const meta = item
-    ? [item.year, item.country, item.format?.slice(0, 2).join(", "), item.label]
-        .filter(Boolean)
-        .join(" · ")
-    : "";
+
+  /* El catálogo entrega «Artista - Álbum» en un solo campo. Partirlo es lo que
+     permite que esta pantalla tenga el mismo pie que la de un disco tuyo, con
+     el artista como puerta a su ficha en vez de como parte del título. */
+  const artist = item ? artistFromCatalogueTitle(item.title) : null;
+  const album =
+    item && artist ? item.title.slice(item.title.indexOf(" - ") + 3).trim() : (item?.title ?? "");
+  const cover = item?.cover_image ?? item?.thumb ?? "/sleeve-vacio.jpg";
 
   return (
     <Sheet open={Boolean(item)} onClose={onClose} size="tall" width={460} bare>
       {item && (
         <div className="scroll-y min-h-0 flex-1 overflow-y-auto">
-          <div className="px-5 pb-8 pt-5">
-            <div className="flex gap-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={item.cover_image ?? item.thumb ?? "/sleeve-vacio.jpg"}
-                alt=""
-                className="h-[104px] w-[104px] shrink-0 rounded-[3px] object-cover"
+          <div className="relative pb-10">
+            <RecordGround cover={cover} />
+
+            <div className="relative mx-auto w-full max-w-[440px] px-5 pt-8">
+              <RecordHero
+                cover={cover}
+                title={album}
+                artist={artist}
+                artistHref={artist ? `/artista/${artistSlug(artist)}` : null}
+                facts={[item.year, item.genre, item.label, item.country]}
+                onNavigate={onClose}
               />
-              <div className="min-w-0 flex-1">
-                <h2 className="text-heading font-medium leading-tight text-content">
-                  {item.title}
-                </h2>
-                {meta && (
-                  <p className="mt-2 text-sub leading-relaxed text-content-muted">{meta}</p>
+
+              {/* La misma fila de acciones que en un disco tuyo, con lo que
+                  aquí tiene sentido. Rellena, porque en esta pantalla guardar
+                  es lo único que se puede hacer y debe parecerlo. */}
+              <div className="mt-6 flex items-center gap-3">
+                {action ?? (
+                  <button
+                    onClick={onSave}
+                    disabled={saved || busy}
+                    className={`pressable flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full px-4 text-sub font-medium transition-colors disabled:opacity-45 ${
+                      saved ? "bg-fill text-paper" : "bg-paper text-ink"
+                    }`}
+                  >
+                    {saved ? <Check /> : <CrateIcon />}
+                    <span className="truncate">
+                      {saved ? `En ${targetName}` : busy ? "Guardando…" : `Guardar en ${targetName}`}
+                    </span>
+                  </button>
                 )}
+                {extra}
               </div>
-            </div>
 
-            <div className="mt-5 flex flex-col gap-2">
-              {action ?? (
-                <button
-                  onClick={onSave}
-                  disabled={saved || busy}
-                  className="pressable flex h-12 w-full items-center justify-center gap-2 rounded-full bg-content text-body font-medium text-surface transition-colors disabled:opacity-45"
-                >
-                  {saved ? (
-                    <>
-                      <Check />
-                      En {targetName}
-                    </>
-                  ) : busy ? (
-                    "Guardando…"
-                  ) : (
-                    `Guardar en ${targetName}`
-                  )}
-                </button>
-              )}
-              {extra}
-            </div>
-
-            {/* Open, not folded. On your own record screen the pressing is a
-                detail behind a line; here it is the reason the sheet exists. */}
-            <div className="mt-6">
-              <RecordSpecsCard
-                key={item.id}
-                discogsId={item.id}
-                open={specs}
-                onOpenChange={setSpecs}
-              />
+              <div className="mt-6">
+                <RecordSpecsCard
+                  key={item.id}
+                  discogsId={item.id}
+                  open={specs}
+                  onOpenChange={setSpecs}
+                />
+              </div>
             </div>
           </div>
         </div>
