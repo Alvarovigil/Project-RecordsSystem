@@ -30,9 +30,9 @@ export default function CatalogueNotice({
 
   const text =
     degraded === "rate-limit"
-      ? "El catálogo está devolviendo menos resultados de lo normal: hemos llegado al límite de consultas de Discogs. Vuelve a intentarlo en un minuto."
+      ? "El catálogo está devolviendo menos resultados de lo normal: hemos llegado al límite de consultas por minuto. Vuelve a intentarlo en un momento."
       : degraded === "down"
-        ? "No hemos podido consultar el catálogo de Discogs. Lo que ves es lo que ya tienes en tu colección."
+        ? "No hemos podido consultar el catálogo. Lo que ves es lo que ya tienes en tu colección."
         : "Faltan resultados: el catálogo ha respondido a medias.";
 
   return (

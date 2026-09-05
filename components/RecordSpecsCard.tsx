@@ -464,15 +464,15 @@ function Specs({ specs: s }: { specs: RecordSpecs }) {
        *
        * How many people have it and how many want it is the first thing a
        * collector looks at — but leading with it turns a shelf into a
-       * portfolio. It sits under everything else, next to the way out to
-       * Discogs where those numbers actually live.
+       * portfolio. It sits under everything else, next to the way out to the
+       * catalogue where those numbers actually live.
        *
        * Two numbers side by side rather than four small facts: "la tienen" and
        * "la quieren" only mean anything against each other, and that
        * comparison is the whole of what a collector reads here.
        */}
       {market && (
-        <Block title="En Discogs">
+        <Block title="Quién lo tiene">
           <div className="flex items-stretch gap-2.5">
             <Count n={s.have} label="la tienen" />
             <Count n={s.want} label="la quieren" />
@@ -492,7 +492,7 @@ function Specs({ specs: s }: { specs: RecordSpecs }) {
             rel="noopener noreferrer"
             className="pressable mt-5 flex h-11 items-center justify-center gap-2 rounded-full border border-line-strong text-sub text-paper transition-colors hover:border-paper/40"
           >
-            Ver en Discogs
+            Ver la ficha completa
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden>
               <path
                 d="M2 8 L8 2 M3.6 2 H8 V6.4"

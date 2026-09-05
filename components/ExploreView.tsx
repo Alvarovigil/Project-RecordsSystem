@@ -509,7 +509,7 @@ export default function ExploreView() {
            */}
           <WantedRail
             title="En tendencia"
-            subtitle={`Los vinilos de ${new Date().getFullYear()} que más gente está buscando, según Discogs.`}
+            subtitle={`Los vinilos de ${new Date().getFullYear()} que más gente está buscando ahora mismo.`}
             ownedIds={ownedDiscogsIds}
             targetName={lib.activeList?.title ?? "Mi Colección"}
             onSave={saveWanted}
