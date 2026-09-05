@@ -146,7 +146,7 @@ export function RecordTopBar({
         <button
           onClick={onClose}
           aria-label="Cerrar"
-          className="pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/55 text-paper ring-1 ring-inset ring-paper/15 backdrop-blur-xl transition-colors hover:bg-ink/75"
+          className="pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/55 text-paper backdrop-blur-xl transition-colors hover:bg-ink/75"
         >
           <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden>
             <path
