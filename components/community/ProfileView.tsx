@@ -315,7 +315,7 @@ export default function ProfileView({
         title={isYou ? "Los que más colocas" : "Los que más coloca"}
       />
 
-      <PortraitCard portrait={portrait} records={(theirs ?? []).length} />
+      <PortraitCard portrait={portrait} records={(theirs ?? []).length} mine={isYou} />
 
       <Regulars records={theirs ?? []} />
 
@@ -387,6 +387,49 @@ export default function ProfileView({
           <div className="mt-4">
             <ListGrid lists={saved} mine={false} coversOf={coversOf} empty={null} />
           </div>
+        </section>
+      )}
+
+      {/**
+       * Tu perfil es además tu cuenta.
+       *
+       * El de otra persona es una vitrina y termina donde terminan sus racks.
+       * El tuyo no: es el único sitio de la aplicación que es tuyo, y en el
+       * móvil no hay menú de cuenta donde meter lo demás. Así que la gestión
+       * vive aquí abajo, después de lo que has reunido y no por delante —
+       * primero eres un coleccionista y después el administrador de una
+       * cuenta.
+       */}
+      {isYou && (
+        <section className="pb-14">
+          <h2 className="text-caption uppercase tracking-label text-content-muted">Tu cuenta</h2>
+          <ul className="mt-3.5 overflow-hidden rounded-[14px] bg-fill-subtle">
+            {[
+              { href: "/actividad", label: "Actividad y avisos" },
+              { href: "/coleccion", label: "Organizar mi colección" },
+              { href: "/ajustes", label: "Ajustes" },
+            ].map((row) => (
+              <li key={row.href} className="border-b border-line last:border-b-0">
+                <a
+                  href={row.href}
+                  className="pressable flex items-center justify-between gap-3 px-4 py-3.5 text-body text-content transition-colors hover:bg-fill"
+                >
+                  {row.label}
+                  <span aria-hidden className="text-content-faint">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path
+                        d="M5 2.5 L9.5 7 L5 11.5"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

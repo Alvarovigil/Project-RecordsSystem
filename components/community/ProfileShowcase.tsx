@@ -63,12 +63,21 @@ export function Standouts({
  * dice en una tarjeta, y el que no llega al umbral no aparece: media pantalla
  * de guiones es peor que media pantalla vacía.
  */
-export function PortraitCard({ portrait, records }: { portrait: Portrait; records: number }) {
+export function PortraitCard({
+  portrait,
+  records,
+  mine,
+}: {
+  portrait: Portrait;
+  records: number;
+  /** tu estantería o la suya: la pantalla habla de alguien, y sabe de quién */
+  mine: boolean;
+}) {
   const facts: { k: string; v: string; note?: string }[] = [];
   if (portrait.genre)
     facts.push({ k: "Sobre todo", v: portrait.genre.name, note: `${portrait.genre.share}% de la estantería` });
   if (portrait.decade)
-    facts.push({ k: "Su década", v: portrait.decade.label, note: `${portrait.decade.count} discos` });
+    facts.push({ k: mine ? "Tu década" : "Su década", v: portrait.decade.label, note: `${portrait.decade.count} discos` });
   if (portrait.label)
     facts.push({ k: "Sello que repite", v: portrait.label.name, note: `${portrait.label.count} veces` });
   if (portrait.span)
@@ -79,7 +88,7 @@ export function PortraitCard({ portrait, records }: { portrait: Portrait; record
   return (
     <section className="pb-10">
       <h2 className="text-caption uppercase tracking-label text-content-muted">
-        Cómo suena esta estantería
+        {mine ? "Cómo suena tu estantería" : "Cómo suena su estantería"}
       </h2>
       <ul className="mt-3.5 grid grid-cols-2 gap-2.5">
         {facts.map((f) => (

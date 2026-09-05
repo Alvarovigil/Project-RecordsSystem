@@ -130,6 +130,21 @@ export function RackMark({ rack, size = 44 }: { rack: RackView; size?: number })
       style={{ width: size, height: size }}
     >
       {rack.cover && (
+        /* El color del cajón lo pone lo que hay dentro: la misma portada,
+           difuminada al fondo de la caja. Es lo mismo que hace la ficha de un
+           disco a pantalla completa, a cuarenta píxeles — y evita que una fila
+           de racks sea una fila de cuadrados grises idénticos. */
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={rack.cover}
+          alt=""
+          aria-hidden
+          loading="lazy"
+          className="absolute inset-0 h-full w-full scale-150 object-cover opacity-45 blur-[6px]"
+        />
+      )}
+
+      {rack.cover && (
         /* El disco, asomando por encima del panel frontal: 62% de ancho y con
            el pie metido dentro de la caja, que es lo que lo pone «dentro» y no
            «detrás». */

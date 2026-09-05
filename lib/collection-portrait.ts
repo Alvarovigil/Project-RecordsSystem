@@ -34,6 +34,17 @@ function top(values: (string | null | undefined)[], min: number) {
   return best && best[1] >= min ? { name: best[0], count: best[1] } : null;
 }
 
+/**
+ * «los 70», «los 2010».
+ *
+ * En español el siglo XX se nombra por sus dos últimas cifras y el XXI no: «los
+ * 10» no significa nada y «los 1970» suena a inventario. La regla es la del
+ * idioma, no la del dato.
+ */
+function decadeLabel(start: number) {
+  return start < 2000 ? `los ${String(start).slice(2)}` : `los ${start}`;
+}
+
 export function portraitOf(records: Vinyl[]): Portrait {
   const n = records.length;
   // Por debajo de cinco discos no hay retrato que hacer, hay una anécdota.
@@ -55,7 +66,7 @@ export function portraitOf(records: Vinyl[]): Portrait {
 
   return {
     genre: genre ? { name: genre.name, share: Math.round((genre.count / n) * 100) } : null,
-    decade: decade ? { label: `los ${decade.name.slice(2)}`, count: decade.count } : null,
+    decade: decade ? { label: decadeLabel(Number(decade.name)), count: decade.count } : null,
     label,
     country,
     span: years.length >= 4 ? { from: Math.min(...years), to: Math.max(...years) } : null,
