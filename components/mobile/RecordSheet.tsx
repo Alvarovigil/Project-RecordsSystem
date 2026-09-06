@@ -17,6 +17,7 @@ import RecordScreen, {
   useScrolledPast,
 } from "@/components/record/RecordScreen";
 import SaveSheet from "./SaveSheet";
+import CoverPicker from "./CoverPicker";
 import Tracklist from "./Tracklist";
 import Card from "@/components/ui/Card";
 import RackRow from "@/components/community/RackRow";
@@ -62,6 +63,7 @@ export default function RecordSheet({
   onRemoveFromList,
   coverOf,
   onCreateList,
+  onChangeCover,
   nowPlayingId,
   playLoading = false,
   anyPlaying = false,
@@ -93,6 +95,8 @@ export default function RecordSheet({
   coverOf?: (vinylId: string) => string | null;
   /** crear un rack desde la hoja de guardar, con este disco dentro */
   onCreateList?: (name: string) => Promise<string> | string;
+  /** quedarse con otra portada: la que de verdad tiene en las manos */
+  onChangeCover?: (v: Vinyl, cover: string) => void;
   /** which record — or which track of it — is sounding right now */
   nowPlayingId?: string;
   /** el fragmento pedido aún se está abriendo */
@@ -123,6 +127,7 @@ export default function RecordSheet({
   const [sharing, setSharing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pickingCover, setPickingCover] = useState(false);
   const [toWishlist, setToWishlist] = useState(false);
   const { sentinel, scrolled } = useScrolledPast(Boolean(vinyl));
   /** the picker is doing double duty: "guardar en" and "lo tengo, ¿en qué rack?" */
@@ -237,6 +242,7 @@ export default function RecordSheet({
           title={vinyl.title}
           artist={cleanArtist(vinyl.artist)}
           scrolled={scrolled}
+          onMenu={() => setMenuOpen(true)}
           trailing={
             <button
               onClick={() => onTogglePlay(vinyl)}
@@ -375,27 +381,6 @@ export default function RecordSheet({
                 />
               </IconButton>
 
-              {/**
-               * Everything else, behind three dots.
-               *
-               * The screen used to end in a card holding "Quitar de esta
-               * lista" and "Borrar de mi colección" — two administrative
-               * sentences under the tracklist, one of them destructive, both
-               * of them the last thing you read about a record you had opened
-               * to look at. Nobody opens a sleeve in order to delete it.
-               *
-               * A menu is the honest place for them: present, one press away,
-               * and not part of the page. It is also where anything else that
-               * is not listening, keeping or sharing will go, so the screen
-               * stops growing a new row every time the app learns a verb.
-               */}
-              {canEdit && (
-                <IconButton label="Más opciones" onClick={() => setMenuOpen(true)}>
-                  <circle cx="8" cy="3.4" r="1.25" fill="currentColor" />
-                  <circle cx="8" cy="8" r="1.25" fill="currentColor" />
-                  <circle cx="8" cy="12.6" r="1.25" fill="currentColor" />
-                </IconButton>
-              )}
             </div>
 
             {/* --------------------------------------------------- lo tengo */}
@@ -589,7 +574,30 @@ export default function RecordSheet({
        */}
       <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} size="auto" width={380}>
         <div className="py-3">
-          {!wished && (
+          {/**
+           * Corregir la portada, antes que nada de lo demás.
+           *
+           * Es lo único de este menú que arregla algo que está mal ahora
+           * mismo delante de quien lo abre: el catálogo eligió una imagen y no
+           * es la del disco que tiene en las manos. Lo demás son decisiones
+           * sobre el disco; esto es una errata.
+           */}
+          <SheetRow
+            icon={
+              <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
+                <rect x="2.6" y="2.6" width="12.8" height="12.8" rx="1.4" stroke="currentColor" strokeWidth="1.3" />
+                <circle cx="6.8" cy="6.8" r="1.3" stroke="currentColor" strokeWidth="1.2" />
+                <path d="M3 12.4 6.9 9l3.1 2.6 2.3-1.9 2.7 2.3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            }
+            label="Cambiar la portada"
+            onClick={() => {
+              setMenuOpen(false);
+              setPickingCover(true);
+            }}
+          />
+          {canEdit && <div className="my-2 h-px bg-line" />}
+          {canEdit && !wished && (
             <SheetRow
               icon={
                 <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
@@ -608,7 +616,8 @@ export default function RecordSheet({
               }}
             />
           )}
-          <div className="my-2 h-px bg-line" />
+          {canEdit && <div className="my-2 h-px bg-line" />}
+          {canEdit && (
           <SheetRow
             icon={
               <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
@@ -628,8 +637,16 @@ export default function RecordSheet({
               setDeleting(true);
             }}
           />
+          )}
         </div>
       </Sheet>
+
+      <CoverPicker
+        open={pickingCover}
+        onClose={() => setPickingCover(false)}
+        vinyl={vinyl}
+        onChoose={(url) => onChangeCover?.(vinyl, url)}
+      />
 
       {/**
        * Moving to the wishlist is not a small edit, so it is confirmed.

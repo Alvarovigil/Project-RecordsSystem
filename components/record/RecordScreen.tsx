@@ -122,6 +122,7 @@ export function RecordTopBar({
   artist,
   scrolled,
   trailing,
+  onMenu,
 }: {
   onClose: () => void;
   cover: string;
@@ -130,6 +131,16 @@ export function RecordTopBar({
   scrolled: boolean;
   /** el transporte, donde hay algo que reproducir */
   trailing?: React.ReactNode;
+  /**
+   * Los tres puntos de la esquina.
+   *
+   * Aquí van las cosas que se le hacen a la ficha y no al disco: corregir la
+   * portada cuando la que sale no es la que tienes, avisar de algo que está
+   * mal, y lo que venga. Arriba a la derecha porque es donde vive ese menú en
+   * cualquier aplicación, y separado de la botonera de abajo — que es lo que
+   * se hace *con* el disco: escucharlo, guardarlo, compartirlo.
+   */
+  onMenu?: () => void;
 }) {
   return (
     <div className="sticky top-0 z-30 h-16">
@@ -182,6 +193,20 @@ export function RecordTopBar({
           </span>
           {trailing}
         </div>
+
+        {onMenu && (
+          <button
+            onClick={onMenu}
+            aria-label="Más opciones"
+            className="pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <circle cx="8" cy="3.4" r="1.25" fill="currentColor" />
+              <circle cx="8" cy="8" r="1.25" fill="currentColor" />
+              <circle cx="8" cy="12.6" r="1.25" fill="currentColor" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

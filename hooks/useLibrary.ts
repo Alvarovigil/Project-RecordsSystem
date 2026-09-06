@@ -146,6 +146,9 @@ export function useLibrary() {
     removeFromList: (listId: string, releaseId: string) =>
       act(() => repo.removeFromList(listId, releaseId)),
     deleteRelease: (releaseId: string) => act(() => repo.deleteRelease(releaseId)),
+    /** quedarse con otra portada del mismo disco: la ficha describe tu objeto */
+    setCover: (release: Vinyl, cover: string) =>
+      act(() => repo.upsertRelease({ ...release, cover }).then(() => {})),
     createList: async (input: NewListInput | string) => {
       const list = await repo.createList(
         typeof input === "string" ? { title: input } : input,

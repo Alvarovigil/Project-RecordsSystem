@@ -796,6 +796,10 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           onDelete={(v) => handleDeleteVinylPermanently(v.id)}
           pickOnOpen={pickOnOpen}
           nowPlayingId={nowPlaying?.id}
+          onChangeCover={(v, cover) => {
+            void lib.setCover(v, cover);
+            toast.show("Portada cambiada", { media: { src: cover } });
+          }}
           playLoading={loadingPreview}
           anyPlaying={playing}
           /* Un tema se reproduce como si fuera un disco: mismo reproductor,
