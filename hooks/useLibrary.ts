@@ -154,8 +154,7 @@ export function useLibrary() {
      * y una corrección tuya no puede cambiar la estantería de los demás. La
      * elección se guarda aparte y se superpone al leer.
      */
-    setCover: (release: Vinyl, cover: string) =>
-      act(() => repo.setReleaseCover(release.id, cover)),
+    setCover: (release: Vinyl, cover: string) => act(() => repo.setReleaseCover(release.id, cover)),
     createList: async (input: NewListInput | string) => {
       const list = await repo.createList(
         typeof input === "string" ? { title: input } : input,

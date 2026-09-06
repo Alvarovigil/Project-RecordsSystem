@@ -802,8 +802,14 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
              que es exactamente cuando alguien piensa que no ha funcionado. */
           onChangeCover={(v, cover) => {
             setOpen((prev) => (prev && prev.id === v.id ? { ...prev, cover } : prev));
-            void lib.setCover(v, cover);
-            toast.show("Portada cambiada", { media: { src: cover } });
+            /* Si el guardado falla — la tabla de portadas elegidas todavía no
+               está en este entorno, por ejemplo — la biblioteca se relee y la
+               portada vuelve a la de antes. Decirlo es mejor que dejar que
+               parpadee y que quien lo hizo se quede sin saber qué ha pasado. */
+            lib.setCover(v, cover).then(
+              () => toast.show("Portada cambiada", { media: { src: cover } }),
+              () => toast.show("No se ha podido guardar la portada.", { tone: "error" }),
+            );
           }}
           playLoading={loadingPreview}
           anyPlaying={playing}

@@ -156,7 +156,12 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     return data.user.id;
   };
 
-  return {
+  /* Con nombre, para que los métodos puedan llamarse entre ellos: superponer
+     las portadas elegidas hace falta en tres sitios y escribir la consulta tres
+     veces es tener tres sitios donde se olvide. */
+  const api: LibraryRepository & {
+    _coversChosenBy(ownerId: string): Promise<Record<string, string>>;
+  } = {
     async getCurrentProfile(): Promise<Profile | null> {
       const { data: auth } = await sb.auth.getUser();
       if (!auth.user) return null;
@@ -484,19 +489,59 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       return ((data ?? []) as any[]).map(withOwner);
     },
 
+    /**
+     * Las portadas que ha elegido una persona, para superponerlas.
+     *
+     * La portada de un disco es la del catálogo salvo que su dueño haya dicho
+     * que la suya es otra — y esa corrección tiene que verse en todas partes
+     * donde se enseña su estantería, no solo cuando la mira él. Si no, cada
+     * pantalla enseña un disco distinto y la corrección parece no haber
+     * funcionado.
+     *
+     * Devuelve un mapa vacío si la tabla todavía no existe en este entorno.
+     */
+    async _coversChosenBy(ownerId: string): Promise<Record<string, string>> {
+      try {
+        const { data } = await sb
+          .from("release_covers")
+          .select("release_id, cover_url")
+          .eq("user_id", ownerId);
+        return Object.fromEntries(
+          ((data ?? []) as { release_id: string; cover_url: string }[]).map((c) => [
+            c.release_id,
+            c.cover_url,
+          ]),
+        );
+      } catch {
+        return {};
+      }
+    },
+
     async coversOfLists(listIds) {
       if (listIds.length === 0) return {};
       const { data } = await sb
         .from("list_items")
-        .select("list_id, added_at, releases!inner(cover_url)")
+        .select("list_id, added_at, releases!inner(id, cover_url), lists!inner(owner_id)")
         .in("list_id", listIds)
         // newest first: the crate shows what went in last, which is the only
         // ordering that makes a preview worth looking at twice
         .order("added_at", { ascending: false })
         .limit(400);
+      const rows = (data ?? []) as any[];
+      /* Una consulta por dueño y no una por fila: en Explorar hay doce cajones
+         de seis personas distintas. */
+      const owners = Array.from(new Set(rows.map((r) => r.lists?.owner_id).filter(Boolean)));
+      const chosen: Record<string, Record<string, string>> = {};
+      await Promise.all(
+        owners.map(async (o) => {
+          chosen[o] = await api._coversChosenBy(o);
+        }),
+      );
+
       const out: Record<string, string[]> = {};
-      for (const row of (data ?? []) as any[]) {
-        const url = row.releases?.cover_url;
+      for (const row of rows) {
+        const owner = row.lists?.owner_id;
+        const url = chosen[owner]?.[row.releases?.id] ?? row.releases?.cover_url;
         if (!url) continue;
         const bucket = (out[row.list_id] ??= []);
         // six, not three: the crate shows three and the hover card shows six.
@@ -509,12 +554,21 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     async releasesOfList(listId) {
       const { data } = await sb
         .from("list_items")
-        .select("position, releases!inner(*)")
+        .select("position, releases!inner(*), lists!inner(owner_id)")
         .eq("list_id", listId)
         .order("position");
-      return ((data ?? []) as unknown as { releases: ReleaseRow }[]).map((r) =>
-        toVinyl(r.releases),
-      );
+      const rows = (data ?? []) as unknown as {
+        releases: ReleaseRow;
+        lists: { owner_id: string };
+      }[];
+      const ownerId = rows[0]?.lists?.owner_id;
+      /* La estantería se enseña como la ve su dueño: si él corrigió una
+         portada, es la suya la que sale también para quien pasa por delante. */
+      const chosen = ownerId ? await api._coversChosenBy(ownerId) : {};
+      return rows.map((r) => {
+        const v = toVinyl(r.releases);
+        return chosen[r.releases.id] ? { ...v, cover: chosen[r.releases.id] } : v;
+      });
     },
 
     // ---- discovery --------------------------------------------------------
@@ -1036,6 +1090,8 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         .eq("id", notificationId);
     },
   };
+
+  return api;
 }
 
 /** The shallow profile shape the community types pass around. */
