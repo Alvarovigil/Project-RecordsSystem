@@ -796,7 +796,12 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           onDelete={(v) => handleDeleteVinylPermanently(v.id)}
           pickOnOpen={pickOnOpen}
           nowPlayingId={nowPlaying?.id}
+          /* La pantalla abierta enseña el disco que se le pasó, no el que
+             está en la biblioteca: sin esto la portada cambiaba por debajo y
+             la ficha seguía con la vieja hasta cerrarla y volver a abrirla —
+             que es exactamente cuando alguien piensa que no ha funcionado. */
           onChangeCover={(v, cover) => {
+            setOpen((prev) => (prev && prev.id === v.id ? { ...prev, cover } : prev));
             void lib.setCover(v, cover);
             toast.show("Portada cambiada", { media: { src: cover } });
           }}

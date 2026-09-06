@@ -723,6 +723,13 @@ export function createLocalRepository(): LibraryRepository {
       return localProfile();
     },
 
+    async setReleaseCover(releaseSlug, cover) {
+      /* Sin cuenta la biblioteca es un array en el navegador, así que la
+         portada elegida se guarda donde está el disco y no hace falta
+         superponer nada. */
+      writeReleases(readReleases().map((v) => (v.id === releaseSlug ? { ...v, cover } : v)));
+    },
+
     async picksOf(profileId) {
       /* Sin cuenta solo hay una persona aquí, así que las elecciones de
          cualquier otra son las que trae la comunidad de ejemplo: ninguna. */

@@ -301,6 +301,15 @@ export interface LibraryRepository {
    * segundo a una persona. El orden importa — el primero es el que se ve
    * entero en las tarjetas — así que se guarda como lista ordenada.
    */
+  /**
+   * La portada que has elegido para tu copia de un disco.
+   *
+   * El catálogo es compartido y su portada también, así que esto no la cambia:
+   * se superpone al leer, y solo para quien ha dicho que no. Sin elección,
+   * manda el catálogo.
+   */
+  setReleaseCover(releaseSlug: string, cover: string): Promise<void>;
+
   picksOf(profileId: string): Promise<string[]>;
   setPicks(releaseIds: string[]): Promise<void>;
   /** is this handle free? the answer has to arrive while you're still typing */

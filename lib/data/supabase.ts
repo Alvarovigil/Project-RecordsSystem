@@ -185,9 +185,51 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         .select("*, list_items!inner(list_id, lists!inner(owner_id))")
         .eq("list_items.lists.owner_id", userId);
       const seen = new Set<string>();
-      return ((data ?? []) as unknown as ReleaseRow[])
-        .filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true)))
-        .map(toVinyl);
+      const rows = ((data ?? []) as unknown as ReleaseRow[]).filter((r) =>
+        seen.has(r.id) ? false : (seen.add(r.id), true),
+      );
+
+      /* Las portadas que ha corregido esta persona, superpuestas al catálogo.
+         Una consulta más para toda la biblioteca, y si la tabla todavía no
+         existe en este entorno la estantería se dibuja igual. */
+      let mine: Record<string, string> = {};
+      try {
+        const { data: chosen } = await sb
+          .from("release_covers")
+          .select("release_id, cover_url")
+          .eq("user_id", userId);
+        mine = Object.fromEntries(
+          ((chosen ?? []) as { release_id: string; cover_url: string }[]).map((c) => [
+            c.release_id,
+            c.cover_url,
+          ]),
+        );
+      } catch {
+        /* sin tabla de portadas: manda el catálogo, que es el comportamiento
+           de siempre */
+      }
+
+      return rows.map((r) => {
+        const v = toVinyl(r);
+        return mine[r.id] ? { ...v, cover: mine[r.id] } : v;
+      });
+    },
+
+    async setReleaseCover(releaseSlug, cover) {
+      const userId = await requireUser();
+      const { data: row } = await sb
+        .from("releases")
+        .select("id")
+        .eq("slug", releaseSlug)
+        .maybeSingle();
+      if (!row) return;
+      const { error } = await sb
+        .from("release_covers")
+        .upsert(
+          { user_id: userId, release_id: (row as { id: string }).id, cover_url: cover },
+          { onConflict: "user_id,release_id" },
+        );
+      if (error) throw new Error(error.message);
     },
 
     async upsertRelease(release) {

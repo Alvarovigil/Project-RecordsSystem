@@ -146,9 +146,16 @@ export function useLibrary() {
     removeFromList: (listId: string, releaseId: string) =>
       act(() => repo.removeFromList(listId, releaseId)),
     deleteRelease: (releaseId: string) => act(() => repo.deleteRelease(releaseId)),
-    /** quedarse con otra portada del mismo disco: la ficha describe tu objeto */
+    /**
+     * Quedarse con otra portada del mismo disco.
+     *
+     * No pasa por `upsertRelease`: esa función deja la ficha compartida como
+     * está si el disco ya existe — y hace bien, porque el catálogo es de todos
+     * y una corrección tuya no puede cambiar la estantería de los demás. La
+     * elección se guarda aparte y se superpone al leer.
+     */
     setCover: (release: Vinyl, cover: string) =>
-      act(() => repo.upsertRelease({ ...release, cover }).then(() => {})),
+      act(() => repo.setReleaseCover(release.id, cover)),
     createList: async (input: NewListInput | string) => {
       const list = await repo.createList(
         typeof input === "string" ? { title: input } : input,
