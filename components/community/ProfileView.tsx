@@ -14,6 +14,7 @@ import PersonRow from "./PersonRow";
 import ListCard from "./ListCard";
 import EditProfileSheet from "./EditProfileSheet";
 import { useRepository } from "@/hooks/useRepository";
+import { isRealId, repositoryKey } from "@/lib/data";
 import { useRelationship } from "@/hooks/useRelationship";
 import type { ListWithRecord, Profile, ProfileStats, SavedList } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
@@ -191,11 +192,14 @@ export default function ProfileView({
   const [mineIds, setMineIds] = useState<Set<string> | null>(null);
   useEffect(() => {
     if (isYou) return setMineIds(null);
+    // Sin cuenta no hay «tú» que comparar con alguien de verdad: la estantería
+    // de prueba no es de nadie, y cruzarla con un perfil real inventa afinidad.
+    if (isRealId(profileId) && repositoryKey() !== "supabase") return setMineIds(null);
     repo
       .listReleases()
       .then((rs) => setMineIds(new Set(rs.map((v) => v.id))))
       .catch(() => setMineIds(new Set()));
-  }, [repo, isYou]);
+  }, [repo, isYou, profileId]);
 
   const shared = useMemo(
     () => (mineIds ? (theirs ?? []).filter((v) => mineIds.has(v.id)) : []),

@@ -61,19 +61,90 @@ export function subscribeRepository(fn: () => void) {
 }
 
 /** Identity of the current backend, for hooks that need a dependency. */
-export function repositoryKey() {
-  return authenticated ? "supabase" : "local";
+export function repositoryKey(): "supabase" | "visitor" | "local" {
+  if (authenticated) return "supabase";
+  return getSupabaseBrowserClient() ? "visitor" : "local";
 }
 
 /**
- * The app's single data source. Supabase when configured AND signed in;
- * localStorage otherwise, so the app is always usable — including offline and
- * before anyone has an account.
+ * Whether an id belongs to a real account or list.
+ *
+ * Real rows are uuids; everything the local backend invents is not ("local",
+ * "u-…", "cl-…", "default", "wishlist", "col-…"). That difference is what lets
+ * one screen show a real profile and the preview shelf side by side.
+ */
+export function isRealId(id: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+/**
+ * Somebody without an account, on a site that has real ones.
+ *
+ * Their own shelf is the preview in localStorage — that is all they have. But
+ * everything they can look at that belongs to somebody else is real, and has
+ * to be read from the real place. This used to fall through to the local
+ * backend, which answers any question about a real profile with its invented
+ * community: a shared link to @rackrclub showed a thousand followers it does
+ * not have and racks that 404, and a real rack showed "0 discos".
+ *
+ * So the reads route by whose the thing is: a uuid is real and goes to
+ * Supabase with the anonymous key (RLS decides what is public), anything else
+ * is the preview and stays local. Writes never leave localStorage.
+ */
+function createVisitorRepository(sb: NonNullable<ReturnType<typeof getSupabaseBrowserClient>>): LibraryRepository {
+  const local = createLocalRepository();
+  const remote = createSupabaseRepository(sb);
+  const pick = (id: string) => (isRealId(id) ? remote : local);
+
+  return {
+    ...local,
+    async getProfile(handleOrId) {
+      if (isRealId(handleOrId)) return remote.getProfile(handleOrId);
+      return (await remote.getProfile(handleOrId)) ?? local.getProfile(handleOrId);
+    },
+    profileStats: (id) => pick(id).profileStats(id),
+    listsOfProfile: (id) => pick(id).listsOfProfile(id),
+    followersOf: (id) => pick(id).followersOf(id),
+    followingOf: (id) => pick(id).followingOf(id),
+    picksOf: (id) => pick(id).picksOf(id),
+    relationship: async (id) =>
+      isRealId(id) ? { following: false, followsYou: false, isYou: false } : local.relationship(id),
+    releasesOfList: (id) => pick(id).releasesOfList(id),
+    collaboratorsOf: (id) => pick(id).collaboratorsOf(id),
+    addedBy: (listId, releaseId) => pick(listId).addedBy(listId, releaseId),
+    async coversOfLists(ids) {
+      const real = ids.filter(isRealId);
+      const preview = ids.filter((id) => !isRealId(id));
+      const [a, b] = await Promise.all([
+        real.length ? remote.coversOfLists(real) : {},
+        preview.length ? local.coversOfLists(preview) : {},
+      ]);
+      return { ...b, ...a };
+    },
+    listsWithRelease: (slug) => remote.listsWithRelease(slug),
+    friendsWithRelease: (slug) => remote.friendsWithRelease(slug),
+    searchProfiles: (q) => remote.searchProfiles(q),
+    searchLists: (q) => remote.searchLists(q),
+    popularLists: () => remote.popularLists(),
+    suggestedProfiles: () => remote.suggestedProfiles(),
+    activity: () => remote.activity(),
+  };
+}
+
+/**
+ * The app's single data source. Supabase when configured AND signed in; the
+ * visitor mix when configured but signed out; localStorage when there is no
+ * Supabase at all, so the app is always usable — including offline and before
+ * anyone has an account.
  */
 export function getRepository(): LibraryRepository {
   if (cached) return cached;
-  const sb = authenticated ? getSupabaseBrowserClient() : null;
-  cached = sb ? createSupabaseRepository(sb) : createLocalRepository();
+  const sb = getSupabaseBrowserClient();
+  cached = !sb
+    ? createLocalRepository()
+    : authenticated
+      ? createSupabaseRepository(sb)
+      : createVisitorRepository(sb);
   return cached;
 }
 

@@ -69,7 +69,9 @@ export default async function ProfilePage({ params }: { params: { username: stri
   if (params.username === DEMO_PROFILE.username) {
     return <ProfileView profileId={DEMO_PROFILE.id} initialProfile={DEMO_PROFILE} />;
   }
-  const demo = getUserByHandle(params.username);
+  // The placeholder community only exists where there is no real one: with
+  // accounts behind the site, an invented person at a real address is a lie.
+  const demo = supabase ? null : getUserByHandle(params.username);
   if (demo) {
     return (
       <ProfileView
