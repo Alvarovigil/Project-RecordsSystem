@@ -52,11 +52,17 @@ export async function migrateLocalLibrary(
     if (!destination) continue;
     if (!isPrimary) summary.lists++;
 
-    // Mi Colección is derived from the library, so it needs no items copied:
-    // everything already landed there with the catalogue import above.
-    if (destination.kind === "collection") continue;
+    // Locally Mi Colección is derived (the library minus the wishlist), so its
+    // vinylIds can be empty while the records exist. With an account it is a
+    // real list, and skipping it lost every record that was in no rack.
+    const ids =
+      destination.kind === "collection"
+        ? releases
+            .map((v) => v.id)
+            .filter((id) => !localLists.find((l) => l.id === WISHLIST_ID)?.vinylIds.includes(id))
+        : local.vinylIds;
 
-    for (const releaseId of local.vinylIds) {
+    for (const releaseId of ids) {
       await target.addToList(destination.id, releaseId);
       summary.items++;
     }

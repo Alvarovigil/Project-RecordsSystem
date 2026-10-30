@@ -120,7 +120,7 @@ export default function InstallScreen({ url }: { url: string }) {
               note="Rackr se instala en el teléfono, que es donde lo vas a usar en una tienda. En el escritorio funciona igual desde el navegador."
               extra={
                 <Link
-                  href="/coleccion"
+                  href="/explorar"
                   className="text-sub text-content-muted underline-offset-4 transition hover:text-paper hover:underline"
                 >
                   Entrar sin instalar

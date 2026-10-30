@@ -82,7 +82,7 @@ export default function EntryDoor({ variant }: { variant: "hero" | "closing" }) 
           sin descarga y sin cuenta todavía.
         </p>
         <Link
-          href="/coleccion"
+          href="/explorar"
           className="text-[12px] uppercase tracking-[0.05em] text-paper/35 underline-offset-4 transition hover:text-paper hover:underline"
         >
           Prefiero mirar en el navegador

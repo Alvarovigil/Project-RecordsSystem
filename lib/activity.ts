@@ -93,6 +93,33 @@ export function isObjectCentric(g: ActivityGroup): boolean {
   return g.mine;
 }
 
+/**
+ * One thing done, said once.
+ *
+ * Putting a record in one of your racks also puts it in your collection
+ * (0021_coleccion.sql), so the database records two additions for one gesture:
+ * "added to Jazz para el domingo" and "added to Mi Colección". The first is the
+ * news; the second is bookkeeping. This drops the collection half whenever the
+ * same person put the same record in another list within a few minutes.
+ */
+const ECHO_MS = 5 * 60 * 1000;
+
+export function withoutEchoes(events: ActivityEvent[]): ActivityEvent[] {
+  const racked = events.filter(
+    (e) => e.kind === "added" && e.release && e.list && e.list.slug !== "coleccion",
+  );
+  return events.filter((e) => {
+    if (e.kind !== "added" || !e.release || e.list?.slug !== "coleccion") return true;
+    const t = new Date(e.at).getTime();
+    return !racked.some(
+      (r) =>
+        r.actor.id === e.actor.id &&
+        r.release!.slug === e.release!.slug &&
+        Math.abs(new Date(r.at).getTime() - t) < ECHO_MS,
+    );
+  });
+}
+
 export function groupActivity(events: ActivityEvent[]): ActivityGroup[] {
   // newest first, so every group's first event is its most recent one and the
   // window is always measured backwards from a known edge

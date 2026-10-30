@@ -23,7 +23,7 @@ import { useInstall } from "@/hooks/useInstall";
  * The shelf behind it all is the real carousel from the product, drifting and
  * inert — see ShelfBackdrop.
  */
-export default function Landing() {
+export default function Landing({ authFailed = false }: { authFailed?: boolean }) {
   const { ready, standalone } = useInstall();
 
   /**
@@ -83,6 +83,7 @@ export default function Landing() {
         </div>
       </header>
 
+      {authFailed && <AuthFailed />}
       <SoundGate />
       <AboutProject />
 
@@ -570,3 +571,37 @@ const PILLARS = [
     aside: "Aquí no se compite por tener más. Se cotillea, que es otra cosa.",
   },
 ];
+
+/**
+ * Coming back from Google without a session.
+ *
+ * The callback sends you here with `?auth=error`, and for a long time nothing
+ * read it: the landing simply appeared again, which reads as "the button does
+ * nothing". One line that says what happened and that it is safe to retry.
+ */
+function AuthFailed() {
+  const [open, setOpen] = useState(true);
+  if (!open) return null;
+  return (
+    <div
+      role="alert"
+      className="fixed inset-x-4 z-[90] mx-auto flex max-w-md items-center gap-3 rounded-lg bg-surface-overlay px-4 py-3 text-sub text-content shadow-toast"
+      style={{ top: "calc(var(--safe-top) + 16px)" }}
+    >
+      <p className="flex-1">No hemos podido entrar con Google. Prueba otra vez.</p>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(false);
+          // otherwise a reload brings the same notice back for an attempt
+          // that is already over
+          window.history.replaceState(null, "", "/");
+        }}
+        className="pressable -mr-1 px-2 py-1 text-content-secondary"
+        aria-label="Cerrar el aviso"
+      >
+        Cerrar
+      </button>
+    </div>
+  );
+}

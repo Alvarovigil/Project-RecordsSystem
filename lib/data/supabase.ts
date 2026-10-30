@@ -7,6 +7,7 @@
  * (see supabase/migrations), where a bug in this file can't defeat them.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { withoutEchoes } from "@/lib/activity";
 import type { Vinyl } from "@/lib/types";
 import type { SortMode } from "@/lib/collections";
 import type {
@@ -430,7 +431,8 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         id: r.list_id,
         ownerId: r.owner_id,
         title: r.title,
-        slug: slugify(r.title),
+        // the real address: slugify(title) missed "Mi Colección", whose slug is "coleccion"
+        slug: r.slug ?? slugify(r.title),
         description: r.description ?? "",
         kind: "custom",
         visibility: "public",
@@ -603,7 +605,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       // what counts as "one thing that happened" is a design decision and it
       // belongs where it can be read and changed.
       const { data } = await sb.rpc("activity_for_me", { max_rows: 160 });
-      return ((data ?? []) as any[]).map((r) => ({
+      return withoutEchoes(((data ?? []) as any[]).map((r) => ({
         // the tuple that identifies the event; there is no id column because
         // none of the four source tables has one
         id: `${r.kind}:${r.actor_id}:${r.list_id ?? r.target_id ?? ""}:${r.release_slug ?? ""}:${r.at}`,
@@ -641,7 +643,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
             }
           : undefined,
         mine: Boolean(r.mine),
-      }));
+      })));
     },
 
     async popularLists() {
