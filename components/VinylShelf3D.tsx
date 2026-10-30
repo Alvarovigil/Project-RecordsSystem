@@ -857,8 +857,14 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
        * taller or shorter than the box holding it and left a band of ground
        * colour at the foot of the screen. Inheriting the parent cannot be
        * wrong, because the parent is the thing being filled.
+       *
+       * pinch-zoom, not none: one finger is still ours (no panning, so the
+       * drag gets every pointer event), but two fingers belong to the person.
+       * With none, somebody who had zoomed in elsewhere and came back here
+       * could not zoom out again over the whole screen. A pinch cancels the
+       * drag through the pointercancel listener, like any interrupted touch.
        */
-      className="relative h-full w-full select-none touch-none"
+      className="relative h-full w-full select-none touch-pinch-zoom"
       style={{ cursor: ambient ? "default" : "grab", pointerEvents: ambient ? "none" : undefined }}
     >
       <Canvas

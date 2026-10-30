@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRepository } from "./useRepository";
+import { useIsVisitor } from "./useSession";
 import type { Notification } from "@/lib/data/types";
 
 /**
@@ -64,8 +65,16 @@ export function useNotifications() {
 export function useUnreadCount() {
   const repo = useRepository();
   const [n, setN] = useState(0);
+  // Sin sesión los avisos son los sembrados de ejemplo («Teo te sigue»…):
+  // un punto rojo por cosas que no le han pasado a nadie es una mentira, y
+  // Actividad no los enseña. El visitante no tiene avisos.
+  const visitor = useIsVisitor();
 
   useEffect(() => {
+    if (visitor) {
+      setN(0);
+      return;
+    }
     let alive = true;
     const read = () =>
       repo
@@ -78,7 +87,7 @@ export function useUnreadCount() {
       alive = false;
       window.removeEventListener("focus", read);
     };
-  }, [repo]);
+  }, [repo, visitor]);
 
-  return n;
+  return visitor ? 0 : n;
 }

@@ -7,6 +7,7 @@
  * (see supabase/migrations), where a bug in this file can't defeat them.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isAuthSessionMissingError } from "@supabase/supabase-js";
 import { withoutEchoes } from "@/lib/activity";
 import type { Vinyl } from "@/lib/types";
 import type { SortMode } from "@/lib/collections";
@@ -157,6 +158,28 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     return data.user.id;
   };
 
+  /**
+   * The same question for reads, where "nobody" has an honest answer: nothing.
+   *
+   * This backend is chosen before the network has confirmed the session —
+   * `hasStoredSession` trusts a cookie that can be stale or expired — so for a
+   * moment a signed-out visitor can be talking to it. Writes still throw:
+   * pretending one worked is a lie. A read of "my shelf" with no "me" is
+   * simply empty, and throwing there only left an uncaught «Sin sesión» in
+   * the console of every rack and profile, until the session layer swapped
+   * the backend for the right one.
+   */
+  const userOrNull = async () => {
+    const { data, error } = await sb.auth.getUser();
+    if (data.user) return data.user.id;
+    // «Nobody» only when the answer really is nobody. A network failure is
+    // not an empty shelf: returned as [], it would be cached in the snapshot
+    // and the local→cloud migration would mark the upload as done. So a
+    // missing session is null, and anything else is thrown as it came.
+    if (!error || isAuthSessionMissingError(error)) return null;
+    throw error;
+  };
+
   /* Con nombre, para que los métodos puedan llamarse entre ellos: superponer
      las portadas elegidas hace falta en tres sitios y escribir la consulta tres
      veces es tener tres sitios donde se olvide. */
@@ -184,7 +207,8 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     },
 
     async listReleases() {
-      const userId = await requireUser();
+      const userId = await userOrNull();
+      if (!userId) return [];
       // everything in any of my lists — the library is the union of them
       const { data } = await sb
         .from("releases")
@@ -281,7 +305,8 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     },
 
     async listLists() {
-      const userId = await requireUser();
+      const userId = await userOrNull();
+      if (!userId) return [];
       /**
        * Your lists, and the ones you were invited to and said yes to.
        *
@@ -688,7 +713,8 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     },
 
     async followedLists() {
-      const userId = await requireUser();
+      const userId = await userOrNull();
+      if (!userId) return [];
       const { data } = await sb
         .from("list_follows")
         .select("lists!inner(*, profiles!lists_owner_id_fkey!inner(username, display_name, avatar_url))")
@@ -755,7 +781,8 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     },
 
     async following() {
-      const userId = await requireUser();
+      const userId = await userOrNull();
+      if (!userId) return { profiles: [], lists: [] };
       const [{ data: profiles }, { data: lists }] = await Promise.all([
         sb.from("follows").select("following_id").eq("follower_id", userId),
         sb.from("list_follows").select("list_id").eq("user_id", userId),
@@ -876,7 +903,8 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
 
     // ---- keeping other people's lists -------------------------------------
     async savedLists(): Promise<SavedList[]> {
-      const userId = await requireUser();
+      const userId = await userOrNull();
+      if (!userId) return [];
       const { data } = await sb
         .from("list_follows")
         .select("created_at, lists!inner(*, profiles!lists_owner_id_fkey!inner(username, display_name, avatar_url))")

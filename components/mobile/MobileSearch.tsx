@@ -12,6 +12,7 @@ import Sheet from "@/components/ui/Sheet";
 import EmptyState from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { useCatalogueSearch, type DiscogsResult } from "@/hooks/useCatalogueSearch";
+import { useEntryGate } from "@/hooks/useSession";
 import BarcodeScanner, { useCanScan } from "@/components/BarcodeScanner";
 import { findWishlist } from "@/lib/collections";
 import type { Collection } from "@/lib/collections";
@@ -81,6 +82,7 @@ export default function MobileSearch({
   const [looking, setLooking] = useState<DiscogsResult | null>(null);
 
   const search = useCatalogueSearch({ query: q, mode, localVinilos, allVinilos });
+  const gate = useEntryGate();
   const rackCovers = useRackCovers(search.communityLists);
 
   useEffect(() => setTargetId(activeCollectionId), [activeCollectionId]);
@@ -114,6 +116,7 @@ export default function MobileSearch({
 
   /** apuntar un disco que no tienes, sin meterlo en la colección */
   const wishCatalogue = async (r: DiscogsResult) => {
+    if (gate()) return;
     const list = findWishlist(collections);
     if (!list) return;
     const v = await search.addFromCatalogue(r, list.id, onSaveToList);
@@ -123,6 +126,8 @@ export default function MobileSearch({
   };
 
   const saveCatalogue = async (r: DiscogsResult) => {
+    // sin cuenta, el «+» lleva a entrar (ver useEntryGate)
+    if (gate()) return null;
     const v = await search.addFromCatalogue(r, targetId, onSaveToList);
     if (!v)
       return toast.show(search.lastError.current ?? "No se pudo añadir ese disco.", {

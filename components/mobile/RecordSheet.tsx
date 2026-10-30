@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useEntryGate, useIsVisitor } from "@/hooks/useSession";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import Avatar from "@/components/ui/Avatar";
 import Confirm from "@/components/ui/Confirm";
@@ -132,13 +133,18 @@ export default function RecordSheet({
   const { sentinel, scrolled } = useScrolledPast(Boolean(vinyl));
   /** the picker is doing double duty: "guardar en" and "lo tengo, ¿en qué rack?" */
   const [acquiring, setAcquiring] = useState(false);
+  /* Sin sesión no hay racks propios: lo «tuyo» es la estantería de ejemplo,
+     que no es de nadie. Guardar lleva a entrar, y la hoja nunca dice que el
+     disco esté guardado ni se abre sola para colocarlo. */
+  const visitor = useIsVisitor();
+  const gate = useEntryGate();
 
   /* Un disco que acaba de entrar en casa se abre con la hoja de racks puesta:
      colocarlo es lo siguiente que se hace, y es la continuación del gesto que
      lo guardó, no una acción nueva. */
   useEffect(() => {
-    if (vinyl && pickOnOpen) setPicking(true);
-  }, [vinyl?.id, pickOnOpen]);
+    if (vinyl && pickOnOpen && !visitor) setPicking(true);
+  }, [vinyl?.id, pickOnOpen, visitor]);
 
   /* Mientras se mira un disco, su artista se va pidiendo por detrás: el enlace
      está ahí y hay bastantes posibilidades de que se pulse. Si se pulsa, no
@@ -182,6 +188,7 @@ export default function RecordSheet({
    * of those alone.
    */
   const savedLabel = (() => {
+    if (visitor) return null;
     const holding = collections.filter((c) => c.vinylIds.includes(vinyl.id));
     const racks = holding.filter((c) => (c.kind ?? "custom") === "custom");
     if (racks.length > 0) return `En ${racks.length} ${racks.length === 1 ? "rack" : "racks"}`;
@@ -242,7 +249,8 @@ export default function RecordSheet({
           title={vinyl.title}
           artist={cleanArtist(vinyl.artist)}
           scrolled={scrolled}
-          onMenu={() => setMenuOpen(true)}
+          // sin nada que editar ni portada que guardar, el menú saldría vacío
+          onMenu={canEdit || onChangeCover ? () => setMenuOpen(true) : undefined}
           trailing={
             <button
               onClick={() => onTogglePlay(vinyl)}
@@ -349,9 +357,13 @@ export default function RecordSheet({
                * with two shortcuts beside it rather than as four equal icons.
                */}
               <button
-                onClick={() => setPicking(true)}
+                onClick={() => (gate() ? undefined : setPicking(true))}
                 aria-label={
-                  savedLabel ? `Guardado: ${savedLabel}. Cambiar.` : "Guardar en un rack"
+                  visitor
+                    ? "Entra para guardarlo"
+                    : savedLabel
+                      ? `Guardado: ${savedLabel}. Cambiar.`
+                      : "Guardar en un rack"
                 }
                 className={`pressable flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full px-4 text-sub font-medium transition-colors ${
                   savedLabel
@@ -362,7 +374,9 @@ export default function RecordSheet({
                 {/* Una caja, no un marcador: es el objeto que dibuja el
                     resto de la aplicación para decir «guardado». */}
                 <CrateIcon />
-                <span className="truncate">{savedLabel ?? "Guardar"}</span>
+                <span className="truncate">
+                  {visitor ? "Entra para guardarlo" : (savedLabel ?? "Guardar")}
+                </span>
               </button>
 
               <IconButton label="Compartir" onClick={() => setSharing(true)}>
@@ -399,7 +413,7 @@ export default function RecordSheet({
              * everything you have that you are not still waiting for. This
              * button is that rule, said out loud.
              */}
-            {wished && canEdit && (
+            {wished && canEdit && !visitor && (
               <div className="mt-2.5 flex items-center gap-2.5">
                 <button
                   onClick={() => acquire(mine?.id)}
@@ -581,7 +595,12 @@ export default function RecordSheet({
            * mismo delante de quien lo abre: el catálogo eligió una imagen y no
            * es la del disco que tiene en las manos. Lo demás son decisiones
            * sobre el disco; esto es una errata.
+           *
+           * Solo si quien abre la hoja sabe guardar la portada: sin
+           * onChangeCover la elección no iba a ninguna parte y la fila
+           * prometía un arreglo que no hacía.
            */}
+          {onChangeCover && (
           <SheetRow
             icon={
               <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
@@ -596,6 +615,7 @@ export default function RecordSheet({
               setPickingCover(true);
             }}
           />
+          )}
           {canEdit && <div className="my-2 h-px bg-line" />}
           {canEdit && !wished && (
             <SheetRow

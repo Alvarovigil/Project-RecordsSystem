@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/supabase/env";
+import { safeNext } from "@/lib/safe-next";
 
 /**
  * Where Google sends you back.
@@ -11,16 +12,8 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/sup
  */
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
-  // Only somewhere on this site. Checking the string is not enough — "//otro.com"
-  // and "/\otro.com" both look like paths and both leave — so the address is
-  // resolved the way the browser will, and kept only if it is still ours.
-  let next = "/coleccion";
-  try {
-    const asked = new URL(req.nextUrl.searchParams.get("next") || next, req.nextUrl.origin);
-    if (asked.origin === req.nextUrl.origin) next = asked.pathname + asked.search + asked.hash;
-  } catch {
-    // an address that does not even parse is not one to send anybody to
-  }
+  // only somewhere on this site — see lib/safe-next
+  const next = safeNext(req.nextUrl.searchParams.get("next"));
   const fail = (reason: string) =>
     NextResponse.redirect(
       new URL(`/?auth=error&reason=${encodeURIComponent(reason)}`, req.nextUrl.origin),

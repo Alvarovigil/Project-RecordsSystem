@@ -230,12 +230,12 @@ export default function CollectionsOverlay({
       >
         <div className="h-full flex flex-col">
           <header className="flex items-center justify-between px-6 pt-6 pb-3">
-            <span className="text-[11px] uppercase tracking-[0.2em] text-paper/40">
+            <span className="text-[12px] uppercase tracking-[0.2em] text-paper/50">
               {editing ? "Editar el rack" : "Racks"}
             </span>
             <button
               onClick={editing ? () => setEditId(null) : onClose}
-              className="text-[11px] uppercase tracking-[0.2em] text-paper/40 hover:text-paper transition"
+              className="text-[12px] uppercase tracking-[0.2em] text-paper/50 hover:text-paper transition"
             >
               {editing ? "← Atrás" : "Cerrar"}
             </button>
@@ -293,7 +293,7 @@ export default function CollectionsOverlay({
                   )}
 
                   {activeStats && activeStats.count > 0 && (
-                    <p className="mt-2 text-[12px] text-paper/45">
+                    <p className="mt-2 text-[12px] text-paper/50">
                       {activeStats.count} {activeStats.count === 1 ? "disco" : "discos"} · {activeStats.artists} artistas
                     </p>
                   )}
@@ -320,16 +320,16 @@ export default function CollectionsOverlay({
                           look up. */}
                       {sharedWith.length > 0 && (
                         <div className="flex items-baseline justify-between gap-4 border-b border-paper/[0.06] py-2">
-                          <dt className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
+                          <dt className="mono text-[12px] uppercase tracking-[0.2em] text-paper/50">
                             Compartida con
                           </dt>
                           <dd className="flex flex-wrap items-center justify-end gap-1.5">
                             {sharedWith.map((c) => (
                               <span
                                 key={c.profile.id}
-                                className={`flex items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-2 text-[11px] ${
+                                className={`flex items-center gap-1.5 rounded-full py-0.5 pl-0.5 pr-2 text-[12px] ${
                                   c.pending
-                                    ? "bg-paper/[0.04] text-paper/40"
+                                    ? "bg-paper/[0.04] text-paper/50"
                                     : "bg-paper/[0.08] text-paper/80"
                                 }`}
                                 title={c.pending ? "Invitación pendiente" : undefined}
@@ -352,7 +352,7 @@ export default function CollectionsOverlay({
 
                   {/* Who is in it, when there is more than one of you. */}
                   {active.sharedBy && (
-                    <p className="mt-4 flex items-center gap-2 text-[12px] text-paper/45">
+                    <p className="mt-4 flex items-center gap-2 text-[12px] text-paper/50">
                       <SharedMark title={`Compartida por ${active.sharedBy.displayName}`} />
                       Compartida por {active.sharedBy.displayName}
                     </p>
@@ -379,7 +379,7 @@ export default function CollectionsOverlay({
                         onClick={() => {
                           if (confirm(`Eliminar "${active.name}"?`)) onDelete(active.id);
                         }}
-                        className="rounded-control px-3 py-1.5 text-[12px] text-paper/35 transition hover:bg-red-500/10 hover:text-red-400"
+                        className="rounded-control px-3 py-1.5 text-[12px] text-paper/50 transition hover:bg-red-500/10 hover:text-red-400"
                       >
                         Borrar
                       </button>
@@ -392,7 +392,7 @@ export default function CollectionsOverlay({
               {/* every list in one place: the active one is marked, the rest
                   are one click away. No "current vs others" split to parse. */}
               <div className="mt-7 px-6 pb-3 border-b border-paper/[0.04] flex items-baseline justify-between">
-                <span className="text-[11px] uppercase tracking-[0.2em] text-paper/40">
+                <span className="text-[12px] uppercase tracking-[0.2em] text-paper/50">
                   Todas las listas · {collections.length}
                 </span>
                 {collections.length > 6 && (
@@ -400,7 +400,7 @@ export default function CollectionsOverlay({
                     value={listFilter}
                     onChange={(e) => setListFilter(e.target.value)}
                     placeholder="Filtrar…"
-                    className="w-[110px] bg-transparent text-right text-[12px] text-paper outline-none placeholder:text-paper/25"
+                    className="w-[110px] bg-transparent text-right text-[12px] text-paper outline-none placeholder:text-content-muted"
                   />
                 )}
               </div>
@@ -476,7 +476,7 @@ export default function CollectionsOverlay({
                                 </span>
                               )}
                             </span>
-                            <span className="mt-0.5 block text-[11px] text-paper/40">
+                            <span className="mt-0.5 block text-[12px] text-paper/50">
                               {s.count} {s.count === 1 ? "disco" : "discos"}
                               {isActive ? " · viendo ahora" : ""}
                             </span>
@@ -534,7 +534,7 @@ export default function CollectionsOverlay({
                   );
                 })}
                 {visibleCollections.length === 0 && (
-                  <li className="px-4 py-3 text-[12px] text-paper/35">
+                  <li className="px-4 py-3 text-[12px] text-paper/50">
                     Ninguna lista con ese nombre
                   </li>
                 )}
@@ -546,10 +546,10 @@ export default function CollectionsOverlay({
               {followed.length > 0 && (
                 <>
                   <div className="mt-8 flex items-baseline justify-between border-y border-paper/[0.07] px-6 py-3">
-                    <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
+                    <span className="mono text-[12px] uppercase tracking-[0.2em] text-paper/50">
                       Listas que sigues
                     </span>
-                    <span className="mono text-[10px] tracking-[0.16em] text-paper/25">
+                    <span className="mono text-[12px] tracking-[0.16em] text-content-muted">
                       {followed.length}
                     </span>
                   </div>
@@ -601,7 +601,7 @@ export default function CollectionsOverlay({
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-[14px] text-paper">{l.title}</span>
-                              <span className="mt-0.5 block truncate text-[11px] text-paper/40">
+                              <span className="mt-0.5 block truncate text-[12px] text-paper/50">
                                 {l.itemCount} {l.itemCount === 1 ? "disco" : "discos"} · de{" "}
                                 {l.owner.displayName}
                               </span>
@@ -627,7 +627,7 @@ export default function CollectionsOverlay({
                       }
                     }}
                     placeholder="Rack nuevo"
-                    className="flex-1 bg-transparent border-b border-paper/[0.07] py-1.5 text-[13px] text-paper outline-none placeholder:text-paper/30 focus:border-paper/60 transition"
+                    className="flex-1 bg-transparent border-b border-paper/[0.07] py-1.5 text-[13px] text-paper outline-none placeholder:text-content-muted focus:border-paper/60 transition"
                   />
                   <button
                     onClick={() => {
@@ -637,7 +637,7 @@ export default function CollectionsOverlay({
                       }
                     }}
                     disabled={!newName.trim()}
-                    className="text-[11px] uppercase tracking-[0.18em] text-paper/60 hover:text-paper transition disabled:opacity-25"
+                    className="text-[12px] uppercase tracking-[0.18em] text-paper/60 hover:text-paper transition disabled:opacity-25"
                   >
                     Crear
                   </button>
@@ -695,7 +695,7 @@ function RowAction({
       }}
       aria-label={label}
       title={label}
-      className={`flex h-7 w-7 items-center justify-center rounded-sm bg-ink/70 text-paper/45 backdrop-blur-sm transition hover:bg-ink ${
+      className={`flex h-7 w-7 items-center justify-center rounded-sm bg-ink/70 text-paper/50 backdrop-blur-sm transition hover:bg-ink ${
         danger ? "hover:text-red-400" : "hover:text-paper"
       }`}
     >
@@ -709,7 +709,7 @@ function RowAction({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline gap-3 py-1.5 border-b border-paper/[0.04] last:border-b-0">
-      <dt className="text-paper/40 w-[32%]">{label}</dt>
+      <dt className="text-paper/50 w-[32%]">{label}</dt>
       <dd className="flex-1 text-right text-paper/85 truncate">{value}</dd>
     </div>
   );
@@ -813,7 +813,7 @@ function EditPanel({
         {/* Who can see it. The wishlist stays private by nature: what you want
             to buy is nobody else's business unless you say so. */}
         <div className={`flex items-center justify-between gap-4 border-b border-paper/[0.07] py-3 ${preview ? "hidden" : ""}`}>
-          <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
+          <span className="mono text-[12px] uppercase tracking-[0.2em] text-paper/50">
             Visible
           </span>
           <div className="flex items-center gap-1">
@@ -830,7 +830,7 @@ function EditPanel({
                 className={`px-2.5 py-1 text-[12px] transition ${
                   visibility === value
                     ? "bg-paper text-ink"
-                    : "text-paper/45 hover:text-paper"
+                    : "text-paper/50 hover:text-paper"
                 }`}
               >
                 {label}
@@ -845,7 +845,7 @@ function EditPanel({
             which is why nobody found it. */}
         {!isPrimary && (
           <div className="flex items-center justify-between gap-4 border-b border-paper/[0.06] py-3">
-            <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
+            <span className="mono text-[12px] uppercase tracking-[0.2em] text-paper/50">
               Compartida con
             </span>
             <button
@@ -858,7 +858,7 @@ function EditPanel({
         )}
 
         <div className="flex items-center justify-between gap-4 py-3">
-          <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">Orden</span>
+          <span className="mono text-[12px] uppercase tracking-[0.2em] text-paper/50">Orden</span>
           <Select
             label="Orden del rack"
             value={sortBy}
@@ -874,10 +874,10 @@ function EditPanel({
       <div data-scrollable className="flex-1 overflow-y-auto pb-6">
         {/* section header — stays put while the list scrolls under it */}
         <div className="sticky top-0 z-10 flex items-baseline justify-between bg-[#0a0a0a] px-6 pb-2 pt-5">
-          <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
+          <span className="mono text-[12px] uppercase tracking-[0.2em] text-paper/50">
             En la lista
           </span>
-          <span className="mono text-[10px] tracking-[0.16em] text-paper/30">
+          <span className="mono text-[12px] tracking-[0.16em] text-content-muted">
             {orderedVinilos.length}
           </span>
         </div>
@@ -921,7 +921,7 @@ function EditPanel({
               >
                 {sortBy === "custom" && (
                   <span
-                    className="text-paper/25 group-hover:text-paper/60 transition leading-none text-[10px] select-none"
+                    className="text-paper/25 group-hover:text-paper/60 transition leading-none text-[12px] select-none"
                     aria-hidden
                   >
                     ⋮⋮
@@ -940,8 +940,8 @@ function EditPanel({
                 />
                 <span className="min-w-0 flex-1 truncate text-[12px]">
                   <span className="text-paper">{v.title}</span>
-                  <span className="ml-2 text-paper/40">{v.artist}</span>
-                  {v.year ? <span className="ml-2 text-paper/25">{v.year}</span> : null}
+                  <span className="ml-2 text-paper/50">{v.artist}</span>
+                  {v.year ? <span className="ml-2 text-content-muted">{v.year}</span> : null}
                 </span>
                 <button
                   hidden={preview && isLibrary}
@@ -956,7 +956,7 @@ function EditPanel({
                       onToggleVinyl(editing.id, v.id);
                     }
                   }}
-                  className="reveal-on-hover text-[11px] uppercase tracking-[0.16em] text-paper/30 hover:text-red-400 transition px-2"
+                  className="reveal-on-hover text-[12px] uppercase tracking-[0.16em] text-paper/30 hover:text-red-400 transition px-2"
                   aria-label={isLibrary ? "Eliminar permanentemente" : "Quitar"}
                 >
                   {isLibrary ? "Eliminar" : "Quitar"}
@@ -965,7 +965,7 @@ function EditPanel({
             );
           })}
           {orderedVinilos.length === 0 && (
-            <li className="px-3 py-3 text-[12px] text-paper/35">Rack vacío</li>
+            <li className="px-3 py-3 text-[12px] text-paper/50">Rack vacío</li>
           )}
         </ul>
 
@@ -974,13 +974,13 @@ function EditPanel({
           <>
             {/* same rhythm as the section above: label left, count right */}
             <div className="mt-6 flex items-baseline justify-between border-t border-paper/[0.07] px-6 pb-2 pt-5">
-              <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40">
+              <span className="mono text-[12px] uppercase tracking-[0.2em] text-paper/50">
                 Añadir discos
               </span>
-              <span className="mono text-[10px] tracking-[0.16em] text-paper/30">
+              <span className="mono text-[12px] tracking-[0.16em] text-content-muted">
                 {notInCol.length}
                 {notInCol.length !== outside.length && (
-                  <span className="text-paper/20"> / {outside.length}</span>
+                  <span className="text-content-muted"> / {outside.length}</span>
                 )}
               </span>
             </div>
@@ -991,7 +991,7 @@ function EditPanel({
                 onChange={(e) => setAddQuery(e.target.value)}
                 placeholder="Buscar en tu colección"
                 aria-label="Buscar un disco para añadir"
-                className="h-8 min-w-0 flex-1 border-b border-paper/[0.12] bg-transparent text-[12px] text-paper outline-none transition-colors placeholder:text-paper/30 focus:border-paper/40"
+                className="h-8 min-w-0 flex-1 border-b border-paper/[0.12] bg-transparent text-[12px] text-paper outline-none transition-colors placeholder:text-content-muted focus:border-paper/40"
               />
               <div className="shrink-0">
                 <Select
@@ -1006,7 +1006,7 @@ function EditPanel({
               </div>
             </div>
             {notInCol.length === 0 && (
-              <p className="px-6 pb-2 text-[12px] text-paper/35">
+              <p className="px-6 pb-2 text-[12px] text-paper/50">
                 Nada que coincida. {addGenre && "Prueba con otro género."}
               </p>
             )}
@@ -1026,7 +1026,7 @@ function EditPanel({
                     />
                     <span className="min-w-0 flex-1 truncate">
                       <span className="text-paper">{v.title}</span>
-                      <span className="ml-2 text-paper/40">{v.artist}</span>
+                      <span className="ml-2 text-paper/50">{v.artist}</span>
                     </span>
                     <span
                       aria-hidden

@@ -120,7 +120,7 @@ export function ScreenScan({ scale }: { scale?: number }) {
                   <img src={src(COVERS.vandalist)} alt="" className="h-11 w-11 rounded-md object-cover" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-medium text-paper">The Vandalist</span>
-                    <span className="mt-0.5 block truncate text-[11px] text-paper/55">
+                    <span className="mt-0.5 block truncate text-[12px] text-paper/55">
                       2024 · IL · LP · +4 ediciones
                     </span>
                   </span>
@@ -189,7 +189,7 @@ export function ScreenWishlist({ scale }: { scale?: number }) {
                   <span className="mt-2 block truncate text-[13px] font-medium text-paper">
                     {i === 0 ? "Dune: Part Two" : i === 1 ? "Hit Me Hard And Soft" : i === 2 ? "Motomami" : "Brothers In Arms"}
                   </span>
-                  <span className="block truncate text-[11px] text-content-muted">
+                  <span className="block truncate text-[12px] text-content-muted">
                     {i === 0 ? "Hans Zimmer" : i === 1 ? "Billie Eilish" : i === 2 ? "Rosalía" : "Dire Straits"}
                   </span>
                 </motion.div>
@@ -213,7 +213,7 @@ export function ScreenWishlist({ scale }: { scale?: number }) {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={src(COVERS.dune)} alt="" className="h-8 w-8 rounded-full object-cover" />
                   <span className="text-[13px] text-paper">Dune → Mi Colección</span>
-                  <span className="ml-1 text-[12px] text-paper/45">Deshacer</span>
+                  <span className="ml-1 text-[12px] text-paper/50">Deshacer</span>
                 </span>
               </motion.div>
             )}
@@ -232,14 +232,14 @@ export function ScreenClub({ scale }: { scale?: number }) {
       <Device scale={scale}>
         <div className="flex h-full flex-col bg-surface">
           <div className="shrink-0 px-5 pt-[70px]">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-content-muted">Comunidad</p>
+            <p className="text-[12px] uppercase tracking-[0.2em] text-content-muted">Comunidad</p>
             <h3 className="mt-3 text-[19px] leading-tight text-paper">
-              Quién más tiene <span className="text-paper/45">Rumours</span>
+              Quién más tiene <span className="text-paper/50">Rumours</span>
             </h3>
           </div>
 
           <div className="min-h-0 flex-1 overflow-hidden px-5 pt-7">
-            <Label>Amigos <span className="text-paper/30">2</span></Label>
+            <Label>Amigos <span className="text-paper/50">2</span></Label>
             <div className="mt-4 space-y-3">
               <Row live={live} i={0}>
                 <Face initials="BS" />
@@ -248,7 +248,7 @@ export function ScreenClub({ scale }: { scale?: number }) {
             </div>
 
             <div className="mt-8">
-              <Label>Racks <span className="text-paper/30">5</span></Label>
+              <Label>Racks <span className="text-paper/50">5</span></Label>
             </div>
             <div className="mt-4 space-y-3">
               <Row live={live} i={1}>
@@ -300,7 +300,7 @@ function Row({ children, live, i }: { children: React.ReactNode; live: boolean; 
 
 function Face({ initials }: { initials: string }) {
   return (
-    <span className="mono flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-paper/10 text-[11px] text-paper/70">
+    <span className="mono flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-paper/10 text-[12px] text-paper/70">
       {initials}
     </span>
   );
@@ -321,7 +321,7 @@ function Text({ title, detail }: { title: string; detail: string }) {
   return (
     <span className="min-w-0 flex-1">
       <span className="block truncate text-[13px] font-medium text-paper">{title}</span>
-      <span className="mt-0.5 block truncate text-[11px] text-content-muted">{detail}</span>
+      <span className="mt-0.5 block truncate text-[12px] text-content-muted">{detail}</span>
     </span>
   );
 }

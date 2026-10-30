@@ -82,7 +82,7 @@ export default function Select<T extends string>({
           viewBox="0 0 8 8"
           fill="none"
           aria-hidden
-          className={`shrink-0 text-paper/40 transition-transform duration-fast ${
+          className={`shrink-0 text-paper/50 transition-transform duration-fast ${
             open ? "rotate-180" : ""
           }`}
         >
@@ -120,7 +120,7 @@ export default function Select<T extends string>({
                   className={`h-1 w-1 shrink-0 rounded-full ${active ? "bg-accent" : "bg-transparent"}`}
                 />
                 <span className="flex-1 truncate">{o.label}</span>
-                {o.hint && <span className="mono shrink-0 text-[10px] text-paper/25">{o.hint}</span>}
+                {o.hint && <span className="mono shrink-0 text-[12px] text-content-muted">{o.hint}</span>}
               </button>
             );
           })}

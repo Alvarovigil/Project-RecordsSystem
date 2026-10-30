@@ -186,7 +186,7 @@ export function RecordTopBar({
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[13px] text-paper">{title}</span>
             {artist && (
-              <span className="mono block truncate text-[10px] uppercase tracking-[0.16em] text-paper/40">
+              <span className="mono block truncate text-[12px] uppercase tracking-[0.16em] text-paper/50">
                 {artist}
               </span>
             )}

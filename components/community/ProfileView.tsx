@@ -319,11 +319,18 @@ export default function ProfileView({
           {/* Las cifras siguen siendo la navegación hacia la gente — nadie
               busca un menú llamado «seguidores» — pero ya no abren la pantalla:
               ahora son el pie de lo que hay arriba y no su titular. */}
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-            <Stat n={stats?.records} label="discos" />
-            <Stat n={stats?.lists} label="racks" />
-            <Stat n={stats?.followers} label="seguidores" onClick={() => setPeople("followers")} />
-            <Stat n={stats?.following} label="siguiendo" onClick={() => setPeople("following")} />
+          {/* En dos parejas que no se separan: a 360 px las cuatro no siempre
+              caben, y al partirse dejaban «0 siguiendo» sola en otra línea.
+              Si no caben, se parten en dos y dos — lo tuyo y la gente. */}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:gap-x-5">
+            <span className="flex items-center gap-x-4 whitespace-nowrap sm:gap-x-5">
+              <Stat n={stats?.records} label="discos" />
+              <Stat n={stats?.lists} label="racks" />
+            </span>
+            <span className="flex items-center gap-x-4 whitespace-nowrap sm:gap-x-5">
+              <Stat n={stats?.followers} label="seguidores" onClick={() => setPeople("followers")} />
+              <Stat n={stats?.following} label="siguiendo" onClick={() => setPeople("following")} />
+            </span>
           </div>
 
           {/**

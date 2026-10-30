@@ -201,7 +201,7 @@ function Collection({ justAdded }: { justAdded: boolean }) {
         <div className="flex min-w-0 flex-1 justify-center">
           <span className="flex h-12 max-w-[230px] items-center gap-1.5 rounded-full bg-ink/72 px-4 text-paper/90 backdrop-blur-xl">
             <span className="text-[13px] font-medium">Mi Colección</span>
-            <span className="text-[13px] text-paper/40">{justAdded ? 129 : 128}</span>
+            <span className="text-[13px] text-paper/50">{justAdded ? 129 : 128}</span>
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none" className="text-paper/50">
               <path d="M2.5 4.5 L6 8 L9.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -230,7 +230,7 @@ function Collection({ justAdded }: { justAdded: boolean }) {
               <span className="mt-2 block truncate text-[13px] font-medium text-paper">
                 {i === 0 && justAdded ? SCANNED.title : TITLES[c]?.[0]}
               </span>
-              <span className="block truncate text-[11px] text-content-muted">
+              <span className="block truncate text-[12px] text-content-muted">
                 {i === 0 && justAdded ? SCANNED.artist : TITLES[c]?.[1]}
               </span>
             </motion.div>
@@ -365,7 +365,7 @@ function Scanner({ caught }: { caught: boolean }) {
                 <span className="block truncate text-[13px] font-medium text-paper">
                   {SCANNED.title}
                 </span>
-                <span className="mt-0.5 block truncate text-[11px] text-paper/55">
+                <span className="mt-0.5 block truncate text-[12px] text-paper/55">
                   {SCANNED.edition}
                 </span>
               </span>
@@ -415,10 +415,10 @@ function TabBar() {
         {tabs.map((t) => (
           <div key={t.label} className="flex-1">
             <div className="relative flex h-[54px] flex-col items-center justify-center gap-[3px]">
-              <span className={t.on ? "text-paper" : "text-paper/40"}>{t.icon}</span>
+              <span className={t.on ? "text-paper" : "text-paper/50"}>{t.icon}</span>
               <span
-                className={`text-[10px] leading-none ${
-                  t.on ? "font-semibold text-paper" : "font-medium text-paper/40"
+                className={`text-[12px] leading-none ${
+                  t.on ? "font-semibold text-paper" : "font-medium text-paper/50"
                 }`}
               >
                 {t.label}

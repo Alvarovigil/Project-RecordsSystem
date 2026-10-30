@@ -28,7 +28,7 @@ export default function DemoNotice() {
       </span>
       <button
         onClick={signInWithGoogle}
-        className="mono text-[10px] uppercase tracking-[0.18em] text-paper underline-offset-4 transition hover:underline"
+        className="mono text-[12px] uppercase tracking-[0.18em] text-paper underline-offset-4 transition hover:underline"
       >
         Crear la mía
       </button>

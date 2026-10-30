@@ -19,11 +19,15 @@ import { useRepository } from "@/hooks/useRepository";
 import RecordSheet from "@/components/mobile/RecordSheet";
 import { usePlaybackContext } from "@/lib/playback-context";
 import { useLibrary } from "@/hooks/useLibrary";
+import { useEntryGate, useIsVisitor } from "@/hooks/useSession";
 import { useCatalogueSearch } from "@/hooks/useCatalogueSearch";
 import { useToast } from "@/components/ui/Toast";
 import { coverFor } from "@/lib/cover";
 import type { ActivityEvent, ListWithRecord, SuggestedProfile } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
+
+/** the sample shelf is nobody's, so for a visitor nothing counts as owned */
+const NOTHING: Set<string> = new Set();
 
 /**
  * Where you go when you don't know what you're looking for — and where you go
@@ -126,10 +130,17 @@ export default function ExploreView() {
 
   /** lo que ya está en tu estantería, por id de disco */
   const ownedIds = useMemo(() => new Set(lib.releases.map((v) => v.id)), [lib.releases]);
+  const visitor = useIsVisitor();
+  const gate = useEntryGate();
 
+  // sin sesión la estantería de ejemplo no es de nadie: no se quita nada de
+  // las listas del catálogo por estar en ella
   const ownedDiscogsIds = useMemo(
-    () => new Set(lib.releases.map((v) => v.discogsId).filter(Boolean) as number[]),
-    [lib.releases],
+    () =>
+      visitor
+        ? new Set<number>()
+        : new Set(lib.releases.map((v) => v.discogsId).filter(Boolean) as number[]),
+    [lib.releases, visitor],
   );
 
   const [wantedSaving, setWantedSaving] = useState<number | null>(null);
@@ -138,6 +149,7 @@ export default function ExploreView() {
   /** the same door every catalogue row uses, so a save here behaves like a
    *  save anywhere else — including the undo the library hands back */
   const saveWanted = async (row: WantedRow) => {
+    if (gate()) return null;
     setWantedSaving(row.id);
     const v = await catalogue.addFromCatalogue(row, lib.activeListId, (vinyl, listId) =>
       void lib.saveToList(vinyl, listId),
@@ -171,6 +183,8 @@ export default function ExploreView() {
 
   /** guardar desde la esquina de la portada, sin abrir nada */
   const saveRow = async (r: (typeof addable)[number]) => {
+    // el «+» de la portada: sin cuenta, lleva a entrar en vez de guardar
+    if (gate()) return null;
     remember(query);
     const v = await catalogue.addFromCatalogue(r, lib.activeListId, (vinyl, listId) =>
       void lib.saveToList(vinyl, listId),
@@ -443,7 +457,7 @@ export default function ExploreView() {
                   >
                     {label}
                     {n !== null && (
-                      <span className={`ml-1.5 ${active ? "text-content-muted" : "text-content-faint/70"}`}>
+                      <span className={`ml-1.5 ${active ? "text-content-muted" : "text-content-faint"}`}>
                         {n}
                       </span>
                     )}
@@ -517,20 +531,25 @@ export default function ExploreView() {
 
           {lists.length > 0 && (
             <Section
-              title="Lo tienen ellos, tú no"
-              note="Discos sacados de los racks de aquí abajo. Ábrelos y verás quién más los tiene."
+              title={visitor ? "De los racks de aquí abajo" : "Lo tienen ellos, tú no"}
+              // sin sesión el título ya dice de dónde salen: la nota no lo repite
+              note={
+                visitor
+                  ? "Ábrelos y verás quién más los tiene."
+                  : "Discos sacados de los racks de aquí abajo. Ábrelos y verás quién más los tiene."
+              }
             >
               <FromOthersRail
                 lists={lists}
-                ownedIds={ownedIds}
+                ownedIds={visitor ? NOTHING : ownedIds}
                 onOpen={(f) => setOpenRecord(f.vinyl)}
               />
             </Section>
           )}
 
           <Section
-            title="Cajones que vale la pena abrir"
-            note="Colecciones que alguien ha montado con criterio, no carpetas."
+            title="Racks que vale la pena abrir"
+            note="Montados con criterio, no carpetas."
           >
             {loading && lists.length === 0 ? (
               <SkeletonRackRail n={5} />
@@ -575,8 +594,14 @@ export default function ExploreView() {
           </Section>
 
           <Section
-            title="Coleccionan como tú"
-            note="Puede que os solapéis más de lo que crees."
+            /* Sin sesión no hay un «tú» con el que comparar: la estantería
+               de la que saldría el parecido es la de ejemplo. */
+            title={visitor ? "Gente con la que empezar" : "Coleccionan como tú"}
+            note={
+              visitor
+                ? "Colecciones que mirar antes de montar la tuya."
+                : "Puede que os solapéis más de lo que crees."
+            }
           >
             {/* The same rail as the crates above, for the same reason: this is
                 something to skim past, not a directory to work through. And
@@ -605,8 +630,13 @@ export default function ExploreView() {
            * llegado hasta aquí abajo.
            */}
           <WantedRail
+            // la lista se pide una vez al montar: si la sesión se resuelve
+            // después, se vuelve a pedir con el filtro que toca
+            key={visitor ? "visitor" : "member"}
             title="Lo que todo el mundo busca"
-            subtitle={`Los vinilos de ${new Date().getFullYear()} más perseguidos ahora mismo. Sin lo que ya tienes.`}
+            subtitle={`Los vinilos de ${new Date().getFullYear()} más perseguidos ahora mismo.${
+              visitor ? "" : " Sin lo que ya tienes."
+            }`}
             ownedIds={ownedDiscogsIds}
             targetName={lib.activeList?.title ?? "Mi Colección"}
             onSave={saveWanted}
@@ -618,7 +648,8 @@ export default function ExploreView() {
             savedIds={wantedSaved}
           />
 
-          {topGenre && (
+          {/* sin sesión el género saldría de la estantería de ejemplo */}
+          {topGenre && !visitor && (
             <WantedRail
               title={`Tu estantería tira a ${topGenre.toLowerCase()}`}
               genre={topGenre}

@@ -9,6 +9,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonActivity } from "@/components/ui/Skeleton";
 import { useRepository } from "@/hooks/useRepository";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useIsVisitor } from "@/hooks/useSession";
 import { groupActivity, namesOf, type ActivityGroup } from "@/lib/activity";
 import Invites from "@/components/activity/Invites";
 import type { ActivityEvent } from "@/lib/data/types";
@@ -33,6 +34,7 @@ import type { ActivityEvent } from "@/lib/data/types";
 export default function ActivityView() {
   const repo = useRepository();
   const notif = useNotifications();
+  const visitor = useIsVisitor();
   const [events, setEvents] = useState<ActivityEvent[] | null>(null);
   /**
    * Un filtro, porque cuarenta cosas no se leen seguidas.
@@ -56,7 +58,7 @@ export default function ActivityView() {
   // Reading the screen is what counts as having seen it. Not opening the app,
   // not scrolling past — arriving here.
   useEffect(() => {
-    if (notif.unread > 0) void notif.markRead();
+    if (notif.unread > 0 && !visitor) void notif.markRead();
     // deliberately once per mount: marking read on every notif change would
     // clear the dot for something that arrived while you were looking away
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -79,6 +81,25 @@ export default function ActivityView() {
     racks: all.filter((g) => g.kind !== "added").length,
   };
   const invites = (notif.items ?? []).filter((n) => n.actionable && n.kind === "invite");
+
+  /**
+   * Sin sesión no hay actividad que enseñar: lo que el repositorio devuelve
+   * son los avisos y movimientos sembrados con la estantería de ejemplo, que
+   * no es de nadie. «Ver mi colección» llevaba a /coleccion y de ahí a la
+   * landing; aquí se dice para qué sirve esta pestaña y se lleva a entrar.
+   */
+  if (visitor) {
+    return (
+      <Page width="full">
+        <EmptyState
+          title="Aquí se ve lo que mueve tu gente"
+          body="Cuando entres y sigas a alguien, verás los discos que añade, los racks que publica y quién se guarda los tuyos."
+          action={{ label: "Entrar", href: "/entrar" }}
+          secondary={{ label: "Buscar gente", href: "/explorar" }}
+        />
+      </Page>
+    );
+  }
 
   return (
     <Page width="full">

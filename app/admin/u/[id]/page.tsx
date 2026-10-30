@@ -32,7 +32,7 @@ export default async function AdminUser({
       <div className="mx-auto w-full max-w-[1100px] px-6 py-12">
         <Link
           href="/admin"
-          className="mono text-[10px] uppercase tracking-[0.2em] text-paper/40 transition hover:text-paper"
+          className="mono text-[12px] uppercase tracking-[0.2em] text-paper/50 transition hover:text-paper"
         >
           ← Panel
         </Link>
@@ -49,9 +49,9 @@ export default async function AdminUser({
             </span>
             <div>
               <h1 className="text-[22px] leading-tight">{profile.display_name}</h1>
-              <p className="mono mt-0.5 text-[11px] text-paper/40">@{profile.username}</p>
+              <p className="mono mt-0.5 text-[12px] text-paper/50">@{profile.username}</p>
               {profile.bio && <p className="mt-2 max-w-[52ch] text-[13px] text-paper/55">{profile.bio}</p>}
-              <p className="mono mt-3 text-[10px] uppercase tracking-[0.16em] text-paper/30">
+              <p className="mono mt-3 text-[12px] uppercase tracking-[0.16em] text-paper/30">
                 Alta {new Date(profile.created_at).toLocaleDateString("es-ES")} · id {profile.id.slice(0, 8)}
               </p>
             </div>
@@ -108,7 +108,7 @@ export default async function AdminUser({
                   Se borran el perfil, {lists.length} {lists.length === 1 ? "lista" : "listas"},
                   sus discos y todo su grafo de seguimiento. No se puede deshacer.
                 </p>
-                <label className="mono mt-3 block text-[9px] uppercase tracking-[0.18em] text-paper/40">
+                <label className="mono mt-3 block text-[12px] uppercase tracking-[0.18em] text-paper/50">
                   Escribe {profile.username} para confirmar
                 </label>
                 <input
@@ -151,7 +151,7 @@ export default async function AdminUser({
 
         <div className="mt-8 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
           <section>
-            <h2 className="mono border-b border-paper/[0.07] pb-2 text-[10px] uppercase tracking-[0.2em] text-paper/40">
+            <h2 className="mono border-b border-paper/[0.07] pb-2 text-[12px] uppercase tracking-[0.2em] text-paper/50">
               Listas · {lists.length}
             </h2>
             <ul className="mt-3 space-y-6">
@@ -160,7 +160,7 @@ export default async function AdminUser({
                   <div className="flex items-baseline justify-between gap-4">
                     <div className="min-w-0">
                       <span className="text-[15px]">{l.title}</span>
-                      <span className="mono ml-3 text-[10px] uppercase tracking-[0.16em] text-paper/30">
+                      <span className="mono ml-3 text-[12px] uppercase tracking-[0.16em] text-paper/30">
                         {l.kind} · {l.visibility} · {l.item_count} discos
                       </span>
                     </div>
@@ -170,14 +170,14 @@ export default async function AdminUser({
                         <button
                           name="action"
                           value={l.visibility === "public" ? "hide-list" : "publish-list"}
-                          className="mono text-[10px] uppercase tracking-[0.16em] text-paper/35 transition hover:text-paper"
+                          className="mono text-[12px] uppercase tracking-[0.16em] text-paper/50 transition hover:text-paper"
                         >
                           {l.visibility === "public" ? "Ocultar" : "Publicar"}
                         </button>
                         <button
                           name="action"
                           value="delete-list"
-                          className="mono text-[10px] uppercase tracking-[0.16em] text-paper/25 transition hover:text-red-400"
+                          className="mono text-[12px] uppercase tracking-[0.16em] text-paper/25 transition hover:text-red-400"
                         >
                           Borrar
                         </button>
@@ -205,7 +205,7 @@ export default async function AdminUser({
           </section>
 
           <section>
-            <h2 className="mono border-b border-paper/[0.07] pb-2 text-[10px] uppercase tracking-[0.2em] text-paper/40">
+            <h2 className="mono border-b border-paper/[0.07] pb-2 text-[12px] uppercase tracking-[0.2em] text-paper/50">
               Seguidores · {followers.length}
             </h2>
             <ul className="mt-3 space-y-1 text-[13px] text-paper/70">
@@ -215,7 +215,7 @@ export default async function AdminUser({
               {followers.length === 0 && <li className="text-paper/25">nadie todavía</li>}
             </ul>
 
-            <h2 className="mono mt-8 border-b border-paper/[0.07] pb-2 text-[10px] uppercase tracking-[0.2em] text-paper/40">
+            <h2 className="mono mt-8 border-b border-paper/[0.07] pb-2 text-[12px] uppercase tracking-[0.2em] text-paper/50">
               Siguiendo · {following.length}
             </h2>
             <ul className="mt-3 space-y-1 text-[13px] text-paper/70">
@@ -242,7 +242,7 @@ function Fact({
 }) {
   return (
     <div className="bg-ink px-4 py-4">
-      <div className="mono text-[9px] uppercase tracking-[0.18em] text-paper/35">{label}</div>
+      <div className="mono text-[12px] uppercase tracking-[0.18em] text-paper/50">{label}</div>
       <div
         className={`mt-1.5 truncate text-[14px] ${tone === "warn" ? "text-[#ff6b57]" : "text-paper/85"}`}
         title={value}

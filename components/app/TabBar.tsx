@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/hooks/useSession";
@@ -32,18 +33,63 @@ const TABS = [
 
 export default function TabBar() {
   const pathname = usePathname();
-  const { available, user, profile } = useSession();
+  const { available, loading, user, profile } = useSession();
   const unread = useUnreadCount();
-  const preview = available && !user;
+  // not while the session is still being read: a signed-in tap in that
+  // instant would otherwise go through the door and bounce back
+  const preview = available && !loading && !user;
   const handle = profile?.username ?? DEMO_PROFILE.username;
 
+  // Signed out there is no shelf and no profile of yours: both tabs lead to the
+  // way in, instead of to a sample collector presented as if it were you.
   const tabs = [
-    ...TABS.map((t) =>
-      // signed out there is no shelf of yours, but there is one to look at
-      t.href === "/coleccion" && preview ? { ...t, href: "/demo" } : t,
-    ),
-    { href: `/u/${handle}`, label: "Perfil", icon: Person },
+    ...TABS.map((t) => (t.href === "/coleccion" && preview ? { ...t, href: "/entrar" } : t)),
+    /**
+     * Perfil, which is only a door for somebody who is genuinely signed out.
+     *
+     * Signed in but with the profile not loaded yet (or failed), it used to
+     * fall back to /entrar — and /entrar sends a signed-in person straight on
+     * to /coleccion, so Perfil opened the shelf. The account id is enough for
+     * /u/, which resolves ids as well as handles. While the session itself is
+     * still being read there is nothing honest to link to, so it waits (null).
+     * Signed out it has its own address (?desde=perfil) so the two doors are
+     * two links: with the same href, tapping Perfil lit Colección.
+     */
+    {
+      href: preview
+        ? "/entrar?desde=perfil"
+        : profile
+          ? `/u/${handle}`
+          : user
+            ? `/u/${user.id}`
+            : null,
+      label: "Perfil",
+      icon: Person,
+    },
   ];
+
+  /**
+   * Which of the two tabs brought you to /entrar.
+   *
+   * Read from the address rather than with useSearchParams: that hook makes
+   * every page that renders the bar bail out of static rendering unless it
+   * sits in its own Suspense boundary, and the bar is on every page. The
+   * pathname does not change between /entrar and /entrar?desde=perfil, so the
+   * tap itself also says which one it was.
+   */
+  const [door, setDoor] = useState<"Colección" | "Perfil">("Colección");
+  useEffect(() => {
+    if (pathname !== "/entrar") return;
+    const read = () => {
+      const from = new URLSearchParams(window.location.search).get("desde");
+      setDoor(from === "perfil" ? "Perfil" : "Colección");
+    };
+    read();
+    // «atrás» between the two doors changes only the query, which the
+    // pathname does not see: the history entry says which one it was
+    window.addEventListener("popstate", read);
+    return () => window.removeEventListener("popstate", read);
+  }, [pathname]);
 
   return (
     <nav
@@ -68,21 +114,39 @@ export default function TabBar() {
     >
       <ul className="flex items-stretch">
         {tabs.map((t) => {
-          const active = isActive(pathname, t.href);
+          // signed out two tabs lead to /entrar: the one you tapped lights up
           const Icon = t.icon;
+          if (t.href === null) {
+            return (
+              <li key={t.label} className="flex-1">
+                <span
+                  aria-disabled
+                  className="relative flex h-[54px] flex-col items-center justify-center gap-[3px] text-paper/50"
+                >
+                  <Icon filled={false} />
+                  <span className="text-[12px] font-medium leading-none tracking-[0.01em]">{t.label}</span>
+                </span>
+              </li>
+            );
+          }
+          const toDoor = t.href.startsWith("/entrar");
+          const active = toDoor
+            ? pathname === "/entrar" && door === t.label
+            : isActive(pathname, t.href);
           return (
-            <li key={t.href} className="flex-1">
+            <li key={t.label} className="flex-1">
               <Link
                 href={t.href}
+                onClick={toDoor ? () => setDoor(t.label as "Colección" | "Perfil") : undefined}
                 aria-current={active ? "page" : undefined}
                 className="pressable relative flex h-[54px] flex-col items-center justify-center gap-[3px]"
               >
-                <span className={active ? "text-paper" : "text-paper/40"}>
+                <span className={active ? "text-paper" : "text-paper/50"}>
                   <Icon filled={active} />
                 </span>
                 <span
-                  className={`text-[10px] leading-none tracking-[0.01em] ${
-                    active ? "font-semibold text-paper" : "font-medium text-paper/40"
+                  className={`text-[12px] leading-none tracking-[0.01em] ${
+                    active ? "font-semibold text-paper" : "font-medium text-paper/50"
                   }`}
                 >
                   {t.label}

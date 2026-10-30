@@ -31,7 +31,7 @@ export function Step({
   return (
     <li className="rounded-[14px] bg-fill-subtle p-4">
       <div className="flex items-start gap-3.5">
-        <span className="mono mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-paper text-[11px] font-medium text-ink">
+        <span className="mono mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-paper text-[12px] font-medium text-ink">
           {n}
         </span>
         <span className="min-w-0 flex-1">

@@ -29,7 +29,7 @@ export default function VinylActions({
   );
 
   return (
-    <div className="pointer-events-auto flex flex-col gap-2 text-[11px] uppercase tracking-[0.18em] text-paper/50">
+    <div className="pointer-events-auto flex flex-col gap-2 text-[12px] uppercase tracking-[0.18em] text-paper/50">
       <div className="relative">
         <button
           onClick={() => setShowAddMenu(!showAddMenu)}
@@ -64,7 +64,7 @@ export default function VinylActions({
       {!confirmDelete ? (
         <button
           onClick={() => setConfirmDelete(true)}
-          className="text-left text-paper/35 hover:text-red-400 transition"
+          className="text-left text-paper/50 hover:text-red-400 transition"
         >
           Eliminar permanentemente
         </button>
@@ -78,7 +78,7 @@ export default function VinylActions({
           </button>
           <button
             onClick={() => setConfirmDelete(false)}
-            className="text-paper/40 hover:text-paper transition"
+            className="text-paper/50 hover:text-paper transition"
           >
             Cancelar
           </button>

@@ -74,7 +74,18 @@ const SLIDES: Slide[] = [
   },
 ];
 
-export default function Slides({ onDone }: { onDone: () => void }) {
+export default function Slides({
+  onDone,
+  revisit = false,
+}: {
+  onDone: () => void;
+  /**
+   * Opened again from Ajustes, by somebody already inside. «Entra al club» is
+   * the invitation at the end of a first run; said to a member it is a door
+   * to the room they are standing in, so the last button just says «Listo».
+   */
+  revisit?: boolean;
+}) {
   const [i, setI] = useState(0);
   const last = i === SLIDES.length - 1;
 
@@ -90,16 +101,28 @@ export default function Slides({ onDone }: { onDone: () => void }) {
   return (
     <div className="flex h-full flex-col">
       {/* Always there, never moving. A skip that appears on the last screen is
-          a skip that only helps the people who did not need it. */}
+          a skip that only helps the people who did not need it.
+          Except on the last screen itself, where there is nothing left to
+          skip and the big button already finishes: it goes invisible, not
+          away, so the slide does not shift up under the thumb. Opened again
+          from Ajustes it says Cerrar — somebody rereading is not skipping
+          anything — and that stays to the end, because closing always means
+          something. */}
       <div
         className="flex shrink-0 justify-end px-5"
         style={{ paddingTop: "calc(var(--safe-top) + 14px)" }}
       >
         <button
           onClick={onDone}
-          className="pressable px-2 py-1 text-sub text-content-muted transition hover:text-paper"
+          // 44px tall and wide enough to hit with a thumb: the word stays
+          // small, the target does not
+          aria-hidden={last && !revisit}
+          tabIndex={last && !revisit ? -1 : undefined}
+          className={`pressable -mr-2 flex h-11 min-w-[44px] items-center justify-center px-3 text-sub text-content-muted transition hover:text-paper ${
+            last && !revisit ? "invisible" : ""
+          }`}
         >
-          Saltar
+          {revisit ? "Cerrar" : "Saltar"}
         </button>
       </div>
 
@@ -143,14 +166,16 @@ export default function Slides({ onDone }: { onDone: () => void }) {
         className="flex shrink-0 flex-col items-center gap-6 px-7 pt-6"
         style={{ paddingBottom: "calc(var(--safe-bottom) + 22px)" }}
       >
-        <div className="flex items-center gap-2">
+        {/* Each dot sits in its own 44px square: the mark is 6px, the
+            target is the thumb's size. No gap — the squares are the spacing. */}
+        <div className="-my-3 flex items-center">
           {SLIDES.map((s, idx) => (
             <button
               key={s.key}
               onClick={() => go(idx)}
               aria-label={`Ir a la pantalla ${idx + 1}`}
               aria-current={idx === i}
-              className="p-1.5"
+              className="flex h-11 w-11 items-center justify-center"
             >
               <span
                 className={`block h-1.5 rounded-full transition-all duration-300 ${
@@ -165,7 +190,9 @@ export default function Slides({ onDone }: { onDone: () => void }) {
           onClick={() => (last ? onDone() : go(i + 1))}
           className="pressable flex h-12 w-full max-w-[420px] items-center justify-center gap-2 rounded-full bg-paper text-body font-medium text-ink transition-colors hover:bg-paper/85"
         >
-          {last ? (
+          {last && revisit ? (
+            "Listo"
+          ) : last ? (
             <>
               Entra al club
               <span aria-hidden>→</span>

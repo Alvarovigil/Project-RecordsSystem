@@ -44,7 +44,7 @@ export default function LinksPage() {
       <div className="flex w-full max-w-[420px] flex-col items-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.svg" alt={SITE_NAME} className="h-[34px] w-auto sm:h-[40px]" />
-        <p className="mt-2.5 text-[10px] uppercase tracking-[0.24em] text-paper/45 sm:text-[11px]">
+        <p className="mt-2.5 text-[12px] uppercase tracking-[0.24em] text-paper/50 sm:text-[12px]">
           {SITE_TAGLINE}
         </p>
 

@@ -162,7 +162,7 @@ export default function VinylEditOverlay({
                 className="w-full text-left px-3 py-2 text-paper/80 hover:bg-paper/5 hover:text-paper rounded-control disabled:opacity-30 disabled:hover:bg-transparent flex items-center justify-between gap-2"
               >
                 <span>Añadir a otra colección</span>
-                <span className="text-paper/40">›</span>
+                <span className="text-paper/50">›</span>
               </button>
               {showAddMenu && otherCollections.length > 0 && (
                 <div className="absolute right-full top-0 mr-1 min-w-[180px] bg-surface-overlay/95 backdrop-blur-sm border border-line-overlay rounded-sm shadow-popover p-1">
@@ -197,7 +197,7 @@ export default function VinylEditOverlay({
             )}
             <div className="h-px bg-paper/10 my-1" />
             {preview ? (
-              <p className="px-3 py-2 text-[11px] leading-relaxed text-paper/35">
+              <p className="px-3 py-2 text-[12px] leading-relaxed text-paper/50">
                 Editar y borrar discos llega con tu cuenta.
               </p>
             ) : !confirmDelete ? (
@@ -220,7 +220,7 @@ export default function VinylEditOverlay({
                 </button>
                 <button
                   onClick={() => setConfirmDelete(false)}
-                  className="text-paper/40 hover:text-paper"
+                  className="text-paper/50 hover:text-paper"
                 >
                   Cancelar
                 </button>

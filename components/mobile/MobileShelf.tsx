@@ -245,7 +245,7 @@ export default function MobileShelf({
               <MarqueeText className="min-w-0 text-sub font-medium">
                 {activeName}
               </MarqueeText>
-              <span className="shrink-0 text-sub text-paper/40">{vinilos.length}</span>
+              <span className="shrink-0 text-sub text-paper/50">{vinilos.length}</span>
               <svg
                 width="11"
                 height="11"

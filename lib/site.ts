@@ -73,3 +73,16 @@ export const SITE_SHORT_NAME = "Rackr Club";
 export const SITE_TAGLINE = "Your records. Your people.";
 export const SITE_DESCRIPTION =
   "Tu colección de vinilos, más allá de la estantería. Organiza, descubre y comparte tu colección con el club.";
+
+/** Ajustes asks the onboarding layer to replay the tour (components/Onboarding). */
+export const TOUR_EVENT = "rackr:tour";
+
+/**
+ * What a link opened inside Instagram, WhatsApp or Facebook is told.
+ *
+ * Google will not sign in from another app's browser, so in there every way
+ * in ends in an error page. The landing, /entrar and /instalar all say the
+ * same sentence, from here, so the instruction cannot drift between them.
+ */
+export const IN_APP_NOTE =
+  "Para entrar, ábrelo en Safari o Chrome: toca ⋯ y busca «Abrir en el navegador».";

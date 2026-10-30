@@ -31,7 +31,7 @@ export default function AccountMenu() {
     return (
       <button
         onClick={signInWithGoogle}
-        className="flex items-center gap-2 border border-paper/25 px-3 py-1.5 text-[11px] uppercase tracking-[0.18em] text-paper/70 transition hover:border-paper/60 hover:text-paper"
+        className="flex items-center gap-2 border border-paper/25 px-3 py-1.5 text-[12px] uppercase tracking-[0.18em] text-paper/70 transition hover:border-paper/60 hover:text-paper"
       >
         <GoogleMark />
         Entrar
@@ -55,7 +55,7 @@ export default function AccountMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-label="Tu cuenta"
         title={profile ? `${profile.displayName} · tu cuenta` : "Tu cuenta"}
-        className="group relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-paper/25 mono text-[10px] text-paper/80 transition-all duration-fast hover:scale-105 hover:border-paper hover:shadow-[0_0_0_3px_rgba(245,243,238,0.10)]"
+        className="group relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-paper/25 mono text-[12px] text-paper/80 transition-all duration-fast hover:scale-105 hover:border-paper hover:shadow-[0_0_0_3px_rgba(245,243,238,0.10)]"
       >
         {profile?.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -75,7 +75,7 @@ export default function AccountMenu() {
             <div className="truncate text-[13px] text-paper">
               {profile?.displayName}
             </div>
-            <div className="mono truncate text-[11px] text-paper/40">
+            <div className="mono truncate text-[12px] text-paper/50">
               @{profile?.username}
             </div>
           </div>

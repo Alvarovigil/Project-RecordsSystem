@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import AccountMenu from "@/components/AccountMenu";
 import { useSession } from "@/hooks/useSession";
 import { useDevice } from "@/hooks/useDevice";
-import { DEMO_PROFILE } from "@/lib/demo";
 
 /**
  * The same bar everywhere, including over the 3D shelf.
@@ -40,16 +39,14 @@ export default function TopNav({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { available, user, profile } = useSession();
+  const { available, loading, user } = useSession();
   // A tablet gets this bar, not the phone's tab bar — but it drives it with a
   // finger, and 15px of text with no padding is a 20px-tall target. The ink
   // stays identical; only the hit area grows.
   const { touch } = useDevice();
 
-  // signed out there is no shelf of yours to open, but there is a demo one —
-  // a dead link would be worse than a smaller promise
-  const preview = available && !user;
-  const handle = profile?.username ?? DEMO_PROFILE.username;
+  // signed out: nothing of yours to open, so the shelf link is the way in
+  const preview = available && !loading && !user;
 
   /**
    * The rule under the bar, only when there is something under the bar.
@@ -95,16 +92,13 @@ export default function TopNav({
   });
 
   const links = [
-    preview
-      ? { href: "/demo", label: "Colección" }
-      : { href: "/coleccion", label: "Colección" },
+    // signed out, Colección is the way in rather than a sample shelf
+    preview ? { href: "/entrar", label: "Colección" } : { href: "/coleccion", label: "Colección" },
     { href: "/actividad", label: "Actividad" },
     { href: "/explorar", label: "Explorar" },
     // your own profile lives under the avatar on the right; naming it twice in
-    // one bar just makes the row longer. Signed out there is no avatar menu to
-    // hold it, and the preview collector's shelf is part of what there is to
-    // see, so there it earns its place.
-    ...(preview ? [{ href: `/u/${handle}`, label: "Perfil" }] : []),
+    // one bar just makes the row longer. Signed out there is no profile of
+    // yours to show, and «Entrar» already sits in the corner.
   ];
 
   return (
@@ -124,7 +118,7 @@ export default function TopNav({
       <div className="flex w-full items-center justify-between gap-6 px-6 py-4">
         <div className="flex min-w-0 items-baseline gap-2.5">
           <Link
-            href={preview ? "/demo" : "/coleccion"}
+            href={preview ? "/" : "/coleccion"}
             aria-label="Rackr Club"
             className="shrink-0 transition hover:opacity-100"
           >
@@ -151,7 +145,7 @@ export default function TopNav({
                     className={`text-[15px] leading-none transition-colors duration-150 ${
                       active
                         ? "font-semibold text-paper"
-                        : "font-medium text-paper/40 hover:text-paper/75"
+                        : "font-medium text-paper/50 hover:text-paper/75"
                     }`}
                   >
                     {l.label}
@@ -166,7 +160,7 @@ export default function TopNav({
           <button
             onClick={search}
             style={touch ? { paddingBlock: 12, marginBlock: -12 } : undefined}
-            className="group flex items-center gap-2 text-[15px] font-medium leading-none text-paper/40 transition-colors duration-150 hover:text-paper/75"
+            className="group flex items-center gap-2 text-[15px] font-medium leading-none text-paper/50 transition-colors duration-150 hover:text-paper/75"
           >
             {/**
              * No magnifying glass.
@@ -186,7 +180,7 @@ export default function TopNav({
              */}
             Buscar
             {!touch && (
-              <kbd className="mono inline-flex h-[19px] min-w-[19px] items-center justify-center rounded-[4px] border border-line px-1 text-[11px] font-normal normal-case leading-none tracking-normal text-content-faint transition-colors duration-150 group-hover:border-line-strong group-hover:text-content-secondary">
+              <kbd className="mono inline-flex h-[19px] min-w-[19px] items-center justify-center rounded-[4px] border border-line px-1 text-[12px] font-normal normal-case leading-none tracking-normal text-content-faint transition-colors duration-150 group-hover:border-line-strong group-hover:text-content-secondary">
                 /
               </kbd>
             )}

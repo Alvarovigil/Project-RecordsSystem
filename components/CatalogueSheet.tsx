@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useEntryGate, useIsVisitor } from "@/hooks/useSession";
 import RecordSpecsCard from "@/components/RecordSpecsCard";
 import { CrateIcon, IconButton, RecordGround, RecordHero } from "@/components/record/RecordHero";
 import SaveSheet from "@/components/mobile/SaveSheet";
@@ -72,7 +73,7 @@ export default function CatalogueSheet({
   item,
   onClose,
   targetName,
-  saved = false,
+  saved: savedProp = false,
   busy = false,
   onSave,
   onWish,
@@ -121,6 +122,12 @@ export default function CatalogueSheet({
   // open by default, but still closable: a panel that cannot be folded is a
   // panel the reader is not allowed to finish with
   const [specs, setSpecs] = useState(true);
+  /* Sin sesión no hay colección: guardar escribiría en la estantería de
+     ejemplo, que el visitante no puede ver (Colección le lleva a /entrar).
+     El botón dice lo que hace falta para guardarlo y lleva allí. */
+  const visitor = useIsVisitor();
+  const gate = useEntryGate();
+  const saved = !visitor && savedProp;
   const { sentinel, scrolled } = useScrolledPast(Boolean(item));
   /* el disco, ya con id propio, en cuanto entra en la biblioteca: es lo que
      necesita la hoja de racks para saber dónde está y dónde no */
@@ -191,13 +198,15 @@ export default function CatalogueSheet({
                 {action ?? (
                   <>
                     <button
-                      onClick={() => void keep()}
+                      onClick={() => (gate() ? undefined : void keep())}
                       disabled={saved || busy}
                       className="pressable flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-paper px-4 text-sub font-medium text-ink transition-colors disabled:opacity-45"
                     >
                       {saved ? <Check /> : <CrateIcon />}
                       <span className="truncate">
-                        {saved
+                        {visitor
+                          ? "Entra para guardarlo"
+                          : saved
                           ? `En ${targetName}`
                           : busy
                             ? "Guardando…"
@@ -209,10 +218,12 @@ export default function CatalogueSheet({
                         algo que ya tienes no es un estado que exista. */}
                     {onWish && !saved && (
                       <IconButton
-                        label={wished ? "Ya está en tu lista de deseos" : "Añadir a la lista de deseos"}
-                        onClick={onWish}
+                        label={
+                          wished && !visitor ? "Ya está en tu lista de deseos" : "Añadir a la lista de deseos"
+                        }
+                        onClick={() => (gate() ? undefined : onWish?.())}
                       >
-                        {wished ? (
+                        {wished && !visitor ? (
                           <path
                             d="M8 13.2 3 8.6a3 3 0 1 1 5-3.2 3 3 0 1 1 5 3.2Z"
                             fill="currentColor"

@@ -3,7 +3,11 @@
 import { useSession } from "@/hooks/useSession";
 
 /** The only way in, on purpose: one provider, no passwords to forget. */
-export default function SignInButton({ variant = "solid" }: { variant?: "solid" | "quiet" }) {
+export default function SignInButton({
+  variant = "solid",
+}: {
+  variant?: "solid" | "quiet" | "text";
+}) {
   const { available, signInWithGoogle } = useSession();
   if (!available) return null;
 
@@ -13,9 +17,22 @@ export default function SignInButton({ variant = "solid" }: { variant?: "solid" 
         onClick={signInWithGoogle}
         // the same size and weight as the claim in the opposite corner: two
         // labels holding the two ends of one row have to be one thing
-        className="text-[11px] uppercase tracking-[0.05em] text-paper/80 transition hover:text-paper sm:text-[13px]"
+        className="text-[12px] uppercase tracking-[0.05em] text-paper/80 transition hover:text-paper sm:text-[13px]"
       >
-        Iniciar sesión
+        Entrar
+      </button>
+    );
+  }
+
+  // the way in for somebody who is not installing: plain, but a full-size target
+  if (variant === "text") {
+    return (
+      <button
+        onClick={signInWithGoogle}
+        className="pressable inline-flex min-h-[44px] items-center gap-2.5 px-3 text-[14px] text-paper transition hover:text-paper/80"
+      >
+        <GoogleMark />
+        Entrar con Google, sin instalar
       </button>
     );
   }

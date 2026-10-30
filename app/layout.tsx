@@ -84,23 +84,16 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   /**
-   * No pinch zoom.
+   * Pinch zoom is allowed again (30 Oct 2026, the accessibility pass).
    *
-   * Reversing an earlier decision, and worth saying why both ways. Refusing to
-   * let somebody enlarge text is a real cost, and on a page it would be the
-   * wrong trade. This is not a page: installed, it is the only app on the
-   * phone whose content can be pinched, and the gesture collides with
-   * everything the shelf is made of — a stack you drag, sleeves you flick, a
-   * scroll that snaps. A pinch that half-zooms the interface and leaves it
-   * there is a broken app, and the way back out is not obvious to anyone.
-   *
-   * Safari ignores this in a browser tab and honours it in a standalone
-   * window, which is exactly the split we want: the web page stays zoomable,
-   * the installed app does not. `touch-action: manipulation` in globals.css
-   * kills the double-tap zoom that this flag does not cover.
+   * It had been switched off for the installed app, where a pinch collides
+   * with the shelf's own gestures. But the people Rackr now has to serve
+   * include somebody who cannot read 12px without enlarging it, and for them
+   * an app that refuses to zoom is an app they cannot use — a worse failure
+   * than a pinch that needs undoing. The shelf keeps its own gestures through
+   * `touch-action` on the canvas; `touch-action: manipulation` in globals.css
+   * still kills the accidental double-tap zoom.
    */
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
   themeColor: "#0a0a0a",
 };

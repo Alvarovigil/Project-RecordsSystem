@@ -7,6 +7,7 @@ import { DEFAULT_ID, type Collection } from "@/lib/collections";
 import Sheet from "./ui/Sheet";
 import CatalogueSheet from "./CatalogueSheet";
 import { useToast } from "./ui/Toast";
+import { useEntryGate } from "@/hooks/useSession";
 
 type Match = {
   id: number;
@@ -141,6 +142,7 @@ export default function BarcodeScanner({
   lockTarget = false,
 }: Props) {
   const toast = useToast();
+  const gate = useEntryGate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const stopFns = useRef<Array<() => void>>([]);
@@ -358,6 +360,9 @@ export default function BarcodeScanner({
   const commit = async () => {
     const list = staged;
     if (list.length === 0) return onClose();
+    // sin cuenta, la bandeja no se guarda en ninguna parte: a entrar (ver
+    // useEntryGate), y lo escaneado no se importa
+    if (gate()) return;
     const listId = targetId;
     const listName = target?.name ?? "tu colección";
     setCommitting(true);
@@ -554,7 +559,7 @@ export default function BarcodeScanner({
           Capped at three because the fourth is already history. */}
       <div className="relative z-20 shrink-0 px-3">
         {buried > 0 && (
-          <p className="pb-2 text-center text-caption text-paper/40">y {buried} antes</p>
+          <p className="pb-2 text-center text-caption text-paper/50">y {buried} antes</p>
         )}
         <AnimatePresence initial={false}>
           {visible.map((s, i) => (
@@ -595,7 +600,7 @@ export default function BarcodeScanner({
               autoFocus
               inputMode="numeric"
               placeholder="Teclea el código de barras"
-              className="h-12 flex-1 bg-transparent text-body text-paper outline-none placeholder:text-paper/35"
+              className="h-12 flex-1 bg-transparent text-body text-paper outline-none placeholder:text-paper/50"
             />
             <button type="submit" className="pressable shrink-0 px-2 py-3 text-sub font-medium text-paper">
               Buscar
@@ -886,7 +891,7 @@ function ScanCard({
           }`}
         />
       ) : (
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white/10 text-paper/40">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white/10 text-paper/50">
           <BarcodeIcon size={16} />
         </span>
       )}

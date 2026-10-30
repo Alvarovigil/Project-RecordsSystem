@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getRepository, type ListWithRecord, type Profile } from "@/lib/data";
 import type { Vinyl } from "@/lib/types";
+import { useWriteBlocked } from "./useSession";
 import { artistFromCatalogueTitle, artistSlug, matchArtists } from "@/lib/artist";
 
 /**
@@ -172,12 +173,17 @@ export function useCatalogueSearch({
   /** el porqué del último «no», en las palabras del servidor */
   const lastError = useRef<string | null>(null);
 
+  const blocked = useWriteBlocked();
   const addFromCatalogue = useCallback(
     async (
       r: DiscogsResult,
       listId: string,
       onSaveToList: (v: Vinyl, listId: string) => void,
     ): Promise<Vinyl | null> => {
+      // La última red, por si algún botón no pasó por useEntryGate: sin
+      // sesión no se importa nada (la importación escribe de verdad) ni se
+      // guarda en la estantería de ejemplo.
+      if (blocked) return null;
       setAdding(r.id);
       try {
         const res = await fetch(`/api/discogs/release`, {
@@ -206,7 +212,7 @@ export function useCatalogueSearch({
         setAdding(null);
       }
     },
-    [allVinilos],
+    [allVinilos, blocked],
   );
 
   /**

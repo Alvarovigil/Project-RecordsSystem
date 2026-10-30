@@ -139,7 +139,7 @@ function Sleeve({ vinyl, active }: { vinyl: Vinyl; active: boolean }) {
         }}
       >
         <div className="text-paper">
-          <div className="text-[11px] uppercase tracking-[0.16em] opacity-70">
+          <div className="text-[12px] uppercase tracking-[0.16em] opacity-70">
             {vinyl.artist}
           </div>
           <div className="font-serif text-2xl italic leading-tight">

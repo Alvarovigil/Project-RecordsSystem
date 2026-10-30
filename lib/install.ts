@@ -102,6 +102,12 @@ function publish(state: InstallState) {
   const root = document.documentElement;
   root.toggleAttribute("data-standalone", state.standalone);
   root.toggleAttribute("data-no-install", state.platform === "in-app" || state.platform === "desktop");
+  // Its own flag, not folded into data-no-install: inside Instagram or
+  // WhatsApp the problem is not only that nothing installs — Google refuses to
+  // sign in from a webview at all (disallowed_useragent), so every door that
+  // ends in Google is a dead end there. The landing swaps them for a way out
+  // to the real browser and a way to look without an account.
+  root.toggleAttribute("data-in-app", state.platform === "in-app");
 }
 
 function refresh() {

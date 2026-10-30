@@ -9,6 +9,7 @@ import Avatar from "@/components/ui/Avatar";
 import { fileToAvatar } from "@/lib/avatar";
 import { useDevice } from "@/hooks/useDevice";
 import Slides from "@/components/onboarding/Slides";
+import { TOUR_EVENT } from "@/lib/site";
 
 const HANDLE_RULE = /^[a-z0-9_]{3,24}$/;
 
@@ -67,12 +68,26 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
         setDisplayName(profile.displayName);
         setAvatarUrl(profile.avatarUrl ?? googleAvatar);
         setPending(localLibraryMigrated() ? 0 : localLibrarySize());
-        setStep("slides");
+        // Straight to the name: five slides before you can do anything was a
+        // tour of a house you are standing in. They are one tap away in
+        // Ajustes («Cómo funciona»), for whoever wants them.
+        setStep("identity");
       });
     return () => {
       alive = false;
     };
   }, [user, profile, supabase]);
+
+  // the tour, on request (Ajustes → Cómo funciona): the slides alone, and back
+  const [touring, setTouring] = useState(false);
+  useEffect(() => {
+    const open = () => {
+      setTouring(true);
+      setStep("slides");
+    };
+    window.addEventListener(TOUR_EVENT, open);
+    return () => window.removeEventListener(TOUR_EVENT, open);
+  }, []);
 
   if (!step || !user) return null;
 
@@ -154,14 +169,21 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
         }
       >
         {deck ? (
-          <Slides onDone={() => setStep("identity")} />
+          <Slides
+            revisit={touring}
+            onDone={() => {
+              if (!touring) return setStep("identity");
+              setTouring(false);
+              setStep(null);
+            }}
+          />
         ) : (
         <div className={isPhone ? "flex h-full flex-col" : undefined}>
         <div
           className="flex items-center justify-between border-b border-paper/10 px-6 py-3"
           style={isPhone ? { paddingTop: "calc(var(--safe-top) + 14px)" } : undefined}
         >
-          <span className="mono text-[10px] uppercase tracking-[0.22em] text-paper/40">
+          <span className="mono text-[12px] uppercase tracking-[0.22em] text-paper/50">
             {step === "identity" ? "Tu nombre" : "Tu colección"}
           </span>
         </div>

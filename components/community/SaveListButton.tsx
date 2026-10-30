@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import { useToast, ToastIcon } from "@/components/ui/Toast";
 import { useSaves } from "@/hooks/useListFlags";
+import { useEntryGate, useIsVisitor } from "@/hooks/useSession";
 
 /**
  * Keeping a list somebody else made.
@@ -40,10 +41,18 @@ export default function SaveListButton({
   // cualquier otra copia de esta lista en pantalla: dos respuestas distintas a
   // "¿la tengo guardada?" en la misma vista es un fallo que se ve
   const saves = useSaves();
-  const saved = saves.ready ? saves.has(listId) : null;
+  const visitor = useIsVisitor();
+  const gate = useEntryGate();
+  // sin sesión no hay colección donde guardarla: nunca «Guardada», y el gesto
+  // lleva a entrar en vez de escribir en la estantería de ejemplo
+  const saved = visitor ? false : saves.ready ? saves.has(listId) : null;
   const [menu, setMenu] = useState(false);
 
   const toggle = async () => {
+    if (gate()) {
+      setMenu(false);
+      return;
+    }
     const next = !saved;
     try {
       await saves.toggle(listId, next);

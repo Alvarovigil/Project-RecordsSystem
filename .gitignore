@@ -19,3 +19,6 @@ supabase/.temp/
 !.env.example
 !.env.local.example
 .next-verify
+
+# local builds with NEXT_DIST_DIR (a second dev server, verification builds)
+.next-*

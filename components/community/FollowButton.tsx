@@ -6,6 +6,7 @@ import Confirm from "@/components/ui/Confirm";
 import { useToast, ToastIcon } from "@/components/ui/Toast";
 import { useDevice } from "@/hooks/useDevice";
 import { useRelationship } from "@/hooks/useRelationship";
+import { useEntryGate, useIsVisitor } from "@/hooks/useSession";
 
 /**
  * Seguir / Siguiendo, and the small decisions inside it.
@@ -57,6 +58,8 @@ export default function FollowButton({
   const toast = useToast();
   const [confirming, setConfirming] = useState(false);
   const [hovering, setHovering] = useState(false);
+  const visitor = useIsVisitor();
+  const gate = useEntryGate();
 
   // Yourself, or an answer that hasn't arrived: render nothing rather than a
   // button that might be about to mean the opposite of what it says.
@@ -64,7 +67,10 @@ export default function FollowButton({
     return <span aria-hidden style={{ minWidth: block ? undefined : icon ? 36 : 104 }} />;
   }
 
-  const following = rel?.following ?? false;
+  // Sin sesión no se sigue a nadie: el repositorio del visitante escribiría en
+  // la estantería de ejemplo, diría «Sigues a…» y el botón volvería a «Seguir»
+  // en cuanto se releyera. El gesto lleva a entrar, que es lo que hace falta.
+  const following = !visitor && (rel?.following ?? false);
 
   const run = async () => {
     try {
@@ -76,6 +82,7 @@ export default function FollowButton({
   };
 
   const onPress = () => {
+    if (gate()) return;
     if (following) {
       if (hover) void run();
       else setConfirming(true);

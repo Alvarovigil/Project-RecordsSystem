@@ -1,5 +1,6 @@
 "use client";
 
+import { TOUR_EVENT } from "@/lib/site";
 import { useState } from "react";
 import Link from "next/link";
 import { Page } from "@/components/app/AppShell";
@@ -97,7 +98,13 @@ export default function SettingsPage() {
             {!standalone && (
               <Row href="/instalar" label="Instalar la app" note="Pantalla completa y arranque directo" />
             )}
-            <Row href="/#sobre" label="Sobre el proyecto" note="Por qué existe Rackr" />
+            {/* It pointed at /#sobre, which redirects a signed-in visitor
+                straight back to the shelf; the tour is what is useful here. */}
+            <Row
+              label="Cómo funciona"
+              note="La presentación de Rackr, en cinco pantallas"
+              onClick={() => window.dispatchEvent(new Event(TOUR_EVENT))}
+            />
           </Group>
 
           <Group title="Cuenta">
@@ -135,7 +142,9 @@ export default function SettingsPage() {
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-9">
-      <h2 className="text-caption uppercase tracking-label text-content-muted">{title}</h2>
+      {/* un escalón por debajo del subtítulo de cada fila: así la etiqueta del
+          grupo se lee como lo que encabeza y no como otra fila más */}
+      <h2 className="text-caption uppercase tracking-label text-content-faint">{title}</h2>
       <ul className="mt-3 overflow-hidden rounded-[14px] bg-fill-subtle">{children}</ul>
     </section>
   );

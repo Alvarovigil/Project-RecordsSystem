@@ -72,7 +72,7 @@ export default function MiniPlayer() {
           className="pressable min-w-0 flex-1 text-left"
         >
           <span className="block truncate text-[13px] text-paper">{nowPlaying.title}</span>
-          <span className="mono block truncate text-[10px] uppercase tracking-[0.16em] text-paper/40">
+          <span className="mono block truncate text-[12px] uppercase tracking-[0.16em] text-paper/50">
             {loading ? "Cargando" : nowPlaying.artist}
           </span>
         </button>
@@ -98,7 +98,7 @@ export default function MiniPlayer() {
             separate text link would be a 9px target next to a 44px one */}
         <Link
           href="/coleccion"
-          className="mono hidden shrink-0 text-[10px] uppercase tracking-[0.16em] text-paper/35 transition hover:text-paper sm:block"
+          className="mono hidden shrink-0 text-[12px] uppercase tracking-[0.16em] text-paper/50 transition hover:text-paper sm:block"
         >
           Ver en mi colección
         </Link>

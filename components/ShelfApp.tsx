@@ -1032,7 +1032,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                      is a wireframe, legible on a dark cover and gone on a
                      bright one. The app's rule for anything floating over a
                      cover applies here like everywhere else. */
-                  className={`pressable flex h-9 items-center whitespace-nowrap rounded-full px-5 text-[11px] uppercase tracking-[0.22em] backdrop-blur-xl transition ${
+                  className={`pressable flex h-9 items-center whitespace-nowrap rounded-full px-5 text-[12px] uppercase tracking-[0.22em] backdrop-blur-xl transition ${
                     specsOpen
                       ? "bg-paper text-ink"
                       : "bg-paper/[0.14] text-paper/90 hover:bg-paper/25"
@@ -1232,7 +1232,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           }`}
         >
           <div className="px-6">
-            <div className="text-[11px] uppercase tracking-[0.22em] text-paper/50">
+            <div className="text-[12px] uppercase tracking-[0.22em] text-paper/50">
               {active.genre} · {active.year}
             </div>
             <h1
@@ -1285,7 +1285,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
               at" without being asked, because in 3D nothing else does. */}
           {foreign ? (
             <span className="relative shrink-0">
-              <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-paper/10 mono text-[10px] text-paper/60">
+              <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-paper/10 mono text-[12px] text-paper/60">
                 {foreign.list.owner.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={foreign.list.owner.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -1316,7 +1316,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             <span className="block text-[20px] font-medium leading-none text-paper">
               {foreign ? foreign.list.title : activeCollection?.name ?? "Mi Colección"}
             </span>
-            <span className="mt-1.5 block text-[11px] uppercase tracking-[0.18em] text-paper/50 transition group-hover:text-paper/75">
+            <span className="mt-1.5 block text-[12px] uppercase tracking-[0.18em] text-paper/50 transition group-hover:text-paper/75">
               {foreign ? `de ${foreign.list.owner.displayName} · ` : ""}
               {vinilos.length} {vinilos.length === 1 ? "disco" : "discos"}
             </span>
@@ -1447,7 +1447,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         >
           <div className="flex items-center gap-3">
             <div className="max-w-[320px]">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-paper/50">
+              <div className="text-[12px] uppercase tracking-[0.18em] text-paper/50">
                 {loadingPreview ? "Cargando" : playing ? "Ahora escuchando" : "En pausa"}
               </div>
               <MarqueeText className="mt-1 font-medium text-[15px]">
@@ -1464,20 +1464,20 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
           <div className="pointer-events-auto w-[420px] max-w-[90vw] border border-paper/10 bg-ink/40 backdrop-blur-sm">
             {/* top stamp row */}
-            <div className="flex items-center justify-between border-b border-paper/10 px-5 py-2 mono text-[10px] uppercase tracking-[0.22em] text-paper/40">
+            <div className="flex items-center justify-between border-b border-paper/10 px-5 py-2 mono text-[12px] uppercase tracking-[0.22em] text-paper/50">
               <span>Ficha · 000</span>
               <span>Vacía</span>
             </div>
             {/* body */}
             <div className="px-7 pt-7 pb-6">
-              <div className="mono text-[10px] uppercase tracking-[0.22em] text-paper/40">
+              <div className="mono text-[12px] uppercase tracking-[0.22em] text-paper/50">
                 Estado
               </div>
               <div className="mt-1.5 text-[15px] text-paper/90">
                 Tu colección no tiene vinilos
               </div>
 
-              <div className="mt-5 mono text-[10px] uppercase tracking-[0.22em] text-paper/40">
+              <div className="mt-5 mono text-[12px] uppercase tracking-[0.22em] text-paper/50">
                 Siguiente paso
               </div>
               <div className="mt-1.5 text-[13px] text-paper/55 leading-relaxed">
@@ -1492,7 +1492,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                 className="flex-1 px-5 py-3 text-left text-[14px] text-paper hover:bg-paper/[0.04] transition flex items-center justify-between"
               >
                 <span>Buscar vinilos</span>
-                <span className="text-paper/40">→</span>
+                <span className="text-paper/50">→</span>
               </button>
               {canScan ? (
                 <button
@@ -1503,7 +1503,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                   <span>Escanear</span>
                 </button>
               ) : (
-                <div className="px-5 py-3 mono text-[10px] uppercase tracking-[0.22em] text-paper/30 border-l border-paper/10 flex items-center">
+                <div className="px-5 py-3 mono text-[12px] uppercase tracking-[0.22em] text-paper/30 border-l border-paper/10 flex items-center">
                   Tecla /
                 </div>
               )}
@@ -1574,7 +1574,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
 function Field({ label, value, href }: { label: string; value: string; href?: string }) {
   return (
     <div className="mb-4 last:mb-0">
-      <div className="text-[9px] uppercase tracking-[0.22em] text-paper/35">{label}</div>
+      <div className="text-[12px] uppercase tracking-[0.22em] text-paper/50">{label}</div>
       {/* The artist is the one field here that leads somewhere, so it is the
           one field that is a link. The column is `pointer-events-none` as a
           whole — it must never take clicks meant for the sleeve — so the link

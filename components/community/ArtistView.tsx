@@ -11,6 +11,7 @@ import { Reveal, SkeletonCovers, useDeadline } from "@/components/ui/Skeleton";
 import CatalogueSheet, { type CatalogueItem } from "@/components/CatalogueSheet";
 import RecordSheet from "@/components/mobile/RecordSheet";
 import { useLibrary } from "@/hooks/useLibrary";
+import { useEntryGate, useIsVisitor } from "@/hooks/useSession";
 import { useToast } from "@/components/ui/Toast";
 import { coverFor } from "@/lib/cover";
 import { artistSlug, cleanArtist, findArtist } from "@/lib/artist";
@@ -36,6 +37,10 @@ export default function ArtistView({ slug }: { slug: string }) {
   const lib = useLibrary();
   const toast = useToast();
   const router = useRouter();
+  // without an account the library is the sample shelf, which is nobody's:
+  // nothing here may say "tuyo" or "te falta" about it
+  const visitor = useIsVisitor();
+  const gate = useEntryGate();
 
   const [portrait, setPortrait] = useState<{ image: string | null; name: string } | null>(null);
   const [looking, setLooking] = useState<CatalogueItem | null>(null);
@@ -120,12 +125,13 @@ export default function ArtistView({ slug }: { slug: string }) {
   const key = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "");
   const more = useMemo(() => {
     if (catalogue === null) return null;
+    if (visitor) return catalogue.slice(0, 24);
     const ownedIds = new Set(lib.releases.map((v) => v.discogsId));
     const ownedTitles = new Set((group?.records ?? []).map((v) => key(v.title)));
     return catalogue
       .filter((r) => !ownedIds.has(r.id) && !ownedTitles.has(key(r.title)))
       .slice(0, 24);
-  }, [catalogue, lib.releases, group]);
+  }, [catalogue, lib.releases, group, visitor]);
 
   /**
    * De dónde sale el color del fondo.
@@ -156,7 +162,8 @@ export default function ArtistView({ slug }: { slug: string }) {
   };
 
   const save = async (item: CatalogueItem): Promise<Vinyl | null> => {
-    if (!mine) return null;
+    // sin cuenta no hay «lo tuyo» donde meterlo: a entrar, sin importar nada
+    if (gate() || !mine) return null;
     let kept: Vinyl | null = null;
     setSaving(item.id);
     try {
@@ -183,6 +190,7 @@ export default function ArtistView({ slug }: { slug: string }) {
   };
 
   const wish = async (item: CatalogueItem) => {
+    if (gate()) return;
     const list = findWishlist(collections);
     if (!list) return;
     try {
@@ -203,7 +211,7 @@ export default function ArtistView({ slug }: { slug: string }) {
     }
   };
 
-  const owned = group?.records ?? [];
+  const owned = visitor ? [] : group?.records ?? [];
 
   /**
    * El género, del disco que sea: primero de los tuyos, y si no, del catálogo.
@@ -392,7 +400,7 @@ export default function ArtistView({ slug }: { slug: string }) {
                   {genre}
                 </li>
               )}
-              {total > 0 && (
+              {total > 0 && !visitor && (
                 <li className="rounded-full bg-fill px-3 py-1 text-caption text-content-secondary">
                   <span style={{ fontVariantNumeric: "tabular-nums" }}>
                     {owned.length}/{total}
@@ -402,7 +410,7 @@ export default function ArtistView({ slug }: { slug: string }) {
               )}
             </ul>
 
-            {owned.length === 0 && (
+            {owned.length === 0 && !visitor && (
               <p className="mt-4 text-sub text-content-muted">Todavía no tienes ninguno suyo.</p>
             )}
           </div>

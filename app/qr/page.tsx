@@ -58,7 +58,7 @@ export default function QrPage() {
           alt={SITE_NAME}
           className="h-[32px] w-auto mix-blend-difference sm:h-[40px]"
         />
-        <p className="mt-2.5 text-[10px] uppercase tracking-[0.24em] text-paper/50 sm:text-[11px]">
+        <p className="mt-2.5 text-[12px] uppercase tracking-[0.24em] text-paper/50 sm:text-[12px]">
           {SITE_TAGLINE}
         </p>
 
@@ -69,7 +69,7 @@ export default function QrPage() {
             alt="Código QR que lleva a rackr.club/instalar"
             className="h-[58vw] max-h-[280px] w-[58vw] max-w-[280px]"
           />
-          <p className="mono mt-3.5 text-center text-[9px] uppercase tracking-[0.2em] text-ink/45">
+          <p className="mono mt-3.5 text-center text-[12px] uppercase tracking-[0.2em] text-ink/45">
             Escanea y lo tienes
           </p>
         </div>
@@ -77,7 +77,7 @@ export default function QrPage() {
         {/* Above the player, not under it. The address is the fallback for
             somebody who would rather type than scan, and a fallback hidden
             behind a now-playing bar is not one. */}
-        <p className="mono mt-7 text-center text-[11px] uppercase tracking-[0.16em] text-paper/40">
+        <p className="mono mt-7 text-center text-[12px] uppercase tracking-[0.16em] text-paper/50">
           {SITE_URL.replace(/^https?:\/\//, "")}/instalar
         </p>
       </div>

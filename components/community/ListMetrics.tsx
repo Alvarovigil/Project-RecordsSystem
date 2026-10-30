@@ -1,6 +1,7 @@
 "use client";
 
 import { useLikes, useSaves } from "@/hooks/useListFlags";
+import { useEntryGate, useIsVisitor } from "@/hooks/useSession";
 import { useToast } from "@/components/ui/Toast";
 
 /**
@@ -36,14 +37,19 @@ export function LikeButton({
 }) {
   const { has, delta, toggle } = useLikes();
   const toast = useToast();
-  const liked = has(listId);
-  const shown = Math.max(0, count + delta(listId));
+  const gate = useEntryGate();
+  // Sin sesión el corazón no es de nadie: no se pinta lleno ni suma, y
+  // pulsarlo lleva a entrar en vez de escribir en la estantería de ejemplo.
+  const visitor = useIsVisitor();
+  const liked = !visitor && has(listId);
+  const shown = Math.max(0, count + (visitor ? 0 : delta(listId)));
 
   const press = async (e: React.MouseEvent) => {
     // vive dentro de un <Link> en la tarjeta: sin esto, dar me gusta te saca
     // de la página que estabas mirando
     e.preventDefault();
     e.stopPropagation();
+    if (gate()) return;
     try {
       await toggle(listId);
     } catch (err) {
@@ -111,7 +117,8 @@ export function SaveCount({
   size?: "sm" | "md";
 }) {
   const { delta } = useSaves();
-  const shown = Math.max(0, n + delta(listId));
+  const visitor = useIsVisitor();
+  const shown = Math.max(0, n + (visitor ? 0 : delta(listId)));
   return (
     <span
       className={`flex items-center gap-1.5 text-content-muted ${

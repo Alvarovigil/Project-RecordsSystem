@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { SITE_NAME } from "@/lib/site";
+import SignInButton from "@/components/SignInButton";
+import { IN_APP_NOTE, SITE_NAME } from "@/lib/site";
 import { useInstall } from "@/hooks/useInstall";
 import { promptInstall } from "@/lib/install";
 import PhonePreview from "./PhonePreview";
@@ -110,7 +111,7 @@ export default function InstallScreen({ url }: { url: string }) {
               label={copied ? "Enlace copiado" : "Copiar el enlace"}
               onClick={share}
               variant="secondary"
-              note="Estás dentro del navegador de otra app y desde aquí no se puede instalar nada. Toca ⋯ y elige «Abrir en Safari» o «Abrir en Chrome»."
+              note={`Estás dentro del navegador de otra app y desde aquí no se puede instalar nada. ${IN_APP_NOTE}`}
             />
           ) : situation === "desktop" ? (
             <Action
@@ -118,14 +119,6 @@ export default function InstallScreen({ url }: { url: string }) {
               onClick={share}
               variant="secondary"
               note="Rackr se instala en el teléfono, que es donde lo vas a usar en una tienda. En el escritorio funciona igual desde el navegador."
-              extra={
-                <Link
-                  href="/explorar"
-                  className="text-sub text-content-muted underline-offset-4 transition hover:text-paper hover:underline"
-                >
-                  Entrar sin instalar
-                </Link>
-              }
             />
           ) : (
             /**
@@ -144,12 +137,6 @@ export default function InstallScreen({ url }: { url: string }) {
             </p>
           )}
         </div>
-
-        {situation !== null && situation !== "installed" && (
-          <div className="mt-12">
-            <PhonePreview />
-          </div>
-        )}
 
         {(situation === "ios" || situation === "android-other") && (
           <section className="mt-14">
@@ -199,6 +186,35 @@ export default function InstallScreen({ url }: { url: string }) {
               )}
             </ol>
           </section>
+        )}
+
+        {/* Installing is the better app, never the only door. Without this,
+            iOS and most Androids reached a page of steps with nothing to press.
+            Inside another app's browser only the looking: Google refuses to
+            sign in there, and the note above says how to get out of it.
+            Under the steps, not above them: on a phone the steps started past
+            the fold and the first thing on screen was a way in, so the page
+            read as a sign-in page that happened to mention installing. Centred,
+            both of them — two ways out of the same page, at the same weight. */}
+        {situation !== null && situation !== "installed" && (
+          <div className="mt-10 flex flex-col items-center">
+            {situation !== "in-app" && <SignInButton variant="text" />}
+            <Link
+              href="/explorar"
+              className="pressable inline-flex min-h-[44px] items-center px-3 text-sub text-content-muted underline-offset-4 transition hover:text-paper hover:underline"
+            >
+              Mirar sin cuenta
+            </Link>
+          </div>
+        )}
+
+        {/* The picture after the steps, not before: above them it pushed the
+            steps under the fold, and the steps are the one thing on this page
+            somebody came to do. */}
+        {situation !== null && situation !== "installed" && (
+          <div className="mt-12">
+            <PhonePreview />
+          </div>
         )}
 
         {/**

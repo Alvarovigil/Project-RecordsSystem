@@ -208,7 +208,7 @@ export default function CommunityBridge({ vinyl, allVinilos, onOpenOwn, onSave }
                     ← Atrás
                   </button>
                 )}
-                <span className="text-sub text-paper/40">
+                <span className="text-sub text-paper/50">
                   {view.kind === "record"
                     ? "Comunidad"
                     : view.kind === "list"
@@ -292,7 +292,7 @@ function RecordView({
     <>
       <div className="px-7 pb-1 pt-6">
         <h2 className="text-heading text-paper">
-          Quién más tiene <span className="text-paper/45">{vinyl.title}</span>
+          Quién más tiene <span className="text-paper/50">{vinyl.title}</span>
         </h2>
       </div>
 
@@ -322,7 +322,7 @@ function RecordView({
                         e.stopPropagation();
                         onOpenList(f.viaListId);
                       }}
-                      className="mt-0.5 block truncate text-caption text-paper/40 underline-offset-2 hover:text-paper hover:underline"
+                      className="mt-0.5 block truncate text-caption text-paper/50 underline-offset-2 hover:text-paper hover:underline"
                     >
                       Lo tiene en {f.viaListTitle}
                     </span>
@@ -336,7 +336,7 @@ function RecordView({
 
       <Section label="Racks" count={lists.length}>
         {lists.length === 0 ? (
-          <p className="text-sub text-paper/40">
+          <p className="text-sub text-paper/50">
             Todavía no está en ningún rack público. El tuyo sería el primero.
           </p>
         ) : (
@@ -403,14 +403,14 @@ function ListView({
               <Avatar user={known.owner} size={22} />
               {known.owner.displayName}
             </button>
-            <span className="text-caption text-paper/35">
+            <span className="text-caption text-paper/50">
               {known.itemCount} discos · {known.saves} guardadas · {known.likes} ♥ ·{" "}
               {known.updatedAt}
             </span>
           </div>
           <Link
             href={`/u/${known.owner.username}/${known.slug}`}
-            className="mt-3 inline-block text-sub text-paper/45 underline-offset-2 transition hover:text-paper hover:underline"
+            className="mt-3 inline-block text-sub text-paper/50 underline-offset-2 transition hover:text-paper hover:underline"
           >
             Ver el rack completo →
           </Link>
@@ -442,13 +442,13 @@ function ListView({
                     onClick={() => (owned ? onOpenOwn(v) : onSave(v))}
                     className="reveal-on-hover absolute inset-0 flex items-end justify-center bg-gradient-to-t from-ink/85 via-transparent to-transparent p-2 transition"
                   >
-                    <span className="mono text-[9px] uppercase tracking-[0.16em] text-paper">
+                    <span className="mono text-[12px] uppercase tracking-[0.16em] text-paper">
                       {owned ? "Ver en mi colección" : "Guardar"}
                     </span>
                   </button>
                 </div>
                 <div className="mt-2 truncate text-[12px] text-paper/85">{v.title}</div>
-                <div className="truncate text-[11px] text-paper/40">{v.artist}</div>
+                <div className="truncate text-[12px] text-paper/50">{v.artist}</div>
               </li>
             );
           })}
@@ -487,13 +487,13 @@ function ProfileView({
           <Avatar user={person} size={48} />
           <div className="min-w-0">
             <h2 className="text-[20px] leading-tight text-paper">{person.displayName}</h2>
-            <p className="mono mt-0.5 text-caption text-paper/40">@{person.username}</p>
-            <p className="mt-3 text-caption text-paper/35">
+            <p className="mono mt-0.5 text-caption text-paper/50">@{person.username}</p>
+            <p className="mt-3 text-caption text-paper/50">
               {lists.length} racks · {discos} discos
             </p>
             <Link
               href={`/u/${person.username}`}
-              className="mono mt-3 inline-block text-[10px] uppercase tracking-[0.16em] text-paper/40 underline-offset-2 transition hover:text-paper hover:underline"
+              className="mono mt-3 inline-block text-[12px] uppercase tracking-[0.16em] text-paper/50 underline-offset-2 transition hover:text-paper hover:underline"
             >
               Ver perfil completo →
             </Link>
@@ -510,7 +510,7 @@ function ProfileView({
             </li>
           ))}
         </ul>
-        {lists.length === 0 && <p className="text-sub text-paper/40">Todavía no ha publicado racks.</p>}
+        {lists.length === 0 && <p className="text-sub text-paper/50">Todavía no ha publicado racks.</p>}
       </Section>
     </>
   );
@@ -561,7 +561,7 @@ function ListRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sub font-medium text-paper">{list.title}</span>
-        <span className="mt-0.5 block truncate text-caption text-paper/40">
+        <span className="mt-0.5 block truncate text-caption text-paper/50">
           {!hideOwner ? `${list.owner.displayName} · ` : ""}
           {list.itemCount} discos
         </span>
@@ -603,7 +603,7 @@ function Avatar({
     .toUpperCase();
   return (
     <span
-      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper/10 mono text-[10px] tracking-[0.06em] text-paper/70"
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-paper/10 mono text-[12px] tracking-[0.06em] text-paper/70"
       style={{ width: size, height: size }}
       aria-hidden
     >
@@ -640,7 +640,7 @@ function Section({
     <section className="px-7 pt-8 first:pt-6">
       <h3 className="flex items-baseline gap-2 text-body font-medium text-paper">
         {label}
-        <span className="text-sub font-normal text-paper/30">{count}</span>
+        <span className="text-sub font-normal text-content-muted">{count}</span>
       </h3>
       <div className="mt-4">{children}</div>
     </section>
@@ -648,5 +648,5 @@ function Section({
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="px-7 py-8 text-sub text-paper/40">{text}</p>;
+  return <p className="px-7 py-8 text-sub text-paper/50">{text}</p>;
 }

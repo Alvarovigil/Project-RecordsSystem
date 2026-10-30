@@ -130,7 +130,7 @@ export default function VinylGrid({
                 >
                   {v.title}
                 </div>
-                <div className="mt-1 truncate text-[11px] uppercase tracking-[0.14em] text-paper/45">
+                <div className="mt-1 truncate text-[12px] uppercase tracking-[0.14em] text-paper/50">
                   {v.artist}
                 </div>
               </button>

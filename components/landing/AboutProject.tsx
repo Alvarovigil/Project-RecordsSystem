@@ -71,14 +71,14 @@ export default function AboutProject() {
           <div className="relative flex w-full max-w-[560px] flex-col border border-paper/15 bg-[#0d0d0d] shadow-[0_30px_90px_rgba(0,0,0,0.75)]"
                style={{ maxHeight: "min(88dvh, 760px)" }}>
             <div className="flex shrink-0 items-start justify-between gap-6 px-6 pt-7 sm:px-9 sm:pt-9">
-              <p className="mono text-[10px] uppercase tracking-[0.24em] text-paper/35">
+              <p className="mono text-[12px] uppercase tracking-[0.14em] text-paper/50">
                 Sobre el proyecto
               </p>
               <button
                 ref={closeRef}
                 onClick={() => setOpen(false)}
                 aria-label="Cerrar"
-                className="-mt-1 text-paper/40 transition hover:text-paper"
+                className="-mt-1 text-paper/50 transition hover:text-paper"
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
                   <path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" strokeWidth="1.3" />
@@ -161,7 +161,7 @@ export default function AboutProject() {
                 <p className="mt-5 text-[14px] text-paper">Álvaro</p>
                 <a
                   href="mailto:rackr.club@gmail.com"
-                  className="mono mt-1 inline-block text-[12px] text-paper/45 underline-offset-4 transition hover:text-paper hover:underline"
+                  className="mono mt-1 inline-block text-[12px] text-paper/50 underline-offset-4 transition hover:text-paper hover:underline"
                 >
                   rackr.club@gmail.com
                 </a>

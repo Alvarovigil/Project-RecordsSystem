@@ -72,12 +72,12 @@ export default function VinylDetail({ vinyl, onClose }: Props) {
                 {vinyl.title}
               </h2>
               <div className="mt-2 text-paper/70">{vinyl.artist}</div>
-              <div className="mt-1 text-xs uppercase tracking-[0.16em] text-paper/40">
+              <div className="mt-1 text-xs uppercase tracking-[0.16em] text-paper/50">
                 {vinyl.label}
               </div>
 
               <div className="mt-10 max-h-[40vh] overflow-y-auto pr-4">
-                <div className="text-[10px] uppercase tracking-[0.2em] text-paper/40">
+                <div className="text-[12px] uppercase tracking-[0.2em] text-paper/50">
                   Tracklist
                 </div>
                 <ul className="mt-3 divide-y divide-paper/10">
@@ -89,11 +89,11 @@ export default function VinylDetail({ vinyl, onClose }: Props) {
                       transition={{ delay: 0.25 + i * 0.025 }}
                       className="flex items-baseline gap-4 py-2 text-sm"
                     >
-                      <span className="w-8 text-paper/40 tabular-nums">
+                      <span className="w-8 text-paper/50 tabular-nums">
                         {t.position}
                       </span>
                       <span className="flex-1">{t.title}</span>
-                      <span className="text-paper/40 tabular-nums">
+                      <span className="text-paper/50 tabular-nums">
                         {t.duration}
                       </span>
                     </motion.li>

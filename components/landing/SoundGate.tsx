@@ -17,6 +17,32 @@ const VOLUME = 0.42;
 const OVERLAP = 0.7;
 
 /**
+ * The list, asked for once per page load.
+ *
+ * It was a fetch inside an effect, and the landing asked four times on
+ * arrival: Strict Mode mounts twice in development, and the gate remounts
+ * whenever the landing does. One promise at module scope answers all of them.
+ * A failure forgets it, so the next press can try again instead of inheriting
+ * a dead answer.
+ */
+let jukebox: Promise<Track[]> | null = null;
+function loadJukebox(): Promise<Track[]> {
+  jukebox ??= fetch("/api/jukebox")
+    // a 500 is a failure like a dropped connection: forgotten, so the next
+    // press asks again instead of inheriting an empty answer
+    .then((r) => {
+      if (!r.ok) throw new Error(`jukebox ${r.status}`);
+      return r.json();
+    })
+    .then((d: { tracks?: Track[] }) => d.tracks ?? [])
+    .catch(() => {
+      jukebox = null;
+      return [];
+    });
+  return jukebox;
+}
+
+/**
  * Brings an element up from silence.
  *
  * Squared, not linear: loudness is not perceived linearly, so a straight ramp
@@ -61,7 +87,17 @@ export default function SoundGate({
   body?: string;
   cta?: string;
 } = {}) {
-  const [entered, setEntered] = useState(false);
+  /**
+   * Open from the start: the door no longer stands in front of the page.
+   *
+   * It used to blur the landing on every visit until you chose between
+   * "Vamos allá" and "Entrar en silencio" — a decision about audio before you
+   * had seen what the place is, asked again each time, and on /qr it hid the
+   * very code the page exists to show. The music stays, as an offer: the player
+   * in the corner says «Poner música» until somebody wants it. The gate and its
+   * words are kept for whoever wants the door back (`entered` starts false).
+   */
+  const [entered, setEntered] = useState(true);
   /**
    * The door does not slam in your face on arrival. The page lands clear —
    * a moment of the shelf actually running — and only then does the blur roll
@@ -70,6 +106,17 @@ export default function SoundGate({
   const [armed, setArmed] = useState(false);
 
   const [tracks, setTracks] = useState<Track[]>([]);
+  /**
+   * Whether there is music to put on at all.
+   *
+   * Pressing «Poner música» before the list had arrived, or after it failed,
+   * dropped the needle and then nothing: the effect hands over to an empty
+   * queue. Now a press while loading waits for the list and says so, and a
+   * list that never comes says «Sin música ahora» instead of a needle.
+   */
+  const [status, setStatus] = useState<"loading" | "ready" | "none">("loading");
+  /** pressed before the list arrived: put it on as soon as it does */
+  const [waiting, setWaiting] = useState(false);
   const [current, setCurrent] = useState<Track | null>(null);
   const [playing, setPlaying] = useState(false);
 
@@ -97,7 +144,23 @@ export default function SoundGate({
    * element, the same transition, opened by a second reason.
    */
   const [peeking, setPeeking] = useState(false);
-  const open = announced || peeking;
+  // before anything has played, the invitation stays readable
+  /**
+   * Open only at the very top of the page.
+   *
+   * Spelled out, the pill sat over whatever paragraph was passing underneath
+   * it and, at the foot, over the footer. After the first scroll it folds to
+   * the meter and the play button — still there, still a target, no longer a
+   * caption on top of the reading.
+   */
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const read = () => setScrolled(window.scrollY > 24);
+    read();
+    window.addEventListener("scroll", read, { passive: true });
+    return () => window.removeEventListener("scroll", read);
+  }, []);
+  const open = peeking || (!scrolled && (announced || !current));
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const needleRef = useRef<HTMLAudioElement | null>(null);
@@ -123,20 +186,23 @@ export default function SoundGate({
     };
   }, [entered, armed]);
 
-  // the stack of records, fetched once and kept
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/jukebox")
-      .then((r) => r.json())
-      .then((d: { tracks?: Track[] }) => {
-        if (!alive || !d.tracks?.length) return;
-        setTracks(d.tracks);
-      })
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
+  // the stack of records, fetched once per page load and kept (see loadJukebox)
+  const alive = useRef(true);
+  const fetchList = useCallback(() => {
+    setStatus("loading");
+    void loadJukebox().then((list) => {
+      if (!alive.current) return;
+      if (list.length) setTracks(list);
+      setStatus(list.length ? "ready" : "none");
+    });
   }, []);
+  useEffect(() => {
+    alive.current = true;
+    fetchList();
+    return () => {
+      alive.current = false;
+    };
+  }, [fetchList]);
 
   const playAt = useCallback((index: number, fade = false) => {
     const list = queue.current;
@@ -244,6 +310,16 @@ export default function SoundGate({
     audio.load();
   }, [tracks, shuffle]);
 
+  // After the queue effect on purpose: effects run in the order they are
+  // declared, and the needle must not come down on a queue not yet shuffled.
+  // the press that came before the list: honoured when the list lands, or
+  // turned into «Sin música ahora» if it never does
+  useEffect(() => {
+    if (!waiting || status === "loading") return;
+    setWaiting(false);
+    if (status === "ready") dropNeedle(cursor.current);
+  }, [waiting, status, dropNeedle]);
+
   /**
    * Warm the next record while this one plays.
    *
@@ -279,6 +355,33 @@ export default function SoundGate({
   const toggle = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !current) {
+      if (!queue.current.length) {
+        /**
+         * The list is still on its way: wait for it, not with a needle.
+         *
+         * A browser only lets audio start from a gesture, and by the time the
+         * list arrives this press is history. Calling play() on both elements
+         * now, inside the gesture, is what lets them play later on iOS; the
+         * needle is muted for it so nothing sounds until there is a song to
+         * hand over to.
+         */
+        const needle = (needleRef.current ??= new Audio(NEEDLE));
+        needle.muted = true;
+        void needle.play().then(
+          () => {
+            needle.pause();
+            needle.muted = false;
+          },
+          () => {
+            needle.muted = false;
+          },
+        );
+        void (audioRef.current ??= new Audio()).play().catch(() => {});
+        setWaiting(true);
+        // after «Sin música ahora», a press is a second try, not a dead end
+        if (status === "none") fetchList();
+        return;
+      }
       // never started (came in silent): this click is the gesture, so the
       // record goes on properly, needle and all
       dropNeedle(cursor.current);
@@ -290,9 +393,12 @@ export default function SoundGate({
       audio.pause();
       setPlaying(false);
     }
-  }, [current, dropNeedle]);
+  }, [current, dropNeedle, status, fetchList]);
 
   const next = useCallback(() => dropNeedle(cursor.current + 1), [dropNeedle]);
+
+  const label =
+    status === "none" ? "Sin música ahora" : waiting ? "Un momento…" : "Poner música";
 
   useEffect(
     () => () => {
@@ -361,7 +467,7 @@ export default function SoundGate({
           <button
             onClick={() => enter(false)}
             style={{ bottom: "calc(var(--safe-bottom) + 32px)" }}
-            className="absolute left-1/2 -translate-x-1/2 text-[11px] uppercase tracking-[0.05em] text-paper/60 underline-offset-4 transition hover:text-paper hover:underline sm:text-[13px]"
+            className="absolute left-1/2 -translate-x-1/2 text-[12px] uppercase tracking-[0.05em] text-paper/60 underline-offset-4 transition hover:text-paper hover:underline sm:text-[13px]"
           >
             Entrar en silencio
           </button>
@@ -380,73 +486,89 @@ export default function SoundGate({
            * outline, because there is nothing on the other side of it to be
            * separated from. Sitting directly on the shelf it needed a ground:
            * over a pale sleeve the controls disappeared, and the fix is the
-           * one the rest of the product already uses.
+           * one the rest of the product already uses. At 0.8 rather than 0.55:
+           * over the bright end of the shelf the label was still fighting it.
            */
           // centred at the foot of a phone, back in its corner from sm up
           style={{ bottom: "calc(var(--safe-bottom) + 24px)" }}
-          className="fixed left-1/2 z-[70] flex max-w-[calc(100vw-2.5rem)] -translate-x-1/2 items-center gap-2 rounded-full bg-ink/55 px-3.5 py-2 backdrop-blur-xl transition-[gap] duration-slow ease-out sm:bottom-5 sm:left-auto sm:right-5 sm:translate-x-0 text-[11px] uppercase tracking-[0.05em] text-paper/80 sm:bottom-5 sm:text-[13px]">
-          {/* The brackets were a frame around three bars that already read as a
-              meter; two more characters, and they held the label at arm's
-              length from the thing it is labelling. */}
-          <span aria-hidden className="mono shrink-0 text-paper/70">
-            <Bars animate={playing} />
-          </span>
-
-          {/**
-           * The name announces itself and then gets out of the way.
-           *
-           * A track title parked in the corner of a landing page for as long
-           * as the song lasts is a label nobody is reading after the first
-           * three seconds — but the three seconds matter, because that is when
-           * you want to know what you are hearing. So it opens on every change
-           * of track, waits, and folds back to the meter and the controls.
-           *
-           * Folded by max-width rather than by unmounting: the text stays in
-           * the DOM for anyone listening to the page, the two states are the
-           * same element so the transition is continuous, and the controls
-           * slide rather than jump because nothing is being added or removed.
-           */}
-          <span
+          className="fixed left-1/2 z-[70] flex min-h-[44px] max-w-[calc(100vw-2.5rem)] -translate-x-1/2 items-center rounded-full bg-[rgb(var(--ink-rgb)/0.8)] text-[12px] uppercase tracking-[0.05em] text-paper/80 backdrop-blur-xl sm:bottom-5 sm:left-auto sm:right-5 sm:translate-x-0 sm:text-[13px]"
+        >
+          {current ? (
+            <span className="flex min-h-[44px] items-center gap-2 px-4">
+              {/* The brackets were a frame around three bars that already read
+                  as a meter; two more characters, and they held the label at
+                  arm's length from the thing it is labelling. */}
+              <span aria-hidden className="mono shrink-0 text-paper/70">
+                <Bars animate={playing} />
+              </span>
+              <TrackName open={open}>{`${current.artist} — ${current.title}`}</TrackName>
+              <span className="-mr-2 flex shrink-0 items-center">
+                <button
+                  onClick={toggle}
+                  aria-label={playing ? "Pausa" : "Reproducir"}
+                  className="flex h-11 w-9 items-center justify-center transition hover:text-paper/60"
+                >
+                  {playing ? <PauseIcon /> : <PlayIcon />}
+                </button>
+                <button
+                  onClick={next}
+                  aria-label="Siguiente canción"
+                  className="flex h-11 w-9 items-center justify-center transition hover:text-paper/60"
+                >
+                  <NextIcon />
+                </button>
+              </span>
+            </span>
+          ) : (
             /**
-             * The width is only ever set by the open/closed pair.
+             * Until something plays, the pill is one button.
              *
-             * There was a `sm:max-w-[300px]` on the base class as well, and
-             * Tailwind sorts utilities by its own rules rather than by the
-             * order you write them — so the open width kept winning while the
-             * thing was closed. The name was invisible and still occupying
-             * three hundred pixels, which is why the meter sat marooned at one
-             * end of the bar and the controls at the other.
-             *
-             * Now the row is exactly as wide as what is in it: closed, the
-             * meter and the two buttons sit together; open, the strip grows to
-             * make room for the name and everything slides across with it.
+             * It was a <div> with an onClick holding two 13px buttons: with a
+             * keyboard or a screen reader only those two existed, and «Siguiente
+             * canción» before anything has played skips nothing. Now the whole
+             * pill is the control, and what it says is what it will do.
              */
-            className={`min-w-0 truncate transition-[max-width,opacity] duration-slow ease-out ${
-              open ? "max-w-[52vw] opacity-100 sm:max-w-[300px]" : "max-w-0 opacity-0"
-            }`}
-          >
-            {current ? `${current.artist} — ${current.title}` : "Sin sonido"}
-          </span>
-
-          <span className="flex shrink-0 items-center gap-2.5">
             <button
               onClick={toggle}
-              aria-label={playing ? "Pausa" : "Reproducir"}
-              className="transition hover:text-paper/60"
+              aria-busy={waiting}
+              aria-label={label}
+              className="pressable flex min-h-[44px] items-center gap-2 rounded-full px-4 uppercase"
             >
-              {playing ? <PauseIcon /> : <PlayIcon />}
+              <span aria-hidden className="mono shrink-0 text-paper/70">
+                <Bars animate={waiting} />
+              </span>
+              <TrackName open={open || status === "none" || waiting}>{label}</TrackName>
+              {status !== "none" && (
+                <span className="shrink-0">
+                  <PlayIcon />
+                </span>
+              )}
             </button>
-            <button
-              onClick={next}
-              aria-label="Siguiente canción"
-              className="transition hover:text-paper/60"
-            >
-              <NextIcon />
-            </button>
-          </span>
+          )}
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * The words in the pill, which announce themselves and then get out of the way.
+ *
+ * Folded by max-width rather than by unmounting: the text stays in the DOM for
+ * anyone listening to the page, the two states are the same element so the
+ * transition is continuous, and the controls slide rather than jump. The width
+ * is only ever set by the open/closed pair — Tailwind sorts utilities by its
+ * own rules, so a second max-width on the base class used to win while closed.
+ */
+function TrackName({ open, children }: { open: boolean; children: React.ReactNode }) {
+  return (
+    <span
+      className={`min-w-0 truncate transition-[max-width,opacity] duration-slow ease-out ${
+        open ? "max-w-[52vw] opacity-100 sm:max-w-[300px]" : "max-w-0 opacity-0"
+      }`}
+    >
+      {children}
+    </span>
   );
 }
 

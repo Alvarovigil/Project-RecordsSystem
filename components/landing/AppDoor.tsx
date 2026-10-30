@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { SITE_NAME } from "@/lib/site";
-import { useSession } from "@/hooks/useSession";
+import { IN_APP_NOTE, SITE_NAME } from "@/lib/site";
+import { nextFromEntry, useSession } from "@/hooks/useSession";
 
 /**
  * What the app shows the first time it is opened from the home screen.
@@ -24,7 +24,20 @@ import { useSession } from "@/hooks/useSession";
  * because a collection that lives on this phone alone is a legitimate way to
  * use Rackr and a wall would be a worse product than a door.
  */
-export default function AppDoor() {
+export default function AppDoor({
+  title = "Ya está en tu casa",
+  body = `${SITE_NAME} vive ahora en tu pantalla de inicio. Entra y tu estantería te sigue en el móvil y en el ordenador.`,
+  browse = false,
+}: {
+  title?: string;
+  body?: string;
+  /**
+   * A quiet way to look first. Off on the installed first launch (see below);
+   * on at /entrar, where somebody tapped Colección or Perfil from inside the
+   * app without an account and has every right to go back to looking.
+   */
+  browse?: boolean;
+} = {}) {
   const { available } = useSession();
 
   return (
@@ -63,17 +76,27 @@ export default function AppDoor() {
           />
         </span>
 
-        <h1 className="mt-8 text-title font-medium leading-tight text-paper">
-          Ya está en tu casa
-        </h1>
-        <p className="mt-3 text-body leading-relaxed text-content-secondary">
-          {SITE_NAME} vive ahora en tu pantalla de inicio. Entra y tu estantería
-          te sigue a cualquier sitio donde abras sesión.
-        </p>
+        <h1 className="mt-8 text-title font-medium leading-tight text-paper">{title}</h1>
+        <p className="mt-3 text-body leading-relaxed text-content-secondary">{body}</p>
 
         <div className="mt-9 w-full">
           {available ? (
-            <GoogleButton />
+            /* Inside Instagram or WhatsApp, Google refuses to sign in (see
+               EntryDoor): the button would lead to an error page, so the way
+               in is the way out. Both are in the HTML and the data-in-app
+               flag picks, like the landing's doors — no frame with the wrong
+               button while the page works out where it is. */
+            <>
+              <span className="hide-in-app block">
+                <GoogleButton />
+              </span>
+              <p
+                style={{ "--door-display": "block" } as React.CSSProperties}
+                className="door-webview text-sub leading-relaxed text-content-secondary"
+              >
+                {IN_APP_NOTE}
+              </p>
+            </>
           ) : (
             <Link
               href="/coleccion"
@@ -83,6 +106,27 @@ export default function AppDoor() {
             </Link>
           )}
         </div>
+        {browse && (
+          <>
+            <Link
+              href="/explorar"
+              className="hide-in-app pressable mt-3 flex h-12 w-full items-center justify-center rounded-full text-body text-content-secondary transition-colors hover:text-paper"
+            >
+              Mirar sin cuenta
+            </Link>
+            {/* Inside another app's browser this is the only thing that can be
+                done here, so it takes the paper pill the Google button would
+                have had — the same treatment as on the landing. A quiet link
+                as the one action on a screen reads as no action at all. */}
+            <Link
+              href="/explorar"
+              style={{ "--door-display": "flex" } as React.CSSProperties}
+              className="door-webview pressable mt-5 h-12 w-full items-center justify-center rounded-full bg-paper text-body font-medium text-ink transition-colors hover:bg-paper/85"
+            >
+              Mirar sin cuenta
+            </Link>
+          </>
+        )}
         {/* There was a "mirar antes de entrar" here, into the local backend.
             It has gone with the demo: an app whose front door offers a way
             past itself is teaching people that the door is optional, and the
@@ -97,7 +141,8 @@ function GoogleButton() {
   const { signInWithGoogle } = useSession();
   return (
     <button
-      onClick={signInWithGoogle}
+      // back to where the person was when something sent them here
+      onClick={() => void signInWithGoogle(nextFromEntry() ?? undefined)}
       className="pressable flex h-12 w-full items-center justify-center gap-3 rounded-full bg-paper text-body font-medium text-ink transition-colors hover:bg-paper/85"
     >
       <GoogleMark />

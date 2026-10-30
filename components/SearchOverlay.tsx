@@ -14,6 +14,7 @@ import BarcodeScanner, { BarcodeIcon, useCanScan } from "./BarcodeScanner";
 import CatalogueSheet from "./CatalogueSheet";
 import CatalogueNotice from "./ui/CatalogueNotice";
 import { useCatalogueSearch, type DiscogsResult as SearchResult } from "@/hooks/useCatalogueSearch";
+import { useEntryGate } from "@/hooks/useSession";
 
 type Props = {
   open: boolean;
@@ -35,7 +36,7 @@ type Props = {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mono px-2 pb-2 pt-4 text-[10px] uppercase tracking-[0.2em] text-paper/35">
+    <div className="mono px-2 pb-2 pt-4 text-[12px] uppercase tracking-[0.2em] text-paper/50">
       {children}
     </div>
   );
@@ -104,8 +105,10 @@ export default function SearchOverlay({
 
   // Saving keeps the search open on purpose: adding several records in a row
   // is the common case, and a closing overlay would punish it.
+  // sin cuenta, cualquier «añadir» de aquí lleva a entrar (ver useEntryGate)
+  const gate = useEntryGate();
   const add = (r: SearchResult, listId: string) =>
-    addFromCatalogue(r, listId, onSaveToList);
+    gate() ? Promise.resolve(null) : addFromCatalogue(r, listId, onSaveToList);
 
   // one cursor over the visible list: ↑↓ to move, ↵ to act on it
   const rackCovers = useRackCovers(communityLists);
@@ -187,8 +190,8 @@ export default function SearchOverlay({
             <button
               key={m}
               onClick={() => setMode(m)}
-              className={`text-[11px] uppercase tracking-[0.22em] py-2 transition relative ${
-                mode === m ? "text-paper" : "text-paper/35 hover:text-paper/70"
+              className={`text-[12px] uppercase tracking-[0.22em] py-2 transition relative ${
+                mode === m ? "text-paper" : "text-paper/50 hover:text-paper/70"
               }`}
             >
               {m === "vinyls" ? "Vinilos" : "Usuarios y racks"}
@@ -208,19 +211,19 @@ export default function SearchOverlay({
                 ? "Buscar un disco, tuyo o por añadir…"
                 : "Buscar personas o racks…"
             }
-            className="flex-1 bg-transparent py-4 text-[18px] text-paper outline-none placeholder:text-paper/30"
+            className="flex-1 bg-transparent py-4 text-[18px] text-paper outline-none placeholder:text-content-muted"
           />
           {canScan && mode !== "people" && (
             <button
               onClick={openScanner}
               title="Escanear el código de barras"
               aria-label="Escanear el código de barras"
-              className="flex h-9 w-9 items-center justify-center text-paper/45 transition hover:text-paper"
+              className="flex h-9 w-9 items-center justify-center text-paper/50 transition hover:text-paper"
             >
               <BarcodeIcon />
             </button>
           )}
-          <kbd className="mono inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-[3px] border border-paper/20 text-[10px] text-paper/45">
+          <kbd className="mono inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-[3px] border border-paper/20 text-[12px] text-paper/50">
             Esc
           </kbd>
         </div>
@@ -233,7 +236,7 @@ export default function SearchOverlay({
             onTargetChange={setTargetId}
             onCreateList={onCreateList}
           />
-          <span className="mono hidden text-[10px] uppercase tracking-[0.18em] text-paper/25 sm:block">
+          <span className="mono hidden text-[12px] uppercase tracking-[0.18em] text-paper/25 sm:block">
             ↑↓ moverse · ↵ {rows[cursor]?.kind === "local" ? "ir al disco" : "guardar"}
           </span>
         </div>
@@ -251,7 +254,7 @@ export default function SearchOverlay({
               </span>
               <span className="min-w-0">
                 <span className="block text-[14px] text-paper/90">Escanear el código de barras</span>
-                <span className="mono mt-0.5 block text-[10px] uppercase tracking-[0.16em] text-paper/40">
+                <span className="mono mt-0.5 block text-[12px] uppercase tracking-[0.16em] text-paper/50">
                   Uno detrás de otro, sin salir de la cámara
                 </span>
               </span>
@@ -327,7 +330,7 @@ export default function SearchOverlay({
                           className="h-12 w-12 shrink-0 rounded-full object-cover"
                         />
                       ) : (
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-paper/[0.06] text-paper/45">
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-paper/[0.06] text-paper/50">
                           <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
                             <circle cx="10" cy="10" r="7.6" stroke="currentColor" strokeWidth="1.3" />
                             <circle cx="10" cy="10" r="1.6" fill="currentColor" />
@@ -380,7 +383,7 @@ export default function SearchOverlay({
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[14px] text-paper/90">{v.title}</div>
-                      <div className="mt-0.5 text-[11px] text-paper/50 truncate">
+                      <div className="mt-0.5 text-[12px] text-paper/50 truncate">
                         {[v.artist, v.year, v.genre].filter(Boolean).join(" · ")}
                       </div>
                     </div>
@@ -412,7 +415,7 @@ export default function SearchOverlay({
             <SectionLabel>Añadir a tu colección</SectionLabel>
           )}
           {mode === "vinyls" && localResults.length > 0 && loading && addable.length === 0 && (
-            <div className="px-2 py-3 text-sm text-paper/40">Buscando más…</div>
+            <div className="px-2 py-3 text-sm text-paper/50">Buscando más…</div>
           )}
           <ul className={mode === "vinyls" ? "divide-y divide-paper/10" : "hidden"}>
             {addable.map((r, i) => {
@@ -443,7 +446,7 @@ export default function SearchOverlay({
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[14px] text-paper/90">{r.title}</div>
-                      <div className="mt-0.5 text-[11px] text-paper/50 truncate">
+                      <div className="mt-0.5 text-[12px] text-paper/50 truncate">
                         {[r.year, r.country, r.label, r.format?.join(", ")]
                           .filter(Boolean)
                           .join(" · ")}

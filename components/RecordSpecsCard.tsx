@@ -303,7 +303,7 @@ function Specs({ specs: s }: { specs: RecordSpecs }) {
     <Card>
       <dl>
         {formats.length > 0 && <Row label="Formato" value={formats.join(" · ")} />}
-        {s.released && <Row label="Publicada" value={String(s.released).slice(0, 4)} />}
+        {s.released && <Row label="Publicada" value={releaseDate(String(s.released))} />}
         {s.country && <Row label="País" value={s.country} />}
         {s.label && <Row label="Sello" value={s.label} />}
         {/* The one specialist field that stays: it is the only thing here that
@@ -316,4 +316,36 @@ function Specs({ specs: s }: { specs: RecordSpecs }) {
       </dl>
     </Card>
   );
+}
+
+const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sept", "oct", "nov", "dic"];
+const EN_MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+/**
+ * The release date as the catalogue gives it, said in Spanish and never cut.
+ *
+ * This was `slice(0, 4)`, written for «1977» and «1977-03-04». The catalogue
+ * also answers «03 Apr 2026», and four characters of that is «03 A». Read
+ * the shapes it actually uses; anything else is shown whole rather than
+ * guessed at, because a date that looks odd is better than half a date.
+ */
+function releaseDate(raw: string): string {
+  const v = raw.trim();
+  // 1977, 1977-03, 1977-03-04, with 00 for "unknown"
+  const iso = v.match(/^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$/);
+  if (iso) {
+    const [, y, m, d] = iso;
+    const mi = m ? Number(m) - 1 : -1;
+    if (mi < 0 || mi > 11) return y;
+    const day = d ? Number(d) : 0;
+    return day > 0 ? `${day} ${MONTHS[mi]} ${y}` : `${MONTHS[mi]} ${y}`;
+  }
+  // 03 Apr 2026, Apr 2026
+  const en = v.match(/^(?:(\d{1,2})\s+)?([A-Za-z]{3})[a-z]*\.?\s+(\d{4})$/);
+  if (en) {
+    const [, d, mon, y] = en;
+    const mi = EN_MONTHS.indexOf(mon.toLowerCase());
+    if (mi >= 0) return d && Number(d) > 0 ? `${Number(d)} ${MONTHS[mi]} ${y}` : `${MONTHS[mi]} ${y}`;
+  }
+  return v;
 }

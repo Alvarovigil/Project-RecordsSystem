@@ -18,7 +18,7 @@ export default async function AdminLogin({
         className="w-[360px] max-w-full border border-paper/12 bg-[#0b0b0b]"
       >
         <div className="border-b border-paper/10 px-6 py-3">
-          <span className="mono text-[10px] uppercase tracking-[0.22em] text-paper/40">
+          <span className="mono text-[12px] uppercase tracking-[0.22em] text-paper/50">
             Panel · acceso restringido
           </span>
         </div>
@@ -30,7 +30,7 @@ export default async function AdminLogin({
             </p>
           ) : (
             <>
-              <label className="mono block text-[10px] uppercase tracking-[0.2em] text-paper/40">
+              <label className="mono block text-[12px] uppercase tracking-[0.2em] text-paper/50">
                 Contraseña
               </label>
               <input

@@ -64,7 +64,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
        * it for anything else — the claim printed through it and the sign-in
        * link sat on its shoulder. Both have somewhere better to be: the claim
        * is on the door, in the tab and on every shared card, and the way in is
-       * the button in the middle of the screen that says Empezar gratis.
+       * the button in the middle of the screen that says Entrar gratis.
        */}
       <header
         className="landing-dims pointer-events-none fixed inset-x-0 top-0 z-[60] hidden items-start justify-between px-5 sm:flex sm:px-8"
@@ -74,11 +74,12 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
             Two sentences, and the full stop between them is doing the work:
             it makes the second half land as a separate promise rather than
             as a list of two nouns. */}
-        <span className="max-w-[46vw] text-[11px] uppercase leading-tight tracking-[0.05em] text-paper/80 sm:max-w-none sm:text-[13px]">
+        <span className="max-w-[46vw] text-[12px] uppercase leading-tight tracking-[0.05em] text-paper/80 sm:max-w-none sm:text-[13px]">
           Your records. Your people.
         </span>
 
-        <div className="pointer-events-auto">
+        {/* hide-in-app: Google will not sign in from another app's browser */}
+        <div className="hide-in-app pointer-events-auto">
           <SignInButton variant="quiet" />
         </div>
       </header>
@@ -130,7 +131,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
               corners — see AboutProject */}
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("rackr:about"))}
-            className="mt-8 text-[11px] uppercase tracking-[0.05em] text-paper/60 transition hover:text-paper sm:hidden"
+            className="mt-8 text-[12px] uppercase tracking-[0.05em] text-paper/60 transition hover:text-paper sm:hidden"
           >
             Sobre el proyecto
           </button>
@@ -147,7 +148,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
         >
           <div className="mx-auto max-w-[1100px]">
             <Reveal>
-              <p className="mono text-[10px] uppercase tracking-[0.24em] text-paper/35">
+              <p className="mono text-[12px] uppercase tracking-[0.14em] text-paper/50">
                 El club
               </p>
               {/* the mark signs the section instead of naming it twice */}
@@ -179,7 +180,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
               </Reveal>
 
               <Reveal delay={180}>
-                <p className="mono text-[10px] uppercase tracking-[0.2em] text-paper/35">
+                <p className="mono text-[12px] uppercase tracking-[0.14em] text-paper/50">
                   Lo que no es
                 </p>
                 <ul className="mt-5 max-w-[42ch] divide-y divide-paper/[0.08] border-y border-paper/[0.08]">
@@ -197,7 +198,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
             </div>
 
             <Reveal delay={240}>
-              <p className="mono mt-16 text-[10px] uppercase tracking-[0.24em] text-paper/35">
+              <p className="mono mt-16 text-[12px] uppercase tracking-[0.14em] text-paper/50">
                 Y se resume en tres cosas
               </p>
             </Reveal>
@@ -231,10 +232,10 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
               <div className="mx-auto max-w-[1180px]">
                 <Reveal>
                   <div className="flex items-baseline gap-4">
-                    <span className="mono text-[10px] tracking-[0.24em] text-[#f83a23]">
+                    <span className="mono text-[12px] tracking-[0.24em] text-[#f83a23]">
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    <span className="mono text-[10px] uppercase tracking-[0.18em] text-paper/35">
+                    <span className="mono text-[12px] uppercase tracking-[0.1em] text-paper/50">
                       {p.kicker}
                     </span>
                   </div>
@@ -275,7 +276,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
                     <ul className="mt-10 max-w-[46ch] divide-y divide-paper/[0.08] border-y border-paper/[0.08]">
                       {p.points.map((pt) => (
                         <li key={pt.label} className="py-4">
-                          <span className="mono block text-[10px] uppercase tracking-[0.16em] text-paper/35">
+                          <span className="mono block text-[12px] uppercase tracking-[0.1em] text-paper/50">
                             {pt.label}
                           </span>
                           <span className="mt-2 block text-[15px] leading-relaxed text-paper/80">
@@ -307,18 +308,21 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
             <div className="mt-12">
               <EntryDoor variant="closing" />
             </div>
-            <p className="mono mt-6 text-[10px] uppercase tracking-[0.2em] text-paper/25">
+            <p className="mono mt-6 text-[12px] uppercase tracking-[0.12em] text-paper/50">
               Gratis · Sin anuncios · Cancela cuando quieras (no hay nada que cancelar)
             </p>
           </Reveal>
         </section>
 
-        <footer className="border-t border-paper/[0.07] px-5 py-8 sm:px-8">
-          <div className="mx-auto flex max-w-[1100px] flex-col items-center justify-between gap-3 sm:flex-row">
-            <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/25">
+        {/* On a phone the music pill is fixed to the foot of the screen, and it
+            sat on top of the last lines here: the bottom padding is the pill's
+            height and its gap, so the footer ends above it. */}
+        <footer className="border-t border-paper/[0.07] px-5 pb-[calc(var(--safe-bottom)+88px)] pt-8 sm:px-8 sm:pb-8">
+          <div className="mx-auto flex max-w-[1100px] flex-col items-center justify-between gap-3 text-center sm:flex-row">
+            <span className="mono text-[12px] uppercase tracking-[0.12em] text-paper/50">
               Rackr Club
             </span>
-            <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/25">
+            <span className="mono text-[12px] uppercase tracking-[0.12em] text-paper/50">
               Hecho por gente con demasiados discos
             </span>
           </div>
@@ -409,6 +413,25 @@ function StickyMark() {
   // eased so most of the shrink happens early and the last stretch settles
   const e = gated ? 1 : t * t * (3 - 2 * t);
   return (
+    <>
+    {/**
+     * A ground for the mark once the page moves under it.
+     *
+     * The mark is fixed and the chapters scroll, so on a phone every paragraph
+     * passed straight through the wordmark and the two printed over each
+     * other. Inverting it only made the collision legible, not absent. This
+     * is the band an app puts under its title bar: the page's own black,
+     * fading out below the mark, arriving with the scroll so the first screen
+     * keeps the shelf clear up to the top edge.
+     */}
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-x-0 top-0 z-[55] bg-gradient-to-b from-ink via-ink/85 to-transparent"
+      style={{
+        height: "calc(var(--safe-top) + 16px + var(--mark-min) + 28px)",
+        opacity: gated ? 0 : t,
+      }}
+    />
     <div
       aria-hidden
       /**
@@ -452,6 +475,7 @@ function StickyMark() {
         style={{ height: `calc(var(--mark-max) - (var(--mark-max) - var(--mark-min)) * ${e})` }}
       />
     </div>
+    </>
   );
 }
 
@@ -503,7 +527,7 @@ const PILLARS = [
   {
     id: "colecciona",
     word: "Colecciona",
-    kicker: "Del código de barras a tu estantería",
+    kicker: "Del código a tu estantería",
     lead: "«¿Este ya lo tengo?», respondido en dos segundos.",
     body:
       "Es la pregunta que te para de pie en una tienda, y hasta ahora se contestaba de memoria o no se contestaba. Apuntas al código de la contraportada y aparece el disco que tienes en la mano: su año, su país, su sello y su número de catálogo. No el álbum en abstracto — esa prensa.",
@@ -588,7 +612,7 @@ function AuthFailed() {
       className="fixed inset-x-4 z-[90] mx-auto flex max-w-md items-center gap-3 rounded-lg bg-surface-overlay px-4 py-3 text-sub text-content shadow-toast"
       style={{ top: "calc(var(--safe-top) + 16px)" }}
     >
-      <p className="flex-1">No hemos podido entrar con Google. Prueba otra vez.</p>
+      <p className="flex-1">No se ha podido entrar con Google. Prueba otra vez.</p>
       <button
         type="button"
         onClick={() => {

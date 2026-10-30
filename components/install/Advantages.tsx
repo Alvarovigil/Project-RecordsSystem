@@ -121,7 +121,7 @@ function MiniPhone({ withBar = false }: { withBar?: boolean }) {
           ))}
         </span>
       </span>
-      <span className="text-[10px] leading-none text-content-faint">
+      <span className="text-[12px] leading-none text-content-faint">
         {withBar ? "Navegador" : "Instalada"}
       </span>
     </span>
@@ -132,9 +132,9 @@ function MiniPhone({ withBar = false }: { withBar?: boolean }) {
 function ResumesWhereYouWere() {
   return (
     <span className="flex w-full max-w-[240px] items-center gap-3 rounded-[10px] bg-ink px-3 py-2.5">
-      <span className="flex h-8 items-center gap-1.5 rounded-full bg-paper/[0.09] px-3 text-[11px] text-paper">
+      <span className="flex h-8 items-center gap-1.5 rounded-full bg-paper/[0.09] px-3 text-[12px] text-paper">
         Jazz de domingo
-        <span className="text-paper/35">18</span>
+        <span className="text-paper/50">18</span>
       </span>
       <span className="flex flex-1 gap-1.5">
         {[0, 1, 2].map((n) => (

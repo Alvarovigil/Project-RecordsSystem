@@ -83,7 +83,7 @@ export function ListPicker({
         {off ? (
           <Check className="text-paper/30" />
         ) : (
-          <span className="text-[11px] text-paper/30">{c.vinylIds.length}</span>
+          <span className="text-[12px] text-content-muted">{c.vinylIds.length}</span>
         )}
         {c.id === targetId && !off && <span className="h-1.5 w-1.5 rounded-full bg-paper/70" />}
       </button>
@@ -102,7 +102,7 @@ export function ListPicker({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar rack…"
-          className="w-full bg-transparent text-[13px] text-paper outline-none placeholder:text-paper/30"
+          className="w-full bg-transparent text-[13px] text-paper outline-none placeholder:text-content-muted"
         />
       </div>
       <div data-scrollable className="max-h-[220px] overflow-y-auto py-1">
@@ -114,7 +114,7 @@ export function ListPicker({
           <Row key={c.id} c={c} />
         ))}
         {listed.length === 0 && (
-          <div className="px-3 py-3 text-[12px] text-paper/40">Ningún rack con ese nombre</div>
+          <div className="px-3 py-3 text-[12px] text-paper/50">Ningún rack con ese nombre</div>
         )}
       </div>
       <div className="border-t border-paper/10">
@@ -128,14 +128,14 @@ export function ListPicker({
               const name = (e.target as HTMLInputElement).value.trim();
               if (name) onPick(await onCreate(name));
             }}
-            className="w-full bg-transparent px-3 py-2.5 text-[13px] text-paper outline-none placeholder:text-paper/30"
+            className="w-full bg-transparent px-3 py-2.5 text-[13px] text-paper outline-none placeholder:text-content-muted"
           />
         ) : (
           <button
             onClick={() => setCreating(true)}
             className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] text-paper/70 transition hover:bg-paper/[0.06] hover:text-paper"
           >
-            <span className="flex h-4 w-4 items-center justify-center border border-paper/30 text-[11px] leading-none">
+            <span className="flex h-4 w-4 items-center justify-center border border-paper/30 text-[12px] leading-none">
               +
             </span>
             Crear lista
@@ -167,7 +167,7 @@ export function DestinationBar({
 
   return (
     <div className="flex items-center gap-2">
-      <span className="mono text-[10px] uppercase tracking-[0.2em] text-paper/35">
+      <span className="mono text-[12px] uppercase tracking-[0.2em] text-paper/50">
         Guardar en
       </span>
       <button
@@ -245,7 +245,7 @@ export function RowSave({
         {onUndo && (
           <button
             onClick={() => onUndo(justSaved.id)}
-            className="mono text-[10px] uppercase tracking-[0.16em] text-paper/35 transition hover:text-paper"
+            className="mono text-[12px] uppercase tracking-[0.16em] text-paper/50 transition hover:text-paper"
           >
             Deshacer
           </button>
@@ -256,7 +256,7 @@ export function RowSave({
 
   if (already) {
     return (
-      <span className="flex shrink-0 items-center gap-1.5 pr-3 text-[12px] text-paper/35">
+      <span className="flex shrink-0 items-center gap-1.5 pr-3 text-[12px] text-paper/50">
         <Check />
         Guardado
       </span>

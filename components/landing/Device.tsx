@@ -122,7 +122,7 @@ export function ShelfHeader({ name, count }: { name: string; count: number }) {
       <div className="flex min-w-0 flex-1 justify-center">
         <span className="flex h-12 max-w-[230px] items-center gap-1.5 rounded-full bg-ink/72 px-4 text-paper/90 backdrop-blur-xl">
           <span className="truncate text-[13px] font-medium">{name}</span>
-          <span className="text-[13px] text-paper/40">{count}</span>
+          <span className="text-[13px] text-paper/50">{count}</span>
           <svg width="11" height="11" viewBox="0 0 12 12" fill="none" className="shrink-0 text-paper/50">
             <path d="M2.5 4.5 L6 8 L9.5 4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -151,10 +151,10 @@ export function TabBar({ active = 0 }: { active?: number }) {
         {tabs.map((t, i) => (
           <div key={t.label} className="flex-1">
             <div className="relative flex h-[54px] flex-col items-center justify-center gap-[3px]">
-              <span className={i === active ? "text-paper" : "text-paper/40"}>{t.icon}</span>
+              <span className={i === active ? "text-paper" : "text-paper/50"}>{t.icon}</span>
               <span
-                className={`text-[10px] leading-none ${
-                  i === active ? "font-semibold text-paper" : "font-medium text-paper/40"
+                className={`text-[12px] leading-none ${
+                  i === active ? "font-semibold text-paper" : "font-medium text-paper/50"
                 }`}
               >
                 {t.label}

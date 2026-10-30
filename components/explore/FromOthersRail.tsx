@@ -116,12 +116,18 @@ export default function FromOthersRail({
             <span className="mt-2.5 block truncate text-sub font-medium text-paper">
               {f.vinyl.title}
             </span>
-            <span className="block truncate text-caption text-content-muted">
+            {/* un escalón por encima de la línea del rack: el artista es parte
+                del disco, de dónde sale es contexto */}
+            <span className="block truncate text-caption text-content-secondary">
               {f.vinyl.artist}
             </span>
-            {/* de dónde sale, que es lo que lo convierte en una puerta */}
-            <span className="mt-1 block truncate text-caption text-content-faint">
-              en {f.from.title} · {f.from.owner.displayName}
+            {/* De dónde sale, que es lo que lo convierte en una puerta. La
+                persona primero y entera si cabe: «en Mi Colección · Álvaro
+                Rodv…» se comía justo a quién se sigue; el rack es lo que se
+                recorta. */}
+            <span className="mt-1 flex min-w-0 text-caption text-content-faint">
+              <span className="max-w-full shrink-0 truncate">{f.from.owner.displayName}</span>
+              <span className="min-w-0 truncate">&nbsp;· {f.from.title}</span>
             </span>
           </button>
         </li>

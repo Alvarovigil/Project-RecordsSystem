@@ -40,8 +40,8 @@
      own hierarchy and none of them agree. */
   --text: rgb(var(--paper-rgb));
   --text-secondary: rgb(var(--paper-rgb) / 0.62);
-  --text-muted: rgb(var(--paper-rgb) / 0.42);
-  --text-faint: rgb(var(--paper-rgb) / 0.26);
+  --text-muted: rgb(var(--paper-rgb) / 0.55); /* AA: 5.7:1 on ink (was .42, 3.8:1) */
+  --text-faint: rgb(var(--paper-rgb) / 0.48); /* AA: 4.6:1 (was .26, 2.1:1) */
 
   /* --- lines ---------------------------------------------------------- */
   --line: rgb(var(--paper-rgb) / 0.10);
@@ -111,8 +111,8 @@
   --t-heading: 17px;
   --t-body: 15px;
   --t-sub: 13px;
-  --t-caption: 11px;
-  --t-micro: 10px;
+  --t-caption: 12px; /* nothing a person needs to read goes below 12 */
+  --t-micro: 12px;
   /* The one tracked, uppercase register, reserved for labels that name a
      region. Never for anything you click. */
   --track-label: 0.18em;
@@ -604,10 +604,13 @@ input[type="search"]::-webkit-search-decoration {
   background: rgba(245, 243, 238, 0.28);
 }
 
-/* While a sheet owns the screen, nothing behind it may scroll or be reached. */
+/* While a sheet owns the screen, nothing behind it may scroll or be reached.
+   pinch-zoom rather than none: panning stays off, so the page under the sheet
+   still cannot be dragged, but two fingers can still zoom — and a sheet with
+   a record's details on it is exactly where somebody needs to. */
 body[data-sheet-open="1"] {
   overflow: hidden;
-  touch-action: none;
+  touch-action: pinch-zoom;
 }
 
 /* ------------------------------------------------------------ navigation */
@@ -622,9 +625,16 @@ body[data-sheet-open="1"] {
     opacity var(--d-base) var(--ease-out),
     filter var(--d-slow) var(--ease-out);
 }
+/* `none` at rest, not blur(0px). Any filter value, even a zero one, makes the
+   page a containing block and a stacking context for everything fixed inside
+   it — so a record screen opened from a rack page (z-60, fixed) was trapped in
+   the page's layer and painted under the tab bar. AppShell also drops the
+   filter on transitionend, but that event can be missed (an interrupted
+   transition, a tab in the background); the end state itself has to be clean.
+   Filters interpolate to `none` as to an identity, so the defocus still plays. */
 .page-fade[data-arrived] {
   opacity: 1;
-  filter: blur(0px);
+  filter: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .page-fade,
@@ -768,6 +778,15 @@ html[data-standalone] .door-touch,
 html[data-no-install] .door-touch { display: none; }
 html[data-standalone] .door-pointer,
 html[data-no-install] .door-pointer { display: var(--door-display, block); }
+/* Inside another app's browser neither door works: both end in Google, and
+   Google will not sign in from a webview. The third door says how to get out
+   to Safari or Chrome and offers to look without an account. Last, so it wins
+   over everything above. */
+.door-webview { display: none; }
+html[data-in-app] .door-touch,
+html[data-in-app] .door-pointer,
+html[data-in-app] .hide-in-app { display: none; }
+html[data-in-app] .door-webview { display: var(--door-display, block); }
 
 /* ---------------------------------------------------------------------------
    Skeletons.
