@@ -38,12 +38,15 @@ export default async function AdminHome({
             >
               Ir a la app
             </Link>
-            <Link
-              href="/api/admin/login"
-              className="mono text-[10px] uppercase tracking-[0.18em] text-paper/40 transition hover:text-paper"
-            >
-              Salir
-            </Link>
+            <form action="/api/admin/login" method="post">
+              <input type="hidden" name="logout" value="1" />
+              <button
+                type="submit"
+                className="mono text-[10px] uppercase tracking-[0.18em] text-paper/40 transition hover:text-paper"
+              >
+                Salir
+              </button>
+            </form>
           </div>
         </header>
 

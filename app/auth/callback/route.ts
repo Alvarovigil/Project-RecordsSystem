@@ -11,7 +11,16 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "@/lib/sup
  */
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code");
-  const next = req.nextUrl.searchParams.get("next") ?? "/coleccion";
+  // Only somewhere on this site. Checking the string is not enough — "//otro.com"
+  // and "/\otro.com" both look like paths and both leave — so the address is
+  // resolved the way the browser will, and kept only if it is still ours.
+  let next = "/coleccion";
+  try {
+    const asked = new URL(req.nextUrl.searchParams.get("next") || next, req.nextUrl.origin);
+    if (asked.origin === req.nextUrl.origin) next = asked.pathname + asked.search + asked.hash;
+  } catch {
+    // an address that does not even parse is not one to send anybody to
+  }
   const fail = (reason: string) =>
     NextResponse.redirect(
       new URL(`/?auth=error&reason=${encodeURIComponent(reason)}`, req.nextUrl.origin),

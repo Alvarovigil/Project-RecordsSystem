@@ -384,9 +384,14 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         .from("list_items")
         .select("*", { count: "exact", head: true })
         .eq("list_id", listId);
+      // Ya estar es no hacer nada. Un upsert reescribía la fila (y movía el
+      // disco al final), y desde 0020 reescribir es solo cosa de la posición.
       await sb
         .from("list_items")
-        .upsert({ list_id: listId, release_id: id, position: count ?? 0 });
+        .upsert(
+          { list_id: listId, release_id: id, position: count ?? 0 },
+          { onConflict: "list_id,release_id", ignoreDuplicates: true },
+        );
     },
 
     async removeFromList(listId, releaseSlug) {

@@ -54,15 +54,20 @@ export function isAdminRequest() {
 }
 
 /**
- * The account that owns the panel.
+ * The account that owns the panel, by id.
  *
- * A handle rather than a uuid so it can be set without looking anything up,
- * and read at request time rather than at module load — the same lesson the
+ * It used to be a handle, and a handle is something its owner can give up and
+ * anyone else can then take: renaming @rackrclub would have handed the panel —
+ * which reads everything with the service key — to whoever registered the
+ * name next. An id never changes hands. The default is @rackrclub's; it is not
+ * a secret (it is in every public link to its racks).
+ *
+ * Read at request time rather than at module load — the same lesson the
  * Discogs token taught in production, where a value captured once was captured
  * as undefined and stayed that way.
  */
-export function adminUsername() {
-  return (process.env.ADMIN_USERNAME ?? "rackrclub").toLowerCase();
+export function adminUserId() {
+  return process.env.ADMIN_USER_ID ?? "d2b6968d-8742-40bc-9f69-7f43ed8b9d86";
 }
 
 /**
@@ -75,22 +80,15 @@ export function adminUsername() {
  * when the account itself is locked out, or from a machine that is not signed
  * in.
  *
- * The check is a server-side read of the session's own profile. It cannot be
- * spoofed from the browser: the username comes from the database, keyed by the
- * user id in a cookie Supabase signs, and a profile's username is unique.
+ * The check is the user id Supabase vouches for (`getUser` asks its server, it
+ * does not trust the cookie on its own), compared with the panel's owner.
  */
 export async function isAdmin() {
   if (isAdminRequest()) return true;
   const sb = getSupabaseServerClient();
   if (!sb) return false;
   const { data: auth } = await sb.auth.getUser();
-  if (!auth.user) return false;
-  const { data } = await sb
-    .from("profiles")
-    .select("username")
-    .eq("id", auth.user.id)
-    .maybeSingle();
-  return String(data?.username ?? "").toLowerCase() === adminUsername();
+  return auth.user?.id === adminUserId();
 }
 
 export const COOKIE_OPTIONS = {
