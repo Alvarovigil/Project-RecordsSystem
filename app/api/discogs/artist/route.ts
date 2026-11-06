@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { DISCOGS_UA } from "@/lib/discogs";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 import { artistSlug } from "@/lib/artist";
+import { catalogueFetch, catalogueWaitSeconds } from "@/lib/discogs-budget";
 
 /**
  * One artist, identified rather than matched.
@@ -46,13 +46,14 @@ const norm = (s: string) =>
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 
-async function discogs(path: string) {
-  const r = await fetch(`https://api.discogs.com${path}`, {
-    headers: { "User-Agent": DISCOGS_UA, Authorization: `Discogs token=${token()}` },
-    next: { revalidate: 3600 },
-  });
-  if (!r.ok) return null;
-  return r.json();
+/**
+ * Through the shared budget, like search and barcode: the artist calls spend
+ * the same quota, and a 429 here has to make everyone wait, not only this
+ * route. A refusal or a wait reads as «nothing», as a failed fetch always did.
+ */
+async function discogs(path: string): Promise<any> {
+  const r = await catalogueFetch(`https://api.discogs.com${path}`, { revalidate: 3600 });
+  return r.kind === "ok" ? r.data : null;
 }
 
 /** the id of the artist credited on a record the shelf already holds */
@@ -122,6 +123,9 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Las caras son un adorno: con el minuto gastado no se pide ninguna, y la
+    // búsqueda de discos se queda con lo que quede.
+    if (catalogueWaitSeconds() > 0) return Response.json({ artists: [] });
     const found = await discogs(
       `/database/search?type=artist&per_page=25&q=${encodeURIComponent(photosFor)}`,
     );

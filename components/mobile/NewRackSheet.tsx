@@ -1,5 +1,6 @@
 "use client";
 
+import { RACK_NAME_MAX } from "@/lib/collections";
 import { useMemo, useState } from "react";
 import Sheet from "@/components/ui/Sheet";
 import { coverFor } from "@/lib/cover";
@@ -111,6 +112,7 @@ export default function NewRackSheet({
             autoFocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            maxLength={RACK_NAME_MAX}
             placeholder="El turno de noche"
             enterKeyHint="next"
             aria-label="Nombre del rack"
@@ -129,7 +131,7 @@ export default function NewRackSheet({
         {records.length > 0 && (
           <>
             <div className="flex items-center justify-between gap-3 border-t border-line px-5 pb-2.5 pt-3.5">
-              <h3 className="text-caption uppercase tracking-label text-content-muted">
+              <h3 className="label text-content-muted">
                 {chosen.size === 0
                   ? "Añade discos"
                   : `${chosen.size} ${chosen.size === 1 ? "disco" : "discos"}`}

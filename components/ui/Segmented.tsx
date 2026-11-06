@@ -67,7 +67,7 @@ export default function Segmented<T extends string>({
             onClick={() => onChange(s.value)}
             aria-label={s.icon ? s.label : undefined}
             title={s.icon ? s.label : undefined}
-            className={`pressable relative z-10 flex items-center justify-center gap-1.5 rounded-full font-medium transition-colors duration-fast ${
+            className={`pressable hit relative z-10 flex items-center justify-center gap-1.5 rounded-full font-medium transition-colors duration-fast ${
               s.icon ? (size === "sm" ? "w-11" : "w-12") : "px-4"
             } ${pad} ${active ? "text-ink" : "text-content-secondary hover:text-paper"}`}
           >

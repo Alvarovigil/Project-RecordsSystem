@@ -15,6 +15,9 @@ import Button from "./Button";
  * Deliberately quiet. An illustration and an exclamation mark make an empty
  * shelf feel like a failure; a card that reads like an index card in an archive
  * makes it feel like the beginning of one.
+ *
+ * The surface is the one `Card` uses (radius 14 on fill-subtle, no outline):
+ * the empty state is a card, not a third kind of box.
  */
 export default function EmptyState({
   title,
@@ -32,7 +35,7 @@ export default function EmptyState({
 }) {
   return (
     <div
-      className={`border border-line bg-fill-subtle/40 ${compact ? "px-5 py-6" : "px-6 py-9"}`}
+      className={`rounded-[14px] bg-fill-subtle ${compact ? "px-5 py-6" : "px-6 py-9"}`}
     >
       <p className="text-heading text-paper">{title}</p>
       <p className="mt-2 max-w-[52ch] text-sub text-content-muted">{body}</p>

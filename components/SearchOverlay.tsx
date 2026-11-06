@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import LayerLink from "@/components/ui/LayerLink";
 import RackRow, { Chevron } from "@/components/community/RackRow";
 import PersonRow from "@/components/community/PersonRow";
 import { useRackCovers } from "@/hooks/useRackCovers";
@@ -20,10 +20,13 @@ type Props = {
   open: boolean;
   onClose: () => void;
   /** put a record (new or already in the library) into a list */
-  onSaveToList: (v: Vinyl, listId: string) => void;
+  onSaveToList: (v: Vinyl, listId: string) => Promise<boolean> | void;
   onCreateList: (name: string) => Promise<string>;
-  onRemoveFromList: (vinylId: string, listId: string) => void;
-  onDeleteVinyl: (vinylId: string) => void;
+  onRemoveFromList?: (vinylId: string, listId: string) => void;
+  /** «Deshacer» de un añadido: deja el disco donde estaba antes, sin alternar */
+  onUndoAdd: (vinylId: string, listId: string) => void;
+  /** ya no lo usa el «Deshacer» (ver onUndoAdd); se acepta por compatibilidad */
+  onDeleteVinyl?: (vinylId: string) => void;
   collections: Collection[];
   activeCollectionId: string;
   allVinilos: Vinyl[];
@@ -47,8 +50,7 @@ export default function SearchOverlay({
   onClose,
   onSaveToList,
   onCreateList,
-  onRemoveFromList,
-  onDeleteVinyl,
+  onUndoAdd,
   collections,
   activeCollectionId,
   allVinilos,
@@ -317,9 +319,9 @@ export default function SearchOverlay({
               <ul className="divide-y divide-paper/10">
                 {artists.map((a) => (
                   <li key={a.slug}>
-                    <Link
+                    <LayerLink
                       href={`/artista/${a.slug}`}
-                      onClick={onClose}
+                      onNavigate={onClose}
                       className="flex items-center gap-3 px-2 py-3 transition hover:bg-paper/5"
                     >
                       {artistPhotos[a.slug] ? (
@@ -346,7 +348,7 @@ export default function SearchOverlay({
                         </span>
                       </span>
                       <Chevron />
-                    </Link>
+                    </LayerLink>
                   </li>
                 ))}
               </ul>
@@ -400,7 +402,7 @@ export default function SearchOverlay({
                       noteSave(v.id, { listId, vinylId: v.id, wasNew: false });
                     }}
                     onUndo={(listId: string) => {
-                      onRemoveFromList(v.id, listId);
+                      onUndoAdd(v.id, listId);
                       forgetSave(v.id);
                     }}
                   />
@@ -464,11 +466,9 @@ export default function SearchOverlay({
                     onSave={(listId: string) => add(r, listId)}
                     onUndo={(listId: string) => {
                       const saved = savedIn[`d${r.id}`];
-                      if (saved) {
-                        // brand new to the library → undo removes it entirely
-                        if (saved.wasNew) onDeleteVinyl(saved.vinylId);
-                        else onRemoveFromList(saved.vinylId, listId);
-                      }
+                      // quien lo deshace sabe dónde estaba: nuevo → fuera de la
+                      // biblioteca; de deseos → a deseos; si no, fuera del rack
+                      if (saved) onUndoAdd(saved.vinylId, listId);
                       forgetSave(`d${r.id}`);
                     }}
                   />
@@ -501,8 +501,7 @@ export default function SearchOverlay({
         onCreateList={onCreateList}
         allVinilos={allVinilos}
         onSaveToList={onSaveToList}
-        onRemoveFromList={onRemoveFromList}
-        onDeleteVinyl={onDeleteVinyl}
+        onUndoAdd={onUndoAdd}
         onSearchManually={(query) => {
           setMode("vinyls");
           setQ(query);

@@ -118,7 +118,7 @@ export default function FromOthersRail({
             </span>
             {/* un escalón por encima de la línea del rack: el artista es parte
                 del disco, de dónde sale es contexto */}
-            <span className="block truncate text-caption text-content-secondary">
+            <span className="block truncate text-sub text-content-secondary">
               {f.vinyl.artist}
             </span>
             {/* De dónde sale, que es lo que lo convierte en una puerta. La

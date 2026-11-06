@@ -124,7 +124,7 @@ export default function TabBar() {
                   className="relative flex h-[54px] flex-col items-center justify-center gap-[3px] text-paper/50"
                 >
                   <Icon filled={false} />
-                  <span className="text-[12px] font-medium leading-none tracking-[0.01em]">{t.label}</span>
+                  <span className="text-tab font-medium leading-none tracking-[0.01em]">{t.label}</span>
                 </span>
               </li>
             );
@@ -145,7 +145,7 @@ export default function TabBar() {
                   <Icon filled={active} />
                 </span>
                 <span
-                  className={`text-[12px] leading-none tracking-[0.01em] ${
+                  className={`text-tab leading-none tracking-[0.01em] ${
                     active ? "font-semibold text-paper" : "font-medium text-paper/50"
                   }`}
                 >

@@ -102,9 +102,9 @@ export default function FollowButton({
           onClick={onPress}
           aria-label={following ? `Dejar de seguir a ${displayName}` : `Seguir a ${displayName}`}
           title={label}
-          className={`pressable flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
+          className={`pressable hit flex h-9 w-9 items-center justify-center rounded-full border transition-colors ${
             following
-              ? "border-line-strong text-content-secondary hover:border-[#ff6b57]/40 hover:text-[#ff6b57]"
+              ? "border-line-strong text-content-secondary hover:border-danger/40 hover:text-danger"
               : "border-transparent bg-paper text-ink hover:bg-paper/90"
           }`}
         >

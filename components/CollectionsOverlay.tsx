@@ -9,7 +9,7 @@ import Select from "@/components/ui/Select";
 import { useRepository } from "@/hooks/useRepository";
 import type { Collaborator } from "@/lib/data/types";
 import CollaboratorsSheet from "@/components/community/CollaboratorsSheet";
-import { type Collection, type SortMode, SORT_LABELS, sortedVinylIds } from "@/lib/collections";
+import { type Collection, type SortMode, SORT_LABELS, sortedVinylIds, RACK_NAME_MAX } from "@/lib/collections";
 import { coverFor } from "@/lib/cover";
 import Avatar from "@/components/ui/Avatar";
 import type { ListVisibility, ListWithRecord } from "@/lib/data/types";
@@ -267,6 +267,7 @@ export default function CollectionsOverlay({
                     <input
                       autoFocus
                       defaultValue={active.name}
+                      maxLength={RACK_NAME_MAX}
                       onBlur={(e) => {
                         const v = e.target.value.trim();
                         if (v && v !== active.name) onRename(active.id, v);
@@ -431,6 +432,7 @@ export default function CollectionsOverlay({
                         <input
                           autoFocus
                           defaultValue={c.name}
+                          maxLength={RACK_NAME_MAX}
                           onBlur={(e) => {
                             const v = e.target.value.trim();
                             if (v && v !== c.name) onRename(c.id, v);
@@ -620,6 +622,7 @@ export default function CollectionsOverlay({
                   <input
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
+                    maxLength={RACK_NAME_MAX}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && newName.trim()) {
                         onCreate(newName.trim());
@@ -801,6 +804,7 @@ function EditPanel({
         ) : (
           <input
             defaultValue={editing.name}
+            maxLength={RACK_NAME_MAX}
             onBlur={(e) => onRename(editing.id, e.target.value.trim() || editing.name)}
             className="w-full bg-transparent border-b border-paper/[0.07] py-1 text-[20px] leading-tight text-paper outline-none focus:border-paper/60 transition"
           />

@@ -174,7 +174,8 @@ export default function ArtistView({ slug }: { slug: string }) {
       });
       const payload = await res.json();
       if (!payload.vinyl) throw new Error(payload.message ?? "no vinyl");
-      await lib.saveToList(payload.vinyl, mine.id);
+      // si no se guardó, useLibrary ya lo ha dicho (con «Reintentar»)
+      if (!(await lib.saveToList(payload.vinyl, mine.id))) return null;
       setSaved((s) => ({ ...s, [item.id]: true }));
       kept = payload.vinyl as Vinyl;
       toast.show(`${payload.vinyl.title} → ${mine.name}`, {
@@ -201,7 +202,7 @@ export default function ArtistView({ slug }: { slug: string }) {
       });
       const payload = await res.json();
       if (!payload.vinyl) throw new Error("no vinyl");
-      await lib.saveToList(payload.vinyl, list.id);
+      if (!(await lib.saveToList(payload.vinyl, list.id))) return;
       toast.show(`${payload.vinyl.title} → ${list.name}`, {
         media: { src: coverFor(payload.vinyl) },
       });
@@ -281,7 +282,7 @@ export default function ArtistView({ slug }: { slug: string }) {
           <button
             onClick={() => router.back()}
             aria-label="Atrás"
-            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
+            className="pressable hit flex h-10 w-10 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
           >
             <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden>
               <path
@@ -297,7 +298,7 @@ export default function ArtistView({ slug }: { slug: string }) {
           <button
             onClick={share}
             aria-label={`Compartir a ${portrait?.name || name}`}
-            className="pressable flex h-10 w-10 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
+            className="pressable hit flex h-10 w-10 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
               <path
@@ -556,7 +557,7 @@ export default function ArtistView({ slug }: { slug: string }) {
         activeListId={mine?.id ?? ""}
         playing={false}
         onTogglePlay={() => {}}
-        onAddTo={(listId, v) => void lib.saveToList(v, listId)}
+        onAddTo={(listId, v) => lib.saveToList(v, listId)}
         onRemoveFromActive={(v) => void lib.removeFromList(mine?.id ?? "", v.id)}
         onRemoveFromList={(listId, v) => void lib.removeFromList(listId, v.id)}
         coverOf={(id) => {

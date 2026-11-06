@@ -384,7 +384,7 @@ export default function ExploreView() {
                * went from the bar — the placeholder already says what to do,
                * and the icon was saying it a second time in another language.
                */
-              className="peer min-w-0 flex-1 bg-transparent text-left text-sub text-paper outline-none placeholder:text-content-faint sm:w-full sm:pb-3 sm:pt-1 sm:text-center sm:text-title sm:placeholder:text-transparent"
+              className="peer min-w-0 flex-1 self-stretch bg-transparent text-left sm:self-auto text-sub text-paper outline-none placeholder:text-content-faint sm:w-full sm:pb-3 sm:pt-1 sm:text-center sm:text-title sm:placeholder:text-transparent"
             />
 
             {/* The wide field asks the longer question, and it is drawn rather
@@ -451,7 +451,7 @@ export default function ExploreView() {
                     key={value}
                     onClick={() => setScope(value)}
                     aria-pressed={active}
-                    className={`pressable text-caption uppercase tracking-label transition-colors ${
+                    className={`pressable label transition-colors ${
                       active ? "text-paper" : "text-content-faint hover:text-content-secondary"
                     }`}
                   >
@@ -728,7 +728,7 @@ export default function ExploreView() {
                             <span className="mt-2 block truncate text-sub text-paper">
                               {row.v.title}
                             </span>
-                            <span className="block truncate text-caption text-content-muted">
+                            <span className="block truncate text-sub text-content-muted">
                               {row.v.artist}
                             </span>
                           </button>
@@ -778,7 +778,7 @@ export default function ExploreView() {
                             onClick={() => void saveRow(row.r)}
                             disabled={catalogue.adding === row.r.id}
                             aria-label={`Guardar ${row.r.title}`}
-                            className="pressable absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-paper backdrop-blur-md transition-colors hover:bg-ink/90 disabled:opacity-50"
+                            className="pressable hit absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-paper backdrop-blur-md transition-colors hover:bg-ink/90 disabled:opacity-50"
                           >
                             {catalogue.adding === row.r.id ? (
                               <span className="h-3 w-3 animate-spin rounded-full border-[1.5px] border-current border-t-transparent" />
@@ -894,7 +894,7 @@ export default function ExploreView() {
         activeListId=""
         playing={playing && nowPlaying?.id === openRecord?.id}
         onTogglePlay={(v) => (nowPlaying?.id === v.id ? audio.toggleCurrent() : audio.play(v))}
-        onAddTo={(listId, v) => void lib.saveToList(v, listId)}
+        onAddTo={(listId, v) => lib.saveToList(v, listId)}
         onRemoveFromActive={() => {}}
         onDelete={() => {}}
       />
@@ -916,13 +916,13 @@ function ResultBlock({
   return (
     <section>
       <div className="flex items-baseline justify-between border-b border-line pb-2">
-        <h2 className="text-caption uppercase tracking-label text-content-muted">
+        <h2 className="label text-content-muted">
           {title}
         </h2>
         {showAll && (
           <button
             onClick={onAll}
-            className="text-caption uppercase tracking-label text-content-faint transition-colors hover:text-paper"
+            className="label text-content-faint transition-colors hover:text-paper"
           >
             Ver todo
           </button>

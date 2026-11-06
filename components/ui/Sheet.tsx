@@ -1,8 +1,10 @@
 "use client";
 
+import LayerLink from "@/components/ui/LayerLink";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { useDevice } from "@/hooks/useDevice";
+import { useBackToClose } from "@/hooks/useBackToClose";
 
 /**
  * The one way this app shows something on top of something else.
@@ -71,6 +73,8 @@ export default function Sheet({
 }: SheetProps) {
   const { isPhone } = useDevice();
   const titleId = useId();
+  // «atrás» del sistema cierra la hoja, no la pantalla de debajo
+  useBackToClose(open, onClose);
 
   // Escape closes, and while anything is open the page behind must not scroll
   // — on iOS a scrolling background under a sheet is the clearest possible
@@ -124,7 +128,7 @@ export default function Sheet({
                     (done ? (
                       <button
                         onClick={onClose}
-                        className="pressable -mr-1 rounded-full px-3 py-1.5 text-sub font-medium text-paper transition-colors hover:bg-fill"
+                        className="pressable hit -mr-1 rounded-full px-3 py-1.5 text-sub font-medium text-paper transition-colors hover:bg-fill"
                       >
                         Listo
                       </button>
@@ -316,7 +320,7 @@ export function SheetRow({
      thumb before it is a line of a list, and 48px is where one stops being a
      coin toss. */
   const cls = `pressable mx-2 flex w-[calc(100%-1rem)] items-center gap-4 rounded-[10px] px-3.5 py-3.5 text-left text-body transition-colors ${
-    danger ? "text-[#ff6b57] hover:bg-[#ff6b57]/10" : "text-content/90 hover:bg-fill"
+    danger ? "text-danger hover:bg-danger/10" : "text-content/90 hover:bg-fill"
   }`;
   const inner = (
     <>
@@ -327,9 +331,10 @@ export function SheetRow({
   );
   if (href) {
     return (
-      <a href={href} className={cls}>
+      // una fila de hoja que lleva a otra página: la hoja sale antes del historial
+      <LayerLink href={href} onNavigate={onClick} className={cls}>
         {inner}
-      </a>
+      </LayerLink>
     );
   }
   return (

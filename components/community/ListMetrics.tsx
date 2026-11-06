@@ -65,7 +65,7 @@ export function LikeButton({
       onClick={press}
       aria-pressed={liked}
       aria-label={liked ? "Quitar me gusta" : "Me gusta"}
-      className={`pressable -my-1 -ml-1 flex items-center gap-1.5 rounded-full px-1 py-1 transition-colors ${
+      className={`pressable hit -my-1 -ml-1 flex items-center gap-1.5 rounded-full px-1 py-1 transition-colors ${
         liked ? "text-[#ff6b57]" : "text-content-muted hover:text-paper"
       }`}
     >

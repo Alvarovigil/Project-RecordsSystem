@@ -255,9 +255,9 @@ function Field({
   return (
     <label className="mt-6 block">
       <span className="flex items-baseline justify-between">
-        <span className="text-caption uppercase tracking-label text-content-muted">{label}</span>
+        <span className="label text-content-muted">{label}</span>
         {hint && (
-          <span className={`text-caption ${tone === "error" ? "text-[#ff6b57]" : "text-content-faint"}`}>
+          <span className={`text-caption ${tone === "error" ? "text-danger" : "text-content-faint"}`}>
             {hint}
           </span>
         )}

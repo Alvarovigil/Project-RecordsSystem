@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { type Collection } from "@/lib/collections";
+import { type Collection, RACK_NAME_MAX } from "@/lib/collections";
 
 const isPrimary = (c: Collection) => (c.kind ?? "custom") !== "custom";
 
@@ -123,6 +123,7 @@ export function ListPicker({
             autoFocus
             defaultValue={listed.length === 0 ? q.trim() : ""}
             placeholder="Nombre del rack"
+            maxLength={RACK_NAME_MAX}
             onKeyDown={async (e) => {
               if (e.key !== "Enter") return;
               const name = (e.target as HTMLInputElement).value.trim();

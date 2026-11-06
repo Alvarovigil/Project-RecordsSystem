@@ -7,6 +7,12 @@ import TopNav from "./TopNav";
 import TabBar from "./TabBar";
 import RotateLock from "./RotateLock";
 import { useDevice } from "@/hooks/useDevice";
+import { noteEntry } from "@/lib/launch";
+import { settleLayers } from "@/hooks/useBackToClose";
+
+// the first client code to run: whatever the address is now is where this
+// launch began (see lib/launch)
+noteEntry();
 
 /**
  * The chrome, chosen by device rather than reflowed for it.
@@ -28,7 +34,7 @@ export default function AppShell({
   children: React.ReactNode;
   bare?: boolean;
 }) {
-  const { isPhone } = useDevice();
+  const { isPhone, measured } = useDevice();
   const pathname = usePathname();
 
   // the trail every back link reads; kept here because this is the one
@@ -37,21 +43,45 @@ export default function AppShell({
     recordVisit(pathname);
   }, [pathname]);
 
+  // a reload (or a restored PWA) with a sheet open leaves its mark behind
+  useEffect(() => settleLayers(), []);
+
   // The shelf is its own world — a 3D canvas edge to edge — so it draws its own
   // header over the artwork. It still gets the tab bar: leaving is not
   // something a screen should be allowed to take away from you.
   const ownsHeader = bare || pathname.startsWith("/coleccion") || pathname.startsWith("/demo");
 
+  /**
+   * Before the device is measured, both bars — and CSS picks.
+   *
+   * `useDevice` can only answer in the browser, so the server's guess is
+   * "desktop" and a phone on a slow connection spent its first seconds under
+   * the desktop bar, folded over itself at 375px, before the tab bar
+   * replaced it. A breakpoint is right on the very first frame and needs no
+   * JavaScript; once the measurement exists it decides, as before (it knows
+   * about pointers and a phone lying on its side, which a width cannot).
+   */
+  const showTop = !ownsHeader && (!measured || !isPhone);
+  const showTabs = !measured || isPhone;
+
   return (
     <>
-      {!isPhone && !ownsHeader && <TopNav />}
+      {showTop && (
+        <div className={measured ? "contents" : "hidden md:contents"}>
+          <TopNav />
+        </div>
+      )}
       {/* The shelf is a 3D canvas edge to edge; blurring it on arrival would
           be a full-screen filter over a live scene, which is the one place a
           phone cannot afford one. It has its own way in — the sleeves fold up
           as their covers decode — so it is left alone. */}
       {ownsHeader ? children : <PageFade key={pathname}>{children}</PageFade>}
-      {isPhone && <TabBar />}
-      {isPhone && <RotateLock />}
+      {showTabs && (
+        <div className={measured ? "contents" : "contents md:hidden"}>
+          <TabBar />
+          <RotateLock />
+        </div>
+      )}
     </>
   );
 }
@@ -192,7 +222,7 @@ export function Section({
           className={
             note
               ? "text-heading font-medium leading-tight text-paper"
-              : "text-caption uppercase tracking-label text-content-muted"
+              : "label text-content-muted"
           }
         >
           {title}
@@ -200,7 +230,7 @@ export function Section({
         {href && (
           <a
             href={href}
-            className="text-caption uppercase tracking-label text-content-faint transition-colors hover:text-paper"
+            className="label text-content-faint transition-colors hover:text-paper"
           >
             {linkLabel}
           </a>

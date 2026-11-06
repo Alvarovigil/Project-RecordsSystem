@@ -303,7 +303,7 @@ function Sleeve({
       <motion.span
         style={{ opacity: hint }}
         aria-hidden
-        className="pointer-events-none absolute inset-0 flex items-center justify-center text-caption font-semibold uppercase tracking-label text-[#ff6b57]"
+        className="pointer-events-none absolute inset-0 flex items-center justify-center label font-semibold text-danger"
       >
         Quitar de {listName}
       </motion.span>

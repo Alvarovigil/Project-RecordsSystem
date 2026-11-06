@@ -5,6 +5,13 @@ import { getRepository, type ListWithRecord, type Profile } from "@/lib/data";
 import type { Vinyl } from "@/lib/types";
 import { useWriteBlocked } from "./useSession";
 import { artistFromCatalogueTitle, artistSlug, matchArtists } from "@/lib/artist";
+import {
+  CATALOGUE_DEBOUNCE_MS,
+  catalogueQueryKey,
+  createQueryCache,
+  retryDelayMs,
+  shouldSearchCatalogue,
+} from "@/lib/catalogue-query";
 
 /**
  * Searching for a record, wherever it happens to be.
@@ -39,6 +46,17 @@ export type DiscogsResult = {
   format?: string[];
 };
 
+/**
+ * Lo que ya se preguntó, para no volver a preguntarlo.
+ *
+ * A nivel de módulo y no del hook: el buscador de escritorio, el del móvil y
+ * Explorar son tres cuerpos para la misma pregunta, y lo que uno ya sabe no
+ * tiene por qué volver a costarle el minuto al otro. Solo respuestas enteras.
+ */
+const recent = createQueryCache<DiscogsResult[]>({ max: 50, ttlMs: 5 * 60_000 });
+/** hasta cuándo el catálogo ha pedido que no se le pregunte (epoch ms) */
+let coolUntil = 0;
+
 /** What a save actually did, so undo can reverse exactly that. */
 export type SaveRecord = { listId: string; vinylId: string; wasNew: boolean };
 
@@ -69,37 +87,179 @@ export function useCatalogueSearch({
   const [adding, setAdding] = useState<number | null>(null);
   const [savedIn, setSavedIn] = useState<Record<string, SaveRecord>>({});
 
+  /**
+   * El catálogo ha pedido que se espere. Va aparte de `degraded` (que sigue
+   * diciendo "rate-limit" para quien ya lo leía) para que la interfaz pueda
+   * contar el tiempo: `retryInMs` es cuánto quedaba cuando se supo, no una
+   * cuenta atrás viva.
+   */
+  const [rateLimited, setRateLimited] = useState(false);
+  const [retryInMs, setRetryInMs] = useState<number | null>(null);
+
   // ---- the catalogue, over the network -----------------------------------
+  /**
+   * Una búsqueda por frase, no por letra.
+   *
+   * Antes salía una petición cada vez que el dedo se paraba 300 ms, desde la
+   * primera letra, y ninguna se cancelaba: «fleetwood mac rumours» escrito a
+   * ritmo de móvil eran dos o tres búsquedas enteras, y el servidor las
+   * terminaba todas aunque ya nadie esperase la respuesta. Ahora:
+   *
+   * - se espera medio segundo después de la última tecla;
+   * - con menos de tres letras no se pregunta (salvo un código de barras);
+   * - la clave es el texto normalizado, así que un espacio de más no cuenta;
+   * - lo que ya se preguntó hace poco sale de memoria, sin red;
+   * - la petición anterior se aborta, y el servidor deja de gastar con ella;
+   * - ante un 429 se espera lo que diga el servidor y se reintenta una vez.
+   */
+  const key = catalogueQueryKey(query);
+  /**
+   * «Buscar» o Intro: la persona ha terminado de escribir.
+   *
+   * El mínimo de tres letras es para no gastar el catálogo mientras se
+   * teclea, no para negarle «U2» o «Yes» a quien ya ha dicho que es eso. Con
+   * `searchNow()` la frase de ahora sale ya, sin espera y aunque sea corta.
+   * Vale solo para esa frase: en cuanto cambia una letra, vuelven las reglas.
+   */
+  const [forcedKey, setForcedKey] = useState<string | null>(null);
+  const force = forcedKey !== null && forcedKey === key;
+  /** la última frase que llegó a salir a la red, para no repetirla al forzar */
+  const firedKey = useRef<string | null>(null);
+  const searchNow = useCallback(() => {
+    if (mode !== "vinyls" || !key || firedKey.current === key) return;
+    setForcedKey(key);
+  }, [mode, key]);
+
+  /**
+   * La frase a la que el catálogo ya ha contestado (bien, a medias o con un
+   * «no puedo»). Mientras no sea la de ahora, la respuesta está pendiente: en
+   * la espera, en vuelo o sin preguntar (menos de tres letras). Sin esto, la
+   * pantalla decía «Nada para «tusk»» antes de haber preguntado.
+   */
+  const [answeredKey, setAnsweredKey] = useState<string | null>(null);
+  /** «Reintentar» tras un 429 o un 503: la misma frase, otra vez */
+  const [attempt, setAttempt] = useState(0);
+  const retry = useCallback(() => {
+    if (mode !== "vinyls" || !key) return;
+    firedKey.current = null;
+    setForcedKey(key);
+    setAttempt((n) => n + 1);
+  }, [mode, key]);
+  /**
+   * La última tecla, sea la que sea. La clave ignora los espacios, así que el
+   * espacio entre «radiohead» e «in» no cambiaba nada y la espera seguía
+   * corriendo: quien escribe despacio disparaba una búsqueda a mitad de frase.
+   */
+  const typedAt = useRef(0);
   useEffect(() => {
-    if (mode !== "vinyls" || !query.trim()) {
+    typedAt.current = Date.now();
+  }, [query]);
+
+  useEffect(() => {
+    if (mode !== "vinyls" || !key) {
       setResults([]);
       setDegraded(null);
+      setRateLimited(false);
+      setRetryInMs(null);
       return;
     }
-    let cancelled = false;
-    const handle = setTimeout(async () => {
+    if (!force && !shouldSearchCatalogue(key)) {
+      // dos letras: tu estantería sí contesta, el catálogo todavía no
+      setResults([]);
+      setDegraded(null);
+      setLoading(false);
+      return;
+    }
+    const hit = recent.get(key);
+    if (hit) {
+      setResults(hit);
+      setDegraded(null);
+      setRateLimited(false);
+      setRetryInMs(null);
+      setLoading(false);
+      setAnsweredKey(key);
+      return;
+    }
+
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let inFlight = false;
+    let retried = false;
+
+    const run = async () => {
+      // un espacio no cambia la clave, pero sí es una tecla: la espera vuelve a empezar
+      const since = Date.now() - typedAt.current;
+      if (!force && since < CATALOGUE_DEBOUNCE_MS) {
+        timer = setTimeout(run, CATALOGUE_DEBOUNCE_MS - since);
+        return;
+      }
+      inFlight = true;
+      firedKey.current = key;
       setLoading(true);
       try {
-        const r = await fetch(`/api/discogs/search?q=${encodeURIComponent(query)}`);
-        const data = await r.json();
-        if (cancelled) return;
-        setResults(data.results ?? []);
-        setDegraded(r.ok ? (data.degraded ?? null) : "down");
-      } catch {
-        // the network, not them: same consequence, same honesty
-        if (!cancelled) {
-          setResults([]);
-          setDegraded("down");
+        const r = await fetch(`/api/discogs/search?q=${encodeURIComponent(key)}`, {
+          signal: controller.signal,
+        });
+        const data = await r.json().catch(() => ({}));
+        if (controller.signal.aborted) return;
+        if (r.status === 429) {
+          const wait = retryDelayMs(data?.retryAfter, r.headers.get("Retry-After"));
+          coolUntil = Math.max(coolUntil, Date.now() + wait);
+          // las filas que sí llegaron se enseñan, con el aviso; si no llegó
+          // ninguna, no se quedan las de la frase anterior
+          setResults(Array.isArray(data?.results) ? data.results : []);
+          setAnsweredKey(key);
+          setDegraded("rate-limit");
+          setRateLimited(true);
+          setRetryInMs(wait);
+          if (!retried) {
+            retried = true;
+            timer = setTimeout(run, wait);
+          }
+          return;
         }
+        const rows: DiscogsResult[] = data?.results ?? [];
+        const deg = r.ok ? (data?.degraded ?? null) : "down";
+        setResults(rows);
+        setDegraded(deg);
+        setAnsweredKey(key);
+        setRateLimited(false);
+        setRetryInMs(null);
+        if (r.ok && deg === null) recent.set(key, rows);
+      } catch {
+        // abortada: la siguiente búsqueda ya se encarga
+        if (controller.signal.aborted) return;
+        // the network, not them: same consequence, same honesty
+        setResults([]);
+        setDegraded("down");
+        setAnsweredKey(key);
+        // un «espera N s» de antes no puede quedarse encima de un «sin conexión»
+        setRateLimited(false);
+        setRetryInMs(null);
       } finally {
-        if (!cancelled) setLoading(false);
+        inFlight = false;
+        if (!controller.signal.aborted) setLoading(false);
       }
-    }, 300);
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
     };
-  }, [query, mode]);
+
+    // Si el catálogo pidió esperar, la siguiente sale cuando toque, no antes.
+    const cooling = coolUntil - Date.now();
+    if (cooling > 0) {
+      setRateLimited(true);
+      setRetryInMs(cooling);
+      setDegraded("rate-limit");
+    }
+    timer = setTimeout(run, Math.max(force ? 0 : CATALOGUE_DEBOUNCE_MS, cooling));
+    return () => {
+      controller.abort();
+      if (timer) clearTimeout(timer);
+      if (inFlight) {
+        setLoading(false);
+        // abortada a medias: si se vuelve a pedir, que salga
+        if (firedKey.current === key) firedKey.current = null;
+      }
+    };
+  }, [key, mode, force, attempt]);
 
   // ---- people and lists, searched together --------------------------------
   useEffect(() => {
@@ -231,15 +391,19 @@ export function useCatalogueSearch({
    */
   const [artistPhotos, setArtistPhotos] = useState<Record<string, string>>({});
   const askedPhotos = useRef(new Set<string>());
+  /* Se mira si hay artistas, no cuántos: cuando llegan las filas del catálogo
+     la cuenta cambia, y eso no debe cancelar la petición de caras en vuelo. */
+  const hasArtists = artists.length > 0;
   useEffect(() => {
-    const q = query.trim();
-    if (mode !== "vinyls" || q.length < 2 || artists.length === 0) return;
-    const key = q.toLowerCase();
+    // la misma puerta que la búsqueda: frase asentada, tres letras, sin espera
+    if (mode !== "vinyls" || !(force || shouldSearchCatalogue(key)) || !hasArtists) return;
     if (askedPhotos.current.has(key)) return;
     let alive = true;
+    const controller = new AbortController();
     const t = setTimeout(() => {
+      if (Date.now() < coolUntil) return;
       askedPhotos.current.add(key);
-      fetch(`/api/discogs/artist?photos=${encodeURIComponent(q)}`)
+      fetch(`/api/discogs/artist?photos=${encodeURIComponent(key)}`, { signal: controller.signal })
         .then((r) => r.json())
         .then((d: { artists?: { slug: string; image: string }[] }) => {
           if (!alive || !d?.artists?.length) return;
@@ -249,13 +413,17 @@ export function useCatalogueSearch({
             return next;
           });
         })
-        .catch(() => {});
-    }, 260);
+        .catch(() => {
+          // abortada antes de contestar: que se pueda volver a pedir
+          if (controller.signal.aborted) askedPhotos.current.delete(key);
+        });
+    }, CATALOGUE_DEBOUNCE_MS);
     return () => {
       alive = false;
       clearTimeout(t);
+      controller.abort();
     };
-  }, [mode, query, artists.length]);
+  }, [mode, key, hasArtists, force]);
 
   const noteSave = useCallback((key: string, record: SaveRecord) => {
     setSavedIn((m) => ({ ...m, [key]: record }));
@@ -280,8 +448,23 @@ export function useCatalogueSearch({
     loading,
     /** null when the catalogue answered in full; see CatalogueNotice */
     degraded,
+    /** el catálogo ha pedido esperar (429); las filas, si hay, van a medias */
+    rateLimited,
+    /** cuánto había que esperar cuando se supo, en ms; null si no hay espera */
+    retryInMs,
     adding,
     savedIn,
+    /** busca ya la frase de ahora, aunque tenga menos de tres letras */
+    searchNow,
+    /** vuelve a preguntar la frase de ahora tras un 429 o un 503 */
+    retry,
+    /**
+     * El catálogo todavía no ha contestado a la frase de ahora: en la espera,
+     * en vuelo o sin preguntar. Mientras sea true, no hay «nada» que decir.
+     */
+    pending: mode === "vinyls" && Boolean(key) && answeredKey !== key,
+    /** menos de tres letras y sin «Buscar»: el catálogo no se pregunta solo */
+    belowMinimum: mode === "vinyls" && Boolean(key) && !force && !shouldSearchCatalogue(key),
     addFromCatalogue,
     noteSave,
     forgetSave,

@@ -110,13 +110,13 @@ export default function LightLab({
       <div className="flex items-center gap-3 px-4 py-2.5">
         <button
           onClick={() => setOpen((o) => !o)}
-          className="pressable flex-1 text-left text-caption uppercase tracking-label text-content-muted"
+          className="pressable flex-1 text-left label text-content-muted"
         >
           Luces {open ? "▾" : "▸"}
         </button>
         <button
           onClick={() => onChange(DEFAULT_RIG)}
-          className="pressable text-caption uppercase tracking-label text-content-muted"
+          className="pressable label text-content-muted"
         >
           Reset
         </button>
@@ -134,7 +134,7 @@ export default function LightLab({
         <div className="scroll-y max-h-[46dvh] px-4 pb-4">
           {GROUPS.map((g) => (
             <div key={g.title} className="mt-3 first:mt-0">
-              <p className="text-caption uppercase tracking-label text-content-faint">{g.title}</p>
+              <p className="label text-content-faint">{g.title}</p>
               {g.controls.map((c) => (
                 <label key={c.key} className="mt-2 flex items-center gap-3">
                   <span className="w-[104px] shrink-0 text-caption text-content-muted">

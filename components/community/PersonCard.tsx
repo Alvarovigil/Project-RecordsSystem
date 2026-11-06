@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import LayerLink from "@/components/ui/LayerLink";
 import Avatar from "@/components/ui/Avatar";
 import FollowButton from "./FollowButton";
 import { useImagesReady } from "@/hooks/useImagesReady";
@@ -114,7 +114,7 @@ export default function PersonCard({ profile }: { profile: SuggestedProfile }) {
        * de un enlace, que no es HTML válido y en el móvil se lleva el gesto la
        * mitad de las veces.
        */}
-      <Link
+      <LayerLink
         href={`/u/${profile.username}`}
         aria-label={`Ver el perfil de ${profile.displayName}`}
         className="absolute inset-0 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-line-focus"

@@ -373,22 +373,6 @@ function Backdrop() {
  */
 function StickyMark() {
   const [t, setT] = useState(0);
-  /**
-   * Small while the door is up.
-   *
-   * Behind the gate the page is out of focus and the screen belongs to the
-   * introduction. A wordmark at hero size up there would be a second, sharper
-   * title over a blurred one — so it goes to its scrolled size and waits, and
-   * grows into place when you come in.
-   */
-  const [gated, setGated] = useState(false);
-  useEffect(() => {
-    const read = () => setGated(document.documentElement.dataset.landing === "gate");
-    read();
-    const mo = new MutationObserver(read);
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-landing"] });
-    return () => mo.disconnect();
-  }, []);
 
   useEffect(() => {
     let frame = 0;
@@ -411,7 +395,7 @@ function StickyMark() {
   }, []);
 
   // eased so most of the shrink happens early and the last stretch settles
-  const e = gated ? 1 : t * t * (3 - 2 * t);
+  const e = t * t * (3 - 2 * t);
   return (
     <>
     {/**
@@ -429,7 +413,7 @@ function StickyMark() {
       className="pointer-events-none fixed inset-x-0 top-0 z-[55] bg-gradient-to-b from-ink via-ink/85 to-transparent"
       style={{
         height: "calc(var(--safe-top) + 16px + var(--mark-min) + 28px)",
-        opacity: gated ? 0 : t,
+        opacity: t,
       }}
     />
     <div

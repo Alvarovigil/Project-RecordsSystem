@@ -10,6 +10,7 @@ import { clearSnapshots } from "@/lib/data/snapshot";
 import type { Profile } from "@/lib/data/types";
 import { FAKE_SESSION, FAKE_USER } from "@/lib/dev-session";
 import { DEMO_PROFILE } from "@/lib/demo";
+import { leaveLayers } from "@/hooks/useBackToClose";
 
 /**
  * Who is using the app.
@@ -157,7 +158,9 @@ export function useEntryGate() {
     // otherwise go through the door and bounce back. The tap is simply
     // dropped; the session lands in a moment and the next one counts.
     if (loading) return true;
-    router.push(entryHref());
+    // se llama desde dentro de una capa (el escáner): primero salen sus
+    // entradas, o la vuelta atrás del cierre se traga la navegación
+    leaveLayers(() => router.push(entryHref()));
     return true;
   }, [available, loading, user, router]);
 }

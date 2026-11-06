@@ -2,10 +2,13 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { PerspectiveCamera } from "@react-three/drei";
-import { forwardRef, memo, Suspense, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, memo, Suspense, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from "react";
 import * as THREE from "three";
+import { useReducedMotion } from "framer-motion";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
+import { hasWebGL, markWebGLLost } from "@/lib/webgl";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 // ---------------- shared texture cache + edge-colour sampler ----------------
 // Loads the cover image once, returns the three.js Texture AND samples the
@@ -138,7 +141,18 @@ type Props = {
    * scenery. A plain prop crosses that boundary.
    */
   handleRef?: { current: VinylShelfHandle | null };
+  /**
+   * There is no 3D here: no WebGL, the context could not be created, or the
+   * system took it back. Called once, so the page can switch to a view that
+   * reads — the grid — instead of leaving a black rectangle where the shelf
+   * was. Without it the shelf simply draws `fallback`.
+   */
+  onUnavailable?: () => void;
+  /** what stands where the canvas would have been; the bare ground if omitted */
+  fallback?: ReactNode;
 };
+
+type SceneProps = Omit<Props, "onUnavailable" | "fallback"> & { onContextLost: (e: Event) => void };
 
 /** Everything about the light that is worth arguing over. */
 export type LightRig = {
@@ -391,8 +405,9 @@ function spineInk(edge: string): { bg: string; ink: string; halo: string } {
   };
 }
 
-const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
+const VinylShelf3D = forwardRef<VinylShelfHandle, SceneProps>(function VinylShelf3D(
   {
+    onContextLost,
     vinilos,
     onOpen,
     onActiveChange,
@@ -616,6 +631,14 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
    */
   const dragging = useRef(false);
   const velocity = useRef(0);
+  /**
+   * «Reduce motion» in the system: the shelf stays 3D, but nothing moves that
+   * the finger did not move. No glide after letting go — a drag lands on the
+   * next record in its direction and stops — and the wallpaper does not drift.
+   */
+  const reduceMotion = useReducedMotion() === true;
+  const reduceMotionRef = useRef(reduceMotion);
+  reduceMotionRef.current = reduceMotion;
 
   // open state — 0 = closed (carousel), 1 = fully opened (cover face-on)
   const openTarget = useRef(0);
@@ -791,7 +814,14 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
       // A throw carries on; a tap does not. Anything slower than this is a
       // hand coming to rest, and honouring it would drift the shelf under a
       // finger that had stopped meaning it.
-      if (!moved || Math.abs(velocity.current) < 0.6) {
+      if (moved && reduceMotionRef.current) {
+        // step, do not glide: at least one record in the direction of the drag
+        velocity.current = 0;
+        const travelled = target.current - startT;
+        let next = Math.round(target.current);
+        if (next === Math.round(startT) && Math.abs(travelled) > 0.15) next += Math.sign(travelled);
+        target.current = clampToList(next);
+      } else if (!moved || Math.abs(velocity.current) < 0.6) {
         velocity.current = 0;
         target.current = clampToList(Math.round(target.current));
       }
@@ -890,6 +920,15 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
           powerPreference: "high-performance",
           antialias: true,
         }}
+        /**
+         * The context can be taken away after it was given: iOS does it to a
+         * page in the background that holds too many textures, and the
+         * canvas comes back black with no way out. Listening is the only way
+         * to know — the scene itself never hears about it.
+         */
+        onCreated={({ gl }) => {
+          gl.domElement.addEventListener("webglcontextlost", onContextLost, { once: true });
+        }}
       >
         {/* Standing in front of a rack, or leaning over a pile. 46° is the
             angle at which a stack still reads as a stack: flatter and the
@@ -953,7 +992,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
             wheelR={WHEEL_R}
             wheelStep={WHEEL_STEP}
             wheelLean={WHEEL_LEAN}
-            drift={drift}
+            drift={reduceMotion ? 0 : drift}
             vinilos={vinilos}
             targetRef={target}
             currentRef={current}
@@ -984,10 +1023,52 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, Props>(function VinylShelf3D(
   );
 });
 
+/**
+ * The shelf, or something that reads in its place.
+ *
+ * Never «Application error»: WebGL is asked for before the canvas exists, the
+ * canvas sits inside its own error wall, and a context lost mid-session takes
+ * the scene down quietly. In every one of those cases the page is told
+ * (`onUnavailable`) so it can show the records another way.
+ */
+const SafeShelf = forwardRef<VinylShelfHandle, Props>(function SafeShelf(
+  { onUnavailable, fallback, ...props },
+  ref,
+) {
+  // the component is only ever loaded in the browser (next/dynamic, ssr:false)
+  const [ok, setOk] = useState(() => hasWebGL());
+
+  const unavailableRef = useRef(onUnavailable);
+  useEffect(() => {
+    unavailableRef.current = onUnavailable;
+  });
+  useEffect(() => {
+    if (!ok) unavailableRef.current?.();
+  }, [ok]);
+
+  const fail = () => {
+    markWebGLLost();
+    setOk(false);
+  };
+
+  const ground = fallback ?? <div aria-hidden className="h-full w-full bg-ink" />;
+  if (!ok) return <>{ground}</>;
+
+  return (
+    <ErrorBoundary fallback={ground} onError={fail}>
+      <VinylShelf3D ref={ref} {...props} onContextLost={(e: Event) => {
+        // without this the browser never offers the context back
+        e.preventDefault();
+        fail();
+      }} />
+    </ErrorBoundary>
+  );
+});
+
 // Memoised: the page re-renders on every playback tick, and without this the
 // whole scene tree would be reconciled each time — the transport animation
 // stuttered against it.
-export default memo(VinylShelf3D);
+export default memo(SafeShelf);
 
 function Strip({
   ambient,

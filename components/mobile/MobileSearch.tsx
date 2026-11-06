@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import LayerLink from "@/components/ui/LayerLink";
 import RackRow, { Chevron, NewRackRow } from "@/components/community/RackRow";
 import PersonRow from "@/components/community/PersonRow";
 import { useRackCovers } from "@/hooks/useRackCovers";
@@ -13,6 +13,8 @@ import EmptyState from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
 import { useCatalogueSearch, type DiscogsResult } from "@/hooks/useCatalogueSearch";
 import { useEntryGate } from "@/hooks/useSession";
+import { useBackToClose } from "@/hooks/useBackToClose";
+import { useFullLayer } from "@/hooks/useFullLayer";
 import BarcodeScanner, { useCanScan } from "@/components/BarcodeScanner";
 import { findWishlist } from "@/lib/collections";
 import type { Collection } from "@/lib/collections";
@@ -53,7 +55,7 @@ export default function MobileSearch({
   onSaveToList,
   onCreateList,
   onRemoveFromList,
-  onDeleteVinyl,
+  onUndoAdd,
   onJumpTo,
 }: {
   open: boolean;
@@ -63,10 +65,14 @@ export default function MobileSearch({
   activeCollectionId: string;
   allVinilos: Vinyl[];
   localVinilos: Vinyl[];
-  onSaveToList: (v: Vinyl, listId: string) => void;
+  /** resuelve a si se ha guardado de verdad, cuando quien lo da lo sabe */
+  onSaveToList: (v: Vinyl, listId: string) => Promise<boolean> | void;
   onCreateList: (name: string) => Promise<string>;
   onRemoveFromList: (vinylId: string, listId: string) => void;
-  onDeleteVinyl: (vinylId: string) => void;
+  /** «Deshacer» de un añadido: deja el disco donde estaba antes, sin alternar */
+  onUndoAdd: (vinylId: string, listId: string) => void;
+  /** ya no lo usa el «Deshacer» (ver onUndoAdd); se acepta por compatibilidad */
+  onDeleteVinyl?: (vinylId: string) => void;
   /** abre la pantalla del disco; `pick` despliega además la hoja de racks */
   onJumpTo: (v: Vinyl, pick?: boolean) => void;
 }) {
@@ -86,6 +92,10 @@ export default function MobileSearch({
   const rackCovers = useRackCovers(search.communityLists);
 
   useEffect(() => setTargetId(activeCollectionId), [activeCollectionId]);
+  // «atrás» del sistema cierra el buscador, no la colección
+  useBackToClose(open, onClose);
+  // sin barra de pestañas debajo: el aviso baja a la zona segura
+  useFullLayer(open);
 
   useEffect(() => {
     if (!open) {
@@ -107,39 +117,71 @@ export default function MobileSearch({
   if (!open) return null;
 
   const target = collections.find((c) => c.id === targetId);
+  /** el catálogo no ha podido contestar (429 o caído): no es «nada», es «no sé» */
+  const catalogueFailed = search.degraded === "rate-limit" || search.degraded === "down";
+  /* «Nada para…» solo cuando la frase se ha preguntado de verdad y ha vuelto
+     vacía: ni en la espera, ni con dos letras sin «Buscar», ni con el catálogo
+     sin contestar. */
   const nothing =
     q.trim() &&
     !search.loading &&
     (mode === "vinyls"
-      ? search.localResults.length === 0 && search.addable.length === 0
+      ? !search.pending &&
+        !catalogueFailed &&
+        search.localResults.length === 0 &&
+        search.addable.length === 0
       : search.people.length === 0 && search.communityLists.length === 0);
+  /** la pregunta está en camino y todavía no hay filas del catálogo */
+  const waiting =
+    mode === "vinyls" &&
+    !search.belowMinimum &&
+    (search.pending || search.loading) &&
+    search.addable.length === 0;
 
   /** apuntar un disco que no tienes, sin meterlo en la colección */
   const wishCatalogue = async (r: DiscogsResult) => {
     if (gate()) return;
     const list = findWishlist(collections);
     if (!list) return;
-    const v = await search.addFromCatalogue(r, list.id, onSaveToList);
+    const saving: { done?: Promise<boolean> | void } = {};
+    const v = await search.addFromCatalogue(r, list.id, (vin, l) => {
+      saving.done = onSaveToList(vin, l);
+    });
     if (!v) return toast.show("No se pudo apuntar ese disco.", { tone: "error" });
-    toast.show(`${v.title} → ${list.name}`, { media: { src: r.thumb } });
+    // si no se guardó, el aviso de error con «Reintentar» ya está en pantalla
+    if ((await saving.done) === false) return search.forgetSave(`d${r.id}`);
+    toast.show(`${v.title} añadido a ${list.name}`, { media: { src: r.thumb } });
     setLooking(null);
   };
 
   const saveCatalogue = async (r: DiscogsResult) => {
     // sin cuenta, el «+» lleva a entrar (ver useEntryGate)
     if (gate()) return null;
-    const v = await search.addFromCatalogue(r, targetId, onSaveToList);
+    /* La promesa del guardado, cogida al vuelo: `addFromCatalogue` llama a
+       `onSaveToList` sin esperarlo, y el aviso no puede salir antes de saber
+       si se guardó. */
+    const saving: { done?: Promise<boolean> | void } = {};
+    const listId = targetId;
+    const v = await search.addFromCatalogue(r, listId, (vin, l) => {
+      saving.done = onSaveToList(vin, l);
+    });
     if (!v)
       return toast.show(search.lastError.current ?? "No se pudo añadir ese disco.", {
         tone: "error",
       });
-    const saved = search.savedIn[`d${r.id}`];
+    if ((await saving.done) === false) {
+      // el «+» vuelve a estar disponible: no se ha guardado
+      search.forgetSave(`d${r.id}`);
+      return null;
+    }
+    /* «Deshacer» con el id que devolvió la operación, nunca con `savedIn`:
+       ese objeto es el del render de antes del guardado, y ahí el disco aún
+       no estaba. Quien lo deshace (ShelfApp) sabe dónde estaba antes. */
     toast.undo(
-      `${v.title} → ${target?.name ?? "tu colección"}`,
+      // con el nombre del disco: «Añadido a Mi Colección» no dice cuál
+      `${v.title} añadido a ${target?.name ?? "Mi Colección"}`,
       () => {
-        // brand new to the library → undo takes it out entirely
-        if (saved?.wasNew) onDeleteVinyl(v.id);
-        else onRemoveFromList(v.id, targetId);
+        onUndoAdd(v.id, listId);
         search.forgetSave(`d${r.id}`);
       },
       { media: { src: r.thumb } },
@@ -156,7 +198,18 @@ export default function MobileSearch({
           style={{ paddingTop: "calc(var(--safe-top) + 10px)" }}
         >
           <div className="flex items-center gap-3">
-            <div className="relative flex-1">
+            {/* «Buscar» en el teclado busca ya, aunque sean dos letras («U2»):
+                quien pulsa Intro ha terminado de escribir. Y baja el teclado,
+                para que se vea lo que ha salido. */}
+            <form
+              role="search"
+              className="relative flex-1"
+              onSubmit={(e) => {
+                e.preventDefault();
+                search.searchNow();
+                inputRef.current?.blur();
+              }}
+            >
               <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-content-faint">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
                   <circle cx="7" cy="7" r="4.8" stroke="currentColor" strokeWidth="1.3" />
@@ -175,8 +228,8 @@ export default function MobileSearch({
                 placeholder={mode === "vinyls" ? "Un disco, tuyo o por añadir" : "Personas o racks"}
                 className="h-11 w-full bg-transparent pl-7 pr-2 text-body text-paper outline-none placeholder:text-content-faint"
               />
-            </div>
-            <button onClick={onClose} className="pressable shrink-0 py-2 text-body text-content-secondary">
+            </form>
+            <button onClick={onClose} className="pressable hit shrink-0 py-2 text-body text-content-secondary">
               Cancelar
             </button>
           </div>
@@ -256,9 +309,43 @@ export default function MobileSearch({
             </div>
           )}
 
+          {/* Dos letras («U2»): el catálogo no se pregunta solo, pero se le
+              puede preguntar. Una fila en vez de un «nada» que no es verdad. */}
+          {mode === "vinyls" && search.belowMinimum && (
+            <button
+              type="button"
+              onClick={() => {
+                search.searchNow();
+                inputRef.current?.blur();
+              }}
+              className="pressable mt-3 flex w-full items-center gap-3 py-3 text-left"
+            >
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-sm bg-fill-subtle text-content-secondary">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+                  <circle cx="7" cy="7" r="4.8" stroke="currentColor" strokeWidth="1.3" />
+                  <path d="M10.6 10.6 L14 14" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-body text-paper">Buscar «{q.trim()}»</span>
+                <span className="block truncate text-sub text-content-muted">En el catálogo</span>
+              </span>
+              <Chevron />
+            </button>
+          )}
+
           {mode === "vinyls" && (
             <div className="px-4 pb-1 pt-3">
-              <CatalogueNotice degraded={search.degraded} compact />
+              <CatalogueNotice
+                degraded={search.degraded}
+                compact
+                empty={search.addable.length === 0}
+                onRetry={
+                  catalogueFailed && search.addable.length === 0 && !search.loading
+                    ? search.retry
+                    : undefined
+                }
+              />
             </div>
           )}
 
@@ -277,9 +364,9 @@ export default function MobileSearch({
               <ul className="divide-y divide-line">
                 {search.artists.map((a) => (
                   <li key={a.slug}>
-                    <Link
+                    <LayerLink
                       href={`/artista/${a.slug}`}
-                      onClick={onClose}
+                      onNavigate={onClose}
                       className="pressable flex items-center gap-3 py-3"
                     >
                       {search.artistPhotos[a.slug] ? (
@@ -306,7 +393,7 @@ export default function MobileSearch({
                         </span>
                       </span>
                       <Chevron />
-                    </Link>
+                    </LayerLink>
                   </li>
                 ))}
               </ul>
@@ -339,6 +426,16 @@ export default function MobileSearch({
                 ))}
               </ul>
             </>
+          )}
+
+          {waiting && (
+            <p role="status" className="flex items-center gap-2.5 py-4 text-sub text-content-muted">
+              <span
+                aria-hidden
+                className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-[1.6px] border-current border-t-transparent"
+              />
+              Buscando en el catálogo…
+            </p>
           )}
 
           {mode === "vinyls" && search.addable.length > 0 && (
@@ -482,8 +579,7 @@ export default function MobileSearch({
         onCreateList={onCreateList}
         allVinilos={allVinilos}
         onSaveToList={onSaveToList}
-        onRemoveFromList={onRemoveFromList}
-        onDeleteVinyl={onDeleteVinyl}
+        onUndoAdd={onUndoAdd}
         onSearchManually={(query) => {
           setScanning(false);
           setMode("vinyls");
@@ -497,7 +593,7 @@ export default function MobileSearch({
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <p className="pb-1.5 pt-6 text-caption uppercase tracking-label text-content-muted">{children}</p>
+    <p className="pb-1.5 pt-6 label text-content-muted">{children}</p>
   );
 }
 

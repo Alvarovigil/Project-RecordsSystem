@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import LayerLink from "@/components/ui/LayerLink";
 import SharedMark from "@/components/ui/SharedMark";
 import { rackCaption, type RackView } from "@/lib/rack";
 
@@ -93,11 +93,12 @@ export default function RackRow({
     className,
   ].join(" ");
 
+  // LayerLink: dentro de una hoja, primero sale la hoja del historial
   if (rack.href && as !== "button" && !disabled)
     return (
-      <Link href={rack.href} onClick={onClick} className={shell}>
+      <LayerLink href={rack.href} onNavigate={onClick} className={shell}>
         {body}
-      </Link>
+      </LayerLink>
     );
 
   return (

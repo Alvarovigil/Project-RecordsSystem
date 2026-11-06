@@ -261,7 +261,7 @@ function MenuRow({
   danger?: boolean;
 }) {
   const cls = `pressable block w-full rounded-[8px] px-2.5 py-2 text-left text-sub transition-colors ${
-    danger ? "text-[#ff6b57] hover:bg-[#ff6b57]/10" : "text-content-secondary hover:bg-fill hover:text-paper"
+    danger ? "text-danger hover:bg-danger/10" : "text-content-secondary hover:bg-fill hover:text-paper"
   }`;
   if (href) {
     return (

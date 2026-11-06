@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import LayerLink from "@/components/ui/LayerLink";
 import Crate from "@/components/ui/Crate";
 import type { ListWithRecord } from "@/lib/data/types";
 import { listTitleFor } from "@/lib/list-title";
@@ -38,7 +38,7 @@ export default function ListCard({
 
   return (
     <div className="group">
-      <Link
+      <LayerLink
         href={to}
         className="pressable block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-line-focus"
       >
@@ -68,7 +68,7 @@ export default function ListCard({
             </span>
           </span>
         </span>
-      </Link>
+      </LayerLink>
 
       {/* Las dos cifras van debajo de la firma, y fuera del enlace: un botón
           dentro de un <a> no es HTML válido, y en el móvil el gesto se lo

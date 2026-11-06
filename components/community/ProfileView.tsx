@@ -247,7 +247,7 @@ export default function ProfileView({
           <button
             onClick={() => router.back()}
             aria-label="Atrás"
-            className="pressable absolute left-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
+            className="pressable hit absolute left-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
             style={{ top: "calc(max(1.5rem, var(--safe-top)) + 0.25rem)" }}
           >
             <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden>
@@ -394,7 +394,7 @@ export default function ProfileView({
        * tenéis en común, porque es lo que convierte a un desconocido en
        * alguien a quien seguir.
        */}
-      <div className="rail -mx-5 mb-7 flex gap-2 px-5 sm:mx-0 sm:px-0">
+      <div className="rail -mx-5 -mt-1.5 mb-5 flex gap-2 px-5 py-1.5 sm:mx-0 sm:mb-7 sm:mt-0 sm:px-0 sm:py-0">
         {(
           [
             ["perfil", "Perfil"],
@@ -405,7 +405,7 @@ export default function ProfileView({
           <button
             key={value}
             onClick={() => setTab(value)}
-            className={`pressable shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sub transition-colors ${
+            className={`pressable hit shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sub transition-colors ${
               tab === value ? "bg-paper text-ink" : "bg-fill text-content-secondary hover:bg-fill-strong"
             }`}
           >
@@ -533,7 +533,7 @@ export default function ProfileView({
               nombre puesto. */}
           {isYou && saved.length > 0 && (
             <div className="mt-12">
-              <h2 className="text-caption uppercase tracking-label text-content-muted">
+              <h2 className="label text-content-muted">
                 Guardados de otra gente
               </h2>
               <div className="mt-4">
@@ -607,7 +607,7 @@ function Stat({ n, label, onClick }: { n?: number; label: string; onClick?: () =
   );
   if (!onClick) return <span>{body}</span>;
   return (
-    <button onClick={onClick} className="pressable transition-opacity hover:opacity-70">
+    <button onClick={onClick} className="pressable hit transition-opacity hover:opacity-70">
       {body}
     </button>
   );

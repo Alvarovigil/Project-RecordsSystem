@@ -125,7 +125,7 @@ export default function ListView({
       {owner && (
         <Link
           href={cameFrom?.href ?? `/u/${owner.username}`}
-          className="pressable relative z-10 -mb-2 inline-flex items-center gap-2 text-sub text-content-muted transition-colors hover:text-paper"
+          className="pressable hit relative z-10 -mb-2 inline-flex items-center gap-2 text-sub text-content-muted transition-colors hover:text-paper"
         >
           <span aria-hidden>←</span>
           {/* coming from the owner's own profile, say their name rather than
@@ -219,7 +219,7 @@ export default function ListView({
             {owner && (
               <Link
                 href={`/u/${owner.username}`}
-                className="pressable flex items-center gap-2 text-sub text-content-secondary transition-colors hover:text-paper"
+                className="pressable hit flex items-center gap-2 text-sub text-content-secondary transition-colors hover:text-paper"
               >
                 <Avatar
                   name={owner.displayName}
@@ -351,7 +351,7 @@ export default function ListView({
                     <button
                       onClick={() => (sounding ? audio.toggleCurrent() : audio.play(v))}
                       aria-label={sounding && playing ? `Pausar ${v.title}` : `Escuchar ${v.title}`}
-                      className={`pressable absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-line-strong bg-ink/70 text-paper backdrop-blur-sm transition focus:opacity-100 ${
+                      className={`pressable hit absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full border border-line-strong bg-ink/70 text-paper backdrop-blur-sm transition focus:opacity-100 ${
                         sounding ? "opacity-100" : "reveal-on-hover"
                       }`}
                     >
@@ -402,7 +402,7 @@ export default function ListView({
         activeListId=""
         playing={playing && nowPlaying?.id === open?.id}
         onTogglePlay={(v) => (nowPlaying?.id === v.id ? audio.toggleCurrent() : audio.play(v))}
-        onAddTo={(listId, v) => void lib.saveToList(v, listId)}
+        onAddTo={(listId, v) => lib.saveToList(v, listId)}
         onRemoveFromActive={() => {}}
         onDelete={() => {}}
       />

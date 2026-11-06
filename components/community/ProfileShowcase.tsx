@@ -68,7 +68,7 @@ export function Standouts({
         {mine && onEdit && (
           <button
             onClick={onEdit}
-            className="pressable text-caption uppercase tracking-label text-content-faint transition-colors hover:text-paper"
+            className="pressable label text-content-faint transition-colors hover:text-paper"
           >
             Cambiar
           </button>
@@ -122,7 +122,7 @@ export function InCommon({
 
   return (
     <section className="pb-10">
-      <h2 className="text-caption uppercase tracking-label text-content-muted">
+      <h2 className="label text-content-muted">
         {records.length === 1 ? "Un disco que tenéis los dos" : `${records.length} discos que tenéis los dos`}
       </h2>
       <ul className="rail rail-page mt-3.5 flex gap-3 pb-2">

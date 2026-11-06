@@ -64,7 +64,7 @@ export default function ConfirmButton({
       }}
       className={`pressable flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-caption font-medium transition-colors duration-fast ${
         armed
-          ? "bg-[#ff6b57]/15 text-[#ff6b57]"
+          ? "bg-danger/15 text-danger"
           : "text-content-faint hover:bg-fill hover:text-paper"
       } ${className}`}
     >

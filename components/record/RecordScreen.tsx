@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Sheet from "@/components/ui/Sheet";
 import { useDevice } from "@/hooks/useDevice";
+import { useBackToClose } from "@/hooks/useBackToClose";
 
 /**
  * La superficie sobre la que vive un disco. Cualquier disco.
@@ -34,6 +35,11 @@ export default function RecordScreen({
   children: React.ReactNode;
 }) {
   const { isPhone } = useDevice();
+  // «atrás» del sistema cierra el disco y te deja donde estabas. En
+  // escritorio la hoja ya lo hace por su cuenta (Sheet), así que aquí solo
+  // cuenta la pantalla del teléfono: dos entradas por un mismo disco
+  // obligarían a pulsar atrás dos veces.
+  useBackToClose(isPhone && open, onClose);
 
   if (!isPhone) {
     return (
@@ -157,7 +163,7 @@ export function RecordTopBar({
         <button
           onClick={onClose}
           aria-label="Cerrar"
-          className="pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
+          className="pressable hit flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
         >
           <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden>
             <path
@@ -184,9 +190,9 @@ export function RecordTopBar({
             <img src={cover} alt="" className="h-full w-full object-cover" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] text-paper">{title}</span>
+            <span className="block truncate text-sub text-paper">{title}</span>
             {artist && (
-              <span className="mono block truncate text-[12px] uppercase tracking-[0.16em] text-paper/50">
+              <span className="mono block truncate text-micro uppercase tracking-[0.16em] text-paper/50">
                 {artist}
               </span>
             )}
@@ -198,7 +204,7 @@ export function RecordTopBar({
           <button
             onClick={onMenu}
             aria-label="Más opciones"
-            className="pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
+            className="pressable hit flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink/38 text-paper backdrop-blur-xl transition-colors hover:bg-ink/60"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
               <circle cx="8" cy="3.4" r="1.25" fill="currentColor" />

@@ -10,11 +10,9 @@
  * person then concludes the catalogue is thin and stops looking, and nothing
  * in the interface ever corrects them.
  *
- * So it says three things, in this order: the search is incomplete, it is a
- * limit rather than a fault of theirs, and it is being worked on. The last one
- * is not decoration — "beta" is the difference between a product that is
- * unfinished and a product that is broken, and only one of those is worth
- * coming back to.
+ * So it says two things, in plain words: what is missing, and that waiting a
+ * few seconds fixes it. No quotas, no limits per minute, no «beta» — none of
+ * that tells the person what to do next.
  *
  * Quiet on purpose. A red alert over a search box makes people think they did
  * something wrong; this is the register of a note in a margin.
@@ -22,23 +20,29 @@
 export default function CatalogueNotice({
   degraded,
   compact = false,
+  empty = false,
+  onRetry,
 }: {
   degraded: "rate-limit" | "down" | "partial" | null;
   compact?: boolean;
+  /** no ha llegado ninguna fila: no se puede decir «menos de lo normal» */
+  empty?: boolean;
+  /** vuelve a preguntar la misma frase */
+  onRetry?: () => void;
 }) {
   if (!degraded) return null;
 
   const text =
-    degraded === "rate-limit"
-      ? "El catálogo está devolviendo menos resultados de lo normal: hemos llegado al límite de consultas por minuto. Vuelve a intentarlo en un momento."
-      : degraded === "down"
-        ? "No hemos podido consultar el catálogo. Lo que ves es lo que ya tienes en tu colección."
-        : "Faltan resultados: el catálogo ha respondido a medias.";
+    degraded === "down"
+      ? "No hemos podido consultar el catálogo. Lo que ves es lo que ya tienes en tu colección."
+      : degraded === "rate-limit" && empty
+        ? "El catálogo va lento ahora mismo. Prueba en unos segundos."
+        : "El catálogo va lento: faltan resultados. Prueba en unos segundos.";
 
   return (
     <div
       role="status"
-      className={`flex items-start gap-2.5 border border-line bg-fill-subtle/40 text-content-muted ${
+      className={`flex items-start gap-2.5 rounded-[14px] bg-fill-subtle text-content-muted ${
         compact ? "px-3 py-2.5" : "px-4 py-3"
       }`}
     >
@@ -49,12 +53,20 @@ export default function CatalogueNotice({
           <circle cx="7" cy="9.9" r="0.75" fill="currentColor" />
         </svg>
       </span>
-      <p className="min-w-0 text-sub leading-snug">
-        {text}{" "}
-        <span className="text-content-faint">
-          La búsqueda en el catálogo está en beta y seguimos trabajando en ella.
-        </span>
-      </p>
+      <div className="min-w-0">
+        <p className="text-sub leading-snug">
+          {text}
+        </p>
+        {onRetry && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="pressable hit mt-2 text-sub font-medium text-paper underline underline-offset-4"
+          >
+            Reintentar
+          </button>
+        )}
+      </div>
     </div>
   );
 }

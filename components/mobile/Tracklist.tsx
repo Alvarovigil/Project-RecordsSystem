@@ -133,13 +133,14 @@ export default function Tracklist({
         <h3 className="text-body font-medium text-paper">
           {many ? `Vinilo ${at + 1} de ${discs.length}` : "Canciones"}
           {playableCount > 0 && (
-            <span className="ml-2 text-caption font-normal text-content-faint">
+            <span className="ml-2 whitespace-nowrap text-caption font-normal text-content-faint">
               {playableCount} para escuchar
             </span>
           )}
         </h3>
         {many && (
-          <div className="flex items-center gap-1">
+          // 8px between the two: their 44px hit layers meet without overlapping
+          <div className="flex items-center gap-2">
             <Step dir="prev" disabled={at === 0} onClick={() => setAt((n) => n - 1)} />
             <Step
               dir="next"
@@ -162,7 +163,7 @@ export default function Tracklist({
           return (
             <div key={side || si} className={si > 0 ? "mt-5" : ""}>
               {side && (
-                <h4 className="flex items-baseline gap-2 px-5 pb-1.5 text-caption uppercase tracking-label text-content-faint">
+                <h4 className="flex items-baseline gap-2 px-5 pb-1.5 label text-content-faint">
                   Cara {side}
                   <span>{rows.length}</span>
                 </h4>
@@ -298,7 +299,7 @@ function Step({
       onClick={onClick}
       disabled={disabled}
       aria-label={dir === "prev" ? "Vinilo anterior" : "Vinilo siguiente"}
-      className="pressable flex h-9 w-9 items-center justify-center rounded-full text-content-secondary transition-colors hover:bg-fill hover:text-paper disabled:pointer-events-none disabled:opacity-25"
+      className="pressable hit flex h-9 w-9 items-center justify-center rounded-full text-content-secondary transition-colors hover:bg-fill hover:text-paper disabled:pointer-events-none disabled:opacity-25"
     >
       <svg width="9" height="14" viewBox="0 0 10 16" fill="none" aria-hidden>
         <path

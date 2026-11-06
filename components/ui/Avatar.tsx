@@ -58,7 +58,9 @@ export default function Avatar({
     .map((w) => w[0])
     .filter(Boolean)
     .join("")
-    .slice(0, 2)
+    // at 16 and 22px two letters at a readable size do not fit in the circle;
+    // one letter at 12px does
+    .slice(0, px < 30 ? 1 : 2)
     .toUpperCase();
 
   return (
@@ -71,7 +73,9 @@ export default function Avatar({
         // near-black ground, not as a sticker
         background: src ? undefined : `hsl(${hue} 24% 26%)`,
         color: `hsl(${hue} 45% 84%)`,
-        fontSize: Math.max(9, Math.round(px * 0.34)),
+        // never under 12px: an initial is something a person reads. In rem so
+        // it follows the browser's text size like the rest of the type.
+        fontSize: `${Math.max(12, Math.round(px * 0.4)) / 16}rem`,
         boxShadow: ring ? "0 0 0 2px var(--surface), 0 0 0 3.5px var(--accent)" : undefined,
       }}
       className={`inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-medium leading-none ${

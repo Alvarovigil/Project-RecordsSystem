@@ -43,11 +43,7 @@ export default function QrPage() {
       />
       <span aria-hidden className="grain pointer-events-none absolute inset-0" />
 
-      <SoundGate
-        title="Enséñale esto a quien tengas delante."
-        body="Escanea el código y Rackr Club se le instala en el móvil."
-        cta="Ver el código"
-      />
+      <SoundGate />
 
       {/* landing-hides: behind the door this waits, like everything else on
           the landing does */}

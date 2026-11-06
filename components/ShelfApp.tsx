@@ -22,7 +22,6 @@ import { coverFor } from "@/lib/cover";
 import { artistSlug, cleanArtist } from "@/lib/artist";
 import {
   findCollection,
-  findWishlist,
   sortedVinylIds,
   type Collection,
   type SortMode,
@@ -32,6 +31,16 @@ import Loading from "@/components/ui/Loading";
 import { useToast, ToastIcon } from "@/components/ui/Toast";
 import type { SavedList } from "@/lib/data/types";
 import { useSearchParams } from "next/navigation";
+/**
+ * The opening screen, in the first chunk rather than behind its own.
+ *
+ * It was `dynamic(..., { ssr: false })`, which meant the thing meant to cover
+ * the wait had to be downloaded during the wait — and what covered *that*
+ * was a black screen. Forty lines of markup; it ships with the page and is
+ * painted from the server's HTML.
+ */
+import BootScreen from "@/components/mobile/BootScreen";
+import { isColdEntry } from "@/lib/launch";
 
 /**
  * The 3D shelf, fetched only if it is going to be shown.
@@ -45,7 +54,6 @@ import { useSearchParams } from "next/navigation";
  * `ssr: false` because it needs a WebGL context, which the server does not have.
  */
 const VinylShelf = dynamic(() => import("@/components/VinylShelf3D"), { ssr: false });
-const BootScreen = dynamic(() => import("@/components/mobile/BootScreen"), { ssr: false });
 
 /**
  * Whether this launch has already shown its opening screen.
@@ -93,6 +101,18 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   const lib = useLibrary();
   const allVinilos = lib.releases;
   const activeCollectionId = lib.activeListId;
+  /* la biblioteca del último render: los «Deshacer» se ejecutan segundos
+     después, desde cierres que vieron otra */
+  const libRef = useRef(lib);
+  libRef.current = lib;
+  const addedBefore = useRef(new Map<string, { inLibrary: boolean; lists: string[] }>());
+  const membershipOf = (vinylId: string) => {
+    const l = libRef.current;
+    return {
+      inLibrary: l.releases.some((v) => v.id === vinylId),
+      lists: l.lists.filter((x) => l.idsOf(x.id).includes(vinylId)).map((x) => x.id),
+    };
+  };
 
   /**
    * A list you kept that somebody else made, opened here rather than sent away.
@@ -110,8 +130,18 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   const [collectionsOpen, setCollectionsOpen] = useState(false);
   const { isPhone, measured } = useDevice();
   const [hydrated, setHydrated] = useState(false);
-  /** the phone's opening screen: once per launch, never on navigation */
-  const [booted, setBooted] = useState(() => bootedThisLaunch);
+  /**
+   * The phone's opening screen: once per launch, never on navigation — and
+   * only when the launch began here. Opening the app on Explorar and then
+   * tapping Colección is moving inside a running app, not starting one.
+   */
+  const [booted, setBooted] = useState(() => {
+    // en el servidor no hay lanzamiento que apuntar: el módulo vive entre
+    // peticiones y marcarlo aquí lo dejaría marcado para todas
+    if (typeof window === "undefined") return true;
+    if (!bootedThisLaunch && !isColdEntry()) bootedThisLaunch = true;
+    return bootedThisLaunch;
+  });
   /**
    * Kept mounted through its own exit.
    *
@@ -241,8 +271,9 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
    * typefaces loaded so nothing reflows underneath, and the first covers
    * decoded so the sleeves are printed rather than blank.
    *
-   * A floor of 900ms because an opening screen that flashes reads as a
-   * stutter, and a ceiling of six seconds because a bad connection must delay
+   * A floor of 400ms because an opening screen that flashes reads as a
+   * stutter — and no more than that, because every millisecond past it is
+   * the app making somebody wait for its own entrance — and a ceiling of six seconds because a bad connection must delay
    * somebody, never trap them: past that the app appears half-built, which is
    * worse than waiting but far better than a wall.
    */
@@ -254,7 +285,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
       if (done) return;
       done = true;
       clearTimeout(cap);
-      const wait = Math.max(0, 900 - (performance.now() - started));
+      const wait = Math.max(0, 400 - (performance.now() - started));
       setTimeout(() => {
         bootedThisLaunch = true;
         setBooted(true);
@@ -431,7 +462,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
    */
   const handleCreateCollection = async (name: string, description?: string) => {
     const id = await lib.createList(description ? { title: name, description } : name);
-    toast.show(`«${name}» creada`, { media: { icon: ToastIcon.list } });
+    toast.show(`«${name}» creado`, { media: { icon: ToastIcon.list } });
     return id;
   };
 
@@ -460,27 +491,20 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
    * So the undo restores the state that actually existed before: back to the
    * wishlist if that is where it was, out of the rack if it was not.
    */
-  const handleAddVinylTo = (colId: string, vinylId: string) => {
+  const handleAddVinylTo = async (colId: string, vinylId: string) => {
     const release = allVinilos.find((v) => v.id === vinylId);
     if (!release) return;
-    const wishlist = findWishlist(resolvedCollections);
-    const wasWished = Boolean(wishlist?.vinylIds.includes(vinylId));
-
-    void lib.saveToList(release, colId);
+    // el aviso solo cuando está guardado: si falla, useLibrary ya lo ha dicho
+    if (!(await handleSaveToList(release, colId))) return;
     const name = lib.lists.find((l) => l.id === colId)?.title ?? "tu colección";
-    toast.undo(
-      `${release.title} → ${name}`,
-      () => {
-        if (wasWished && wishlist) void lib.saveToList(release, wishlist.id);
-        else void lib.removeFromList(colId, vinylId);
-      },
-      { media: { src: coverFor(release) } },
-    );
+    toast.undo(`Añadido a ${name}`, () => handleUndoAdd(vinylId, colId), {
+      media: { src: coverFor(release) },
+    });
   };
 
-  const handleRemoveVinylFromActive = (vinylId: string) => {
+  const handleRemoveVinylFromActive = async (vinylId: string) => {
     const v = allVinilos.find((x) => x.id === vinylId);
-    void lib.removeFromList(activeCollectionId, vinylId);
+    if (!(await lib.removeFromList(activeCollectionId, vinylId))) return;
     if (v) {
       toast.undo(`${v.title} fuera del rack`, () => void lib.saveToList(v, activeCollectionId), {
         media: { src: coverFor(v) },
@@ -488,14 +512,16 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
     }
   };
 
-  const handleDeleteVinylPermanently = (vinylId: string) => {
+  const handleDeleteVinylPermanently = async (vinylId: string) => {
     const v = allVinilos.find((x) => x.id === vinylId);
-    void lib.deleteRelease(vinylId);
+    // dónde estaba, para que «Deshacer» lo devuelva ahí y no solo al rack abierto
+    const before = membershipOf(vinylId);
+    if (!(await lib.deleteRelease(vinylId))) return;
     // Undo-able even though it is the destructive one: putting it back is a
     // save, and a delete you cannot take back for five seconds is a delete
     // people are afraid to use.
     if (v) {
-      toast.undo(`${v.title} fuera de tu colección`, () => void lib.saveToList(v, activeCollectionId), {
+      toast.undo(`${v.title} fuera de tu colección`, () => void lib.restoreRecord(v, before), {
         media: { src: coverFor(v) },
       });
     }
@@ -507,9 +533,10 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
     void lib.reorderList(colId, fromIdx, toIdx);
 
   const handleToggleVinyl = (colId: string, vinylId: string) => {
-    const inList = lib.idsOf(colId).includes(vinylId);
+    // lo último que se pintó, no lo que vio el cierre que llama
+    const inList = libRef.current.idsOf(colId).includes(vinylId);
     if (inList) void lib.removeFromList(colId, vinylId);
-    else handleAddVinylTo(colId, vinylId);
+    else void handleAddVinylTo(colId, vinylId);
   };
 
   /** Save a record — new to the library or already in it — into a list. */
@@ -530,7 +557,29 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
 
   const shifted = specsOpen && Boolean(open?.discogsId);
 
-  const handleSaveToList = (v: Vinyl, listId: string) => void lib.saveToList(v, listId);
+  /**
+   * Guardar un disco, apuntando antes dónde estaba.
+   *
+   * «Deshacer» tras añadir quitaba nada o volvía a añadir: los dos cierres
+   * que lo hacían leían el estado de antes del guardado (F5, QA n.º 5). Ahora
+   * cada guardado deja aquí, en una ref, dónde estaba ese disco justo antes, y
+   * `handleUndoAdd` lo devuelve exactamente ahí con el id que devolvió la
+   * operación: fuera de la biblioteca si era nuevo, de vuelta a deseos si
+   * venía de deseos, fuera del rack si no.
+   */
+  const handleSaveToList = (v: Vinyl, listId: string) => {
+    addedBefore.current.set(`${listId}:${v.id}`, membershipOf(v.id));
+    return lib.saveToList(v, listId);
+  };
+
+  const handleUndoAdd = (vinylId: string, listId: string) => {
+    const key = `${listId}:${vinylId}`;
+    const before = addedBefore.current.get(key);
+    addedBefore.current.delete(key);
+    const v = libRef.current.releases.find((x) => x.id === vinylId);
+    if (!before || !v) return void lib.removeFromList(listId, vinylId);
+    void lib.restoreRecord(v, before);
+  };
 
   /**
    * "Ya lo tengo": the wishlist's exit.
@@ -725,10 +774,14 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
    * `useDevice` answers "desktop" on the server and corrects itself on mount,
    * which is harmless for styling and expensive here: rendering the desktop
    * branch for one frame would fetch the desktop chunk on a phone, and then
-   * the phone chunk immediately after. One frame of the app's own ground
-   * colour costs nothing and saves the whole wrong tree.
+   * the phone chunk immediately after.
+   *
+   * What fills that frame is the opening screen, not a bare `main`: the bare
+   * one was black, and on a slow phone the "one frame" lasted a second. It is
+   * the same screen the server painted, wrapped so that it is the very element
+   * the phone branch keeps on screen — the mark does not restart its turn.
    */
-  if (!measured) return <main className="min-h-screen-d bg-ink" />;
+  if (!measured) return <><BootScreen /></>;
 
   if (isPhone) {
     return (
@@ -749,7 +802,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           isPlaying={playing}
           onOpen={setOpen}
           onActivate={handleActivateCollection}
-          onSearch={() => openSearch()}
+          onSearch={(scan) => openSearch(scan)}
           onPlay={(v) => (nowPlaying?.id === v.id ? audio.toggleCurrent() : playPreview(v))}
           onCreateList={handleCreateCollection}
           onRenameList={handleRenameCollection}
@@ -806,10 +859,10 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                está en este entorno, por ejemplo — la biblioteca se relee y la
                portada vuelve a la de antes. Decirlo es mejor que dejar que
                parpadee y que quien lo hizo se quede sin saber qué ha pasado. */
-            lib.setCover(v, cover).then(
-              () => toast.show("Portada cambiada", { media: { src: cover } }),
-              () => toast.show("No se ha podido guardar la portada.", { tone: "error" }),
-            );
+            void lib.setCover(v, cover).then((ok) => {
+              // el fallo ya lo dice useLibrary, con «Reintentar»
+              if (ok) toast.show("Portada cambiada", { media: { src: cover } });
+            });
           }}
           playLoading={loadingPreview}
           anyPlaying={playing}
@@ -834,7 +887,8 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           onJumpTo={openRecord}
           onCreateList={handleCreateCollection}
           onSaveToList={handleSaveToList}
-          onRemoveFromList={(vinylId, listId) => handleToggleVinyl(listId, vinylId)}
+          onRemoveFromList={(vinylId, listId) => void lib.removeFromList(listId, vinylId)}
+          onUndoAdd={handleUndoAdd}
           onDeleteVinyl={handleDeleteVinylPermanently}
         />
       </>
@@ -861,7 +915,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             system readout in it — "Sistema · v0.1", "Cargando ficheros", a
             progress bar measuring nothing. It was set dressing pretending to
             be information, and it was the first thing anybody saw. */}
-        <Loading size={64} label="Cargando tu colección" />
+        <Loading size={64} label="Cargando la colección" />
       </div>
 
       {/* everything else fades IN when hydrated, and fades briefly on
@@ -902,6 +956,8 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           onOpen={handleVinylClick}
           onActiveChange={setActive}
           onCoverHalfWidth={handleCoverHalfWidth}
+          // no 3D on this machine: the same records, in the grid
+          onUnavailable={() => setView("grid")}
         />
       )}
 
@@ -1534,7 +1590,8 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         }}
         onCreateList={handleCreateCollection}
         onSaveToList={handleSaveToList}
-        onRemoveFromList={(vinylId, listId) => handleToggleVinyl(listId, vinylId)}
+        onRemoveFromList={(vinylId, listId) => void lib.removeFromList(listId, vinylId)}
+        onUndoAdd={handleUndoAdd}
         onDeleteVinyl={handleDeleteVinylPermanently}
       />
 

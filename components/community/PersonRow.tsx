@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import LayerLink from "@/components/ui/LayerLink";
 import Avatar from "@/components/ui/Avatar";
 import FollowButton, { FollowsYouBadge } from "./FollowButton";
 import Verified from "@/components/ui/Verified";
@@ -37,7 +37,7 @@ export default function PersonRow({
     <div className="relative flex items-center gap-3">
       {/* the group is the link, not the row: the follow button sits in the same
           row and hovering it should not light up a face it does not lead to */}
-      <Link
+      <LayerLink
         href={`/u/${profile.username}`}
         className="group pressable flex min-w-0 flex-1 items-center gap-3 py-2.5"
       >
@@ -70,7 +70,7 @@ export default function PersonRow({
             <FollowsYouBadge profileId={profile.id} />
           </span>
         </span>
-      </Link>
+      </LayerLink>
       {action && (
         <div className="relative z-10 shrink-0">
           <FollowButton icon profileId={profile.id} displayName={profile.displayName} size="sm" />

@@ -77,7 +77,7 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={() => setEditing(true)}
-                className="pressable shrink-0 rounded-full bg-fill px-4 py-2 text-sub text-paper transition-colors hover:bg-fill-strong"
+                className="pressable hit shrink-0 rounded-full bg-fill px-4 py-2 text-sub text-paper transition-colors hover:bg-fill-strong"
               >
                 Editar
               </button>
@@ -144,7 +144,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
     <section className="mt-9">
       {/* un escalón por debajo del subtítulo de cada fila: así la etiqueta del
           grupo se lee como lo que encabeza y no como otra fila más */}
-      <h2 className="text-caption uppercase tracking-label text-content-faint">{title}</h2>
+      <h2 className="label text-content-faint">{title}</h2>
       <ul className="mt-3 overflow-hidden rounded-[14px] bg-fill-subtle">{children}</ul>
     </section>
   );
@@ -176,7 +176,7 @@ function Row({
   const inner = (
     <>
       <span className="min-w-0 flex-1">
-        <span className={`block truncate text-body ${danger ? "text-[#ff6b57]" : "text-content"}`}>
+        <span className={`block truncate text-body ${danger ? "text-danger" : "text-content"}`}>
           {label}
         </span>
         {note && <span className="block truncate text-caption text-content-muted">{note}</span>}

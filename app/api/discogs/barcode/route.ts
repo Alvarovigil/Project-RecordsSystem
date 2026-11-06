@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { DISCOGS_UA } from "@/lib/discogs";
+import { catalogueFetch, rateLimitedResponse } from "@/lib/discogs-budget";
 
 /**
  * Read at request time, never at module scope.
@@ -26,18 +26,27 @@ type DiscogsResult = {
   community?: { want?: number; have?: number };
 };
 
-async function byBarcode(code: string) {
+/**
+ * Una forma del código, preguntada al catálogo.
+ *
+ * Antes un 429 devolvía una lista vacía, y la tarjeta del escáner decía «no lo
+ * encontramos» de un disco que sí estaba: el límite se disfrazaba de catálogo
+ * incompleto. Ahora el límite vuelve como lo que es.
+ */
+type Lookup =
+  | { kind: "ok"; rows: DiscogsResult[] }
+  | { kind: "rate_limited"; retryAfter: number }
+  | { kind: "failed" };
+
+async function byBarcode(code: string, signal?: AbortSignal): Promise<Lookup> {
   const url = new URL("https://api.discogs.com/database/search");
   url.searchParams.set("barcode", code);
   url.searchParams.set("type", "release");
   url.searchParams.set("per_page", "50");
-  const r = await fetch(url, {
-    headers: { "User-Agent": DISCOGS_UA, Authorization: `Discogs token=${token()}` },
-    next: { revalidate: 3600 },
-  });
-  if (!r.ok) return [] as DiscogsResult[];
-  const data = await r.json();
-  return (data.results ?? []) as DiscogsResult[];
+  const r = await catalogueFetch(url, { signal, revalidate: 3600 });
+  if (r.kind === "rate_limited") return r;
+  if (r.kind === "failed") return { kind: "failed" };
+  return { kind: "ok", rows: ((r.data as { results?: DiscogsResult[] })?.results ?? []) };
 }
 
 /**
@@ -60,7 +69,32 @@ export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code")?.trim();
   if (!code) return Response.json({ error: "code required" }, { status: 400 });
 
-  const found = (await Promise.all(variants(code).map(byBarcode))).flat();
+  /**
+   * Las formas del código, de una en una y parando en cuanto una acierta.
+   *
+   * Casi siempre la primera — los dígitos tal cual — es la buena, y lanzar las
+   * tres a la vez gastaba tres consultas del minuto por cada disco escaneado.
+   */
+  const found: DiscogsResult[] = [];
+  let limited: number | null = null;
+  let anyAnswered = false;
+  for (const v of variants(code)) {
+    if (req.signal.aborted) return new Response(null, { status: 499 });
+    const r = await byBarcode(v, req.signal);
+    if (r.kind === "rate_limited") {
+      limited = r.retryAfter;
+      break;
+    }
+    if (r.kind === "failed") continue;
+    anyAnswered = true;
+    found.push(...r.rows);
+    if (r.rows.length > 0) break;
+  }
+  // Sin una sola fila y con el límite de por medio, no se sabe si está: se dice
+  // que hay que esperar, nunca «no encontrado».
+  if (found.length === 0 && limited !== null) return rateLimitedResponse(limited, { code });
+  if (found.length === 0 && !anyAnswered)
+    return Response.json({ error: "unavailable", code }, { status: 503 });
   const byId = new Map(found.map((r) => [r.id, r]));
 
   const isVinyl = (r: DiscogsResult) =>

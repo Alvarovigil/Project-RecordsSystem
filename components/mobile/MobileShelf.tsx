@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import ShareSheet from "@/components/ShareSheet";
 import { SITE_URL } from "@/lib/site";
@@ -9,6 +9,9 @@ import MarqueeText from "@/components/MarqueeText";
 import ListEditSheet from "./ListEditSheet";
 import EmptyState from "@/components/ui/EmptyState";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
+import Loading from "@/components/ui/Loading";
+import { useToast } from "@/components/ui/Toast";
+import { useCanScan } from "@/components/BarcodeScanner";
 import { Cover } from "@/components/ui/Avatar";
 import dynamic from "next/dynamic";
 
@@ -20,7 +23,12 @@ import dynamic from "next/dynamic";
  * IS the product, and a flat imitation of it in CSS was a different, worse
  * thing wearing its name.
  */
-const VinylShelf3D = dynamic(() => import("@/components/VinylShelf3D"), { ssr: false });
+const VinylShelf3D = dynamic(() => import("@/components/VinylShelf3D"), {
+  ssr: false,
+  // the engine is the heaviest download in the app; while it travels, the
+  // ground says something is coming instead of being a black screen
+  loading: () => <ShelfWait />,
+});
 import RackRow, { NewRackRow } from "@/components/community/RackRow";
 import NewRackSheet from "./NewRackSheet";
 import RackInfoSheet from "./RackInfoSheet";
@@ -28,13 +36,16 @@ import { rackOfCollection, rackOfList } from "@/lib/rack";
 import { coverFor } from "@/lib/cover";
 import { useImagesReady } from "@/hooks/useImagesReady";
 import { listTitleFor } from "@/lib/list-title";
-import { findWishlist } from "@/lib/collections";
+import { findCollection, findWishlist } from "@/lib/collections";
 import LightLab, { DEFAULT_RIG, useLightLab } from "./LightLab";
 import { useRepository } from "@/hooks/useRepository";
 import type { Collection } from "@/lib/collections";
 import type { ListVisibility, SavedList } from "@/lib/data/types";
 import type { SortMode } from "@/lib/collections";
 import type { Vinyl } from "@/lib/types";
+
+/** el aviso de «sin 3D» ya se dio en este dispositivo */
+const NO_3D_TOLD = "rackr:no-3d-told";
 
 /**
  * The crate, on a phone.
@@ -100,7 +111,8 @@ export default function MobileShelf({
   isPlaying: boolean;
   onOpen: (v: Vinyl) => void;
   onActivate: (listId: string) => void;
-  onSearch: () => void;
+  /** open the search sheet; `true` goes straight to the camera */
+  onSearch: (scan?: boolean) => void;
   onPlay: (v: Vinyl) => void;
   onCreateList: (name: string, description?: string) => Promise<string>;
   onRenameList: (id: string, name: string) => void;
@@ -140,6 +152,33 @@ export default function MobileShelf({
    */
   const [view, setView] = useState<"shelf" | "grid">("shelf");
   const [switching, setSwitching] = useState(false);
+
+  /**
+   * Where the shelf goes when this phone cannot draw it.
+   *
+   * No WebGL, or a context the system took back: the records are still here,
+   * so they are shown the other way there already is — and the person is
+   * told why the room changed, in a sentence about them rather than about
+   * graphics.
+   */
+  const toast = useToast();
+  /** este teléfono no puede pintar el estante: «Ver el estante» no llevaría a nada */
+  const [no3d, setNo3d] = useState(false);
+  const toGrid = useCallback(() => {
+    setView("grid");
+    setNo3d(true);
+    // una vez por dispositivo: el aviso explica un cambio, no se repite en cada arranque
+    let told = false;
+    try {
+      told = localStorage.getItem(NO_3D_TOLD) === "1";
+      if (!told) localStorage.setItem(NO_3D_TOLD, "1");
+    } catch {
+      // sin almacenamiento: mejor avisar de más que no avisar
+    }
+    if (!told) toast.show("La estantería en 3D no ha cargado. Te la enseñamos en cuadrícula.");
+  }, [toast]);
+  const canScan = useCanScan();
+  const isCollection = findCollection(collections)?.id === activeListId;
   /**
    * Same order as the desktop panel: the two you always have, a rule, then the
    * ones you made. Furniture first, so it is found without reading.
@@ -220,6 +259,7 @@ export default function MobileShelf({
           <RoundButton
             label={view === "shelf" ? "Ver en cuadrícula" : "Ver el estante"}
             onClick={() => setView(view === "shelf" ? "grid" : "shelf")}
+            disabled={no3d && view === "grid"}
           >
             {view === "shelf" ? <ShelfIcon /> : <GridIcon />}
           </RoundButton>
@@ -270,18 +310,71 @@ export default function MobileShelf({
             </svg>
           </RoundButton>
 
-          <RoundButton label="Buscar" onClick={onSearch}>
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <circle cx="7" cy="7" r="4.8" stroke="currentColor" strokeWidth="1.4" />
-              <path d="M10.6 10.6 L14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          {/* Añadir vive aquí, y la lupa sola decía «Buscar»: a los setenta
+              nadie asocia una lupa con meter un disco. La palabra «Añadir» no
+              cabe sin quitarle sitio al nombre del rack (a 360–390 lo cortaría),
+              así que el botón lo dice para quien escucha la página y el dibujo
+              lleva un «+». Abre la misma hoja de siempre.
+              El «+» va en una insignia rellena (paper, signo en ink) en la
+              esquina del mismo botón: a trazo fino, pegado a la lupa, se leía
+              como un detalle del icono y no como una acción. */}
+          <RoundButton label="Añadir o buscar un disco" onClick={() => onSearch()}>
+            <svg width="17" height="17" viewBox="0 0 18 18" fill="none" aria-hidden>
+              <circle cx="8" cy="8" r="5" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M11.8 11.8 L15.5 15.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
+            <span
+              aria-hidden
+              className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-paper text-ink"
+            >
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                <path d="M4 1v6M1 4h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </span>
           </RoundButton>
         </div>
       </header>
 
-      {view === "shelf" ? (
+      {/* Empty is a place with a way out, in both views — never a black
+          room with a header over it. While the library has not answered
+          yet it is not empty, it is loading, and says nothing false. */}
+      {vinilos.length === 0 && !loading ? (
+        <div className="px-5 pb-chrome" style={{ paddingTop: "calc(var(--safe-top) + 130px)" }}>
+          <EmptyState
+            title={isCollection ? "Tu colección está vacía" : "Este rack está vacío"}
+            body={
+              readOnly
+                ? "Quien lo hizo todavía no ha añadido ningún disco."
+                : isCollection
+                  ? "Busca un disco por título o artista, o escanea el código de barras de la funda."
+                  : "Busca un disco o escanea su código, y añádelo a este rack."
+            }
+            action={
+              readOnly
+                ? { label: "Ver tus racks", onClick: () => setSwitching(true) }
+                : { label: "Buscar un disco", onClick: () => onSearch() }
+            }
+            secondary={
+              canScan && !readOnly
+                ? { label: "Escanear el código", onClick: () => onSearch(true) }
+                : undefined
+            }
+          />
+        </div>
+      ) : view === "shelf" ? (
         <div className="fixed inset-0">
-          <VinylShelf3D vertical rig={lab ? rig : undefined} vinilos={vinilos} onOpen={onOpen} />
+          {vinilos.length === 0 ? (
+            <ShelfWait />
+          ) : (
+            <VinylShelf3D
+              vertical
+              rig={lab ? rig : undefined}
+              vinilos={vinilos}
+              onOpen={onOpen}
+              onUnavailable={toGrid}
+              fallback={<ShelfWait />}
+            />
+          )}
           {/* The records go into the dark rather than off an edge. It also
               gives the controls up there something to sit on: white type over
               a bright sleeve is unreadable exactly when a bright sleeve
@@ -373,7 +466,7 @@ export default function MobileShelf({
             {/* Other people's lists sit apart and keep their author's name.
                 Mixed into your own with a badge, you lose track of which
                 shelves you actually built. */}
-            <p className="border-t border-line px-5 pb-2 pt-4 text-caption uppercase tracking-label text-content-muted">
+            <p className="border-t border-line px-5 pb-2 pt-4 label text-content-muted">
               Guardadas de otra gente
             </p>
             {/* The same card as your own lists, and it opens the same way:
@@ -610,7 +703,7 @@ function CoverGrid({
                       e.preventDefault();
                       onAcquire(v);
                     }}
-                    className="pressable absolute bottom-1.5 right-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-ink/72 text-paper/90 backdrop-blur-xl"
+                    className="pressable hit absolute bottom-1.5 right-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-ink/72 text-paper/90 backdrop-blur-xl"
                   >
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
                       <path d="M2.5 7.4 L5.6 10.5 L11.5 3.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -634,19 +727,31 @@ function CoverGrid({
   );
 }
 
+/** The ground of the shelf with the mark turning on it: never a black room. */
+function ShelfWait() {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-ink">
+      <Loading size={44} label="Cargando la estantería" />
+    </div>
+  );
+}
+
 function RoundButton({
   label,
   onClick,
   children,
+  disabled = false,
 }: {
   label: string;
   onClick: () => void;
   children: React.ReactNode;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       aria-label={label}
+      disabled={disabled}
       /**
        * Darker glass, and taller.
        *
@@ -657,7 +762,7 @@ function RoundButton({
        * thumb aims at without looking, where 44 is the floor you are allowed
        * to hit.
        */
-      className="pressable flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink/72 text-paper/90 backdrop-blur-xl"
+      className="pressable relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink/72 text-paper/90 backdrop-blur-xl disabled:opacity-40"
     >
       {children}
     </button>

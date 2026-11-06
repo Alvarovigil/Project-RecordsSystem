@@ -23,12 +23,12 @@ export default function DemoNotice() {
 
   return (
     <div className="pointer-events-auto absolute left-1/2 top-[86px] z-30 flex -translate-x-1/2 items-center gap-4 border border-line-overlay bg-surface-overlay/85 px-4 py-2.5 shadow-popover backdrop-blur-sm">
-      <span className="text-[12px] text-paper/60">
+      <span className="text-caption text-paper/60">
         Colección de ejemplo. Toca, escucha y curiosea: nada se guarda.
       </span>
       <button
         onClick={signInWithGoogle}
-        className="mono text-[12px] uppercase tracking-[0.18em] text-paper underline-offset-4 transition hover:underline"
+        className="mono text-micro uppercase tracking-[0.18em] text-paper underline-offset-4 transition hover:underline"
       >
         Crear la mía
       </button>

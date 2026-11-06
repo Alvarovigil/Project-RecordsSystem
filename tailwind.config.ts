@@ -24,6 +24,10 @@ export default {
         ink: "#0a0a0a",
         paper: "#f5f3ee",
         accent: "var(--accent)",
+        danger: {
+          DEFAULT: "rgb(var(--danger-rgb) / <alpha-value>)",
+          surface: "rgb(var(--danger-surface-rgb) / <alpha-value>)",
+        },
         surface: {
           DEFAULT: "var(--surface)",
           raised: "var(--surface-raised)",
@@ -60,6 +64,7 @@ export default {
         md: "var(--r-md)",
         lg: "var(--r-lg)",
         sheet: "var(--r-sheet)",
+        capsule: "var(--r-capsule)",
         full: "var(--r-full)",
       },
       fontSize: {
@@ -70,6 +75,7 @@ export default {
         sub: ["var(--t-sub)", { lineHeight: "1.4" }],
         caption: ["var(--t-caption)", { lineHeight: "1.35" }],
         micro: ["var(--t-micro)", { lineHeight: "1.3" }],
+        tab: ["var(--t-tab)", { lineHeight: "1.3" }],
       },
       letterSpacing: {
         label: "var(--track-label)",

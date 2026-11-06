@@ -109,12 +109,12 @@ export default function ProfileCharts({
             <p className="text-micro uppercase tracking-label text-content-faint">
               Artistas destacados
             </p>
-            <ul className="mt-3 space-y-1">
+            <ul className="mt-3">
               {artists.map((a) => (
                 <li key={a.name}>
                   <Link
                     href={`/artista/${artistSlug(a.name)}`}
-                    className="pressable -mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-fill"
+                    className="pressable -mx-2 flex min-h-tap items-center justify-between gap-3 rounded-md px-2 transition-colors hover:bg-fill"
                   >
                     <span className="truncate text-sub text-paper">{a.name}</span>
                     <span

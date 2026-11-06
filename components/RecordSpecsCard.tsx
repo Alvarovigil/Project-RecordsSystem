@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Card from "@/components/ui/Card";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import type { RecordSpecs } from "@/lib/types";
 
 /**
@@ -59,7 +60,7 @@ export default function RecordSpecsCard({
       >
         <span className="text-body text-paper">Ficha técnica</span>
         <span className="flex items-center gap-2">
-          <span className="text-caption uppercase tracking-label text-content-faint">
+          <span className="label text-content-faint">
             {open ? "Cerrar" : "Ver"}
           </span>
           <svg
@@ -185,7 +186,20 @@ export function RecordSpecsContent({
         </Block>
       )}
 
-      {specs && <Specs specs={specs} />}
+      {/* A malformed answer breaks this card, not the record around it: the
+          sheet, the shelf and the tab bar used to go with it. */}
+      {specs && (
+        <ErrorBoundary
+          key={discogsId ?? undefined}
+          fallback={
+            <Block>
+              <Note>No hemos podido leer la ficha de este disco.</Note>
+            </Block>
+          }
+        >
+          <Specs specs={specs} />
+        </ErrorBoundary>
+      )}
     </>
   );
 }
@@ -261,7 +275,7 @@ function Skeleton() {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-5 border-b border-line py-3.5 last:border-b-0">
-      <dt className="shrink-0 text-caption uppercase tracking-label text-content-faint">{label}</dt>
+      <dt className="shrink-0 label text-content-faint">{label}</dt>
       <dd className="min-w-0 truncate text-right text-body leading-snug text-paper">{value}</dd>
     </div>
   );
@@ -290,14 +304,16 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
  * it is a front end for a catalogue.
  */
 function Specs({ specs: s }: { specs: RecordSpecs }) {
-  const formats = s.formats.join(", ").split(", ").filter(Boolean);
+  // the answer comes from outside: a field that is missing is a line that is
+  // not printed, never a crash
+  const formats = (Array.isArray(s.formats) ? s.formats : []).join(", ").split(", ").filter(Boolean);
   const price =
-    s.lowestPrice === null
+    typeof s.lowestPrice !== "number"
       ? null
       : s.forSale
         ? `${s.forSale} a la venta, desde ${Math.round(s.lowestPrice)} €`
         : `Desde ${Math.round(s.lowestPrice)} €`;
-  const num = (n: number | null) => (n === null ? null : n.toLocaleString("es-ES"));
+  const num = (n: number | null) => (typeof n === "number" ? n.toLocaleString("es-ES") : null);
 
   return (
     <Card>
@@ -310,8 +326,8 @@ function Specs({ specs: s }: { specs: RecordSpecs }) {
             identifies one pressing out of forty, which is what you read out to
             a shop before paying original money for a repress. */}
         {s.catno && <Row label="Referencia" value={<span className="mono">{s.catno}</span>} />}
-        {s.have !== null && <Row label="Lo tienen" value={num(s.have)} />}
-        {s.want !== null && <Row label="Lo quieren" value={num(s.want)} />}
+        {num(s.have) && <Row label="Lo tienen" value={num(s.have)} />}
+        {num(s.want) && <Row label="Lo quieren" value={num(s.want)} />}
         {price && <Row label="Se vende" value={price} />}
       </dl>
     </Card>

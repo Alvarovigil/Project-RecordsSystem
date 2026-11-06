@@ -111,7 +111,7 @@ export default function CollaboratorsSheet({
       >
         {isOwner && (
           <form onSubmit={invite} className="border-b border-line px-5 py-4">
-            <label htmlFor="collab-handle" className="text-caption uppercase tracking-label text-content-muted">
+            <label htmlFor="collab-handle" className="label text-content-muted">
               Invitar por nombre de usuario
             </label>
             <div className="mt-2 flex gap-2">
@@ -139,7 +139,7 @@ export default function CollaboratorsSheet({
             </div>
             {/* the reason, in words, at the place where it failed */}
             {error && (
-              <p role="alert" className="mt-2 text-sub text-[#ff6b57]">
+              <p role="alert" className="mt-2 text-sub text-danger">
                 {error}
               </p>
             )}
@@ -171,7 +171,7 @@ export default function CollaboratorsSheet({
               {isOwner && c.role !== "owner" && (
                 <button
                   onClick={() => setRemoving(c)}
-                  className="pressable shrink-0 px-2 py-2 text-sub text-content-muted transition-colors hover:text-[#ff6b57]"
+                  className="pressable shrink-0 px-2 py-2 text-sub text-content-muted transition-colors hover:text-danger"
                 >
                   Quitar
                 </button>

@@ -103,7 +103,7 @@ export default function PickThreeSheet({
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t border-line px-5 pb-2.5 pt-3.5">
-          <h3 className="text-caption uppercase tracking-label text-content-muted">
+          <h3 className="label text-content-muted">
             {chosen.length < 3 ? `Elige ${3 - chosen.length} más` : "Listo"}
           </h3>
           <input

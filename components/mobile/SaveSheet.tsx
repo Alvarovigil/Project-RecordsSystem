@@ -191,7 +191,7 @@ export default function SaveSheet({
 
 function Heading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="px-4 pb-2 pt-4 text-caption uppercase tracking-label text-content-muted">
+    <h3 className="px-4 pb-2 pt-4 label text-content-muted">
       {children}
     </h3>
   );

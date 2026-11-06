@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import LayerLink from "@/components/ui/LayerLink";
 
 /**
  * La cabecera de un disco. La misma para todos los discos.
@@ -108,13 +108,13 @@ export function RecordHero({
             /* Sin flecha al lado: el subrayado al pulsar ya dice que lleva a
                algún sitio, y una flecha tras un nombre centrado desplaza toda
                la línea por su propio ancho. */
-            <Link
+            <LayerLink
               href={artistHref}
-              onClick={onNavigate}
-              className="pressable mt-1.5 inline-block text-body text-content-secondary underline-offset-4 transition hover:text-paper hover:underline"
+              onNavigate={onNavigate}
+              className="pressable hit mt-1.5 inline-block text-body text-content-secondary underline-offset-4 transition hover:text-paper hover:underline"
             >
               {artist}
-            </Link>
+            </LayerLink>
           ) : (
             <p className="mt-1.5 text-body text-content-secondary">{artist}</p>
           ))}

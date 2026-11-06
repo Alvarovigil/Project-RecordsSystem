@@ -168,7 +168,7 @@ export default function ActivityView() {
                   no landmarks is one nobody can place themselves in: without
                   this, "hace 2 h" and "hace 3 d" sit in the same undifferen-
                   tiated column and the screen has no shape. */}
-              <h2 className="sticky top-0 z-10 bg-surface/90 px-3 py-2 text-caption uppercase tracking-label text-content-faint backdrop-blur-sm">
+              <h2 className="sticky top-0 z-10 bg-surface/90 px-3 py-2 label text-content-faint backdrop-blur-sm">
                 {day}
               </h2>
               <ul className="[&>li]:border-b [&>li]:border-line">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 
 type Props = {
   children: string;
@@ -19,10 +20,20 @@ export default function MarqueeText({ children, className, speed = 60 }: Props) 
   const innerRef = useRef<HTMLSpanElement>(null);
   const [overflows, setOverflows] = useState(false);
   const [duration, setDuration] = useState(0);
+  /**
+   * With «reduce motion» on, text never moves on its own: a long name is cut
+   * with an ellipsis and stays put. For someone with vertigo a title sliding
+   * past is the thing that makes the screen hard to look at.
+   */
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     const outer = outerRef.current;
     if (!outer) return;
+    if (reduce) {
+      setOverflows(false);
+      return;
+    }
     /**
      * Ask the container, not the text.
      *
@@ -71,7 +82,7 @@ export default function MarqueeText({ children, className, speed = 60 }: Props) 
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [children, speed]);
+  }, [children, speed, reduce]);
 
   return (
     <div
@@ -94,7 +105,7 @@ export default function MarqueeText({ children, className, speed = 60 }: Props) 
           <span className="pr-10" aria-hidden>{children}</span>
         </div>
       ) : (
-        <span ref={innerRef} className="block whitespace-nowrap">{children}</span>
+        <span ref={innerRef} className={`block whitespace-nowrap${reduce ? " truncate" : ""}`}>{children}</span>
       )}
     </div>
   );

@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import type { Vinyl } from "@/lib/types";
-import { DEFAULT_ID, type Collection } from "@/lib/collections";
+import { DEFAULT_ID, type Collection, RACK_NAME_MAX } from "@/lib/collections";
 import Sheet from "./ui/Sheet";
 import CatalogueSheet from "./CatalogueSheet";
 import { useToast } from "./ui/Toast";
-import { useEntryGate } from "@/hooks/useSession";
+import { useEntryGate, useWriteBlocked } from "@/hooks/useSession";
+import { useBackToClose } from "@/hooks/useBackToClose";
+import { useFullLayer } from "@/hooks/useFullLayer";
 
 type Match = {
   id: number;
@@ -29,8 +31,12 @@ type Match = {
 type Scan = {
   key: string;
   code: string;
-  /** looking → asking Discogs · ready → staged · known → already on a shelf */
-  status: "looking" | "ready" | "known" | "notfound" | "error";
+  /**
+   * looking → asking the catalogue · ready → staged · known → already on a
+   * shelf · busy → the catalogue asked us to wait (429) · unavailable → it
+   * did not answer (503). Neither of the last two is «no encontrado».
+   */
+  status: "looking" | "ready" | "known" | "notfound" | "error" | "busy" | "unavailable";
   /** every edition the code could be; `pick` is the one the tray shows */
   results: Match[];
   pick: number;
@@ -46,9 +52,10 @@ type Props = {
   onTargetChange: (id: string) => void;
   onCreateList: (name: string) => Promise<string>;
   allVinilos: Vinyl[];
-  onSaveToList: (v: Vinyl, listId: string) => void;
-  onRemoveFromList: (vinylId: string, listId: string) => void;
-  onDeleteVinyl: (vinylId: string) => void;
+  /** resuelve a si se ha guardado de verdad, cuando quien lo da lo sabe */
+  onSaveToList: (v: Vinyl, listId: string) => Promise<boolean> | void;
+  /** «Deshacer» de un añadido: deja el disco donde estaba antes, sin alternar */
+  onUndoAdd: (vinylId: string, listId: string) => void;
   /** hand an unreadable code back to the text search, so the trail never ends */
   onSearchManually: (query: string) => void;
   /**
@@ -136,13 +143,44 @@ export default function BarcodeScanner({
   onCreateList,
   allVinilos,
   onSaveToList,
-  onRemoveFromList,
-  onDeleteVinyl,
+  onUndoAdd,
   onSearchManually,
   lockTarget = false,
 }: Props) {
   const toast = useToast();
   const gate = useEntryGate();
+  /* Sin sesión no se pide la cámara: lo escaneado no se podría guardar en
+     ningún sitio, y se perdía todo al llegar al «Añadir N». Se va a entrar
+     antes de abrir nada; mientras se sabe si hay sesión, la cámara espera. */
+  const blocked = useWriteBlocked();
+  // «atrás» del sistema cierra la cámara, no la pantalla de debajo
+  useBackToClose(open, onClose);
+  // a pantalla completa: el aviso no puede caer sobre «Teclea el código»
+  useFullLayer(open);
+  /* La bandeja y los mandos ocupan el fondo: el aviso va encima de ellos, no
+     sobre «Añadir N a …» (un error con «Reintentar» tapaba justo el botón que
+     reintenta). Se publica lo que miden en --layer-bottom-inset. */
+  const trayRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const tray = trayRef.current;
+    if (!open || !tray) return;
+    const root = document.documentElement;
+    const measure = () =>
+      root.style.setProperty(
+        "--layer-bottom-inset",
+        `${Math.max(0, window.innerHeight - tray.getBoundingClientRect().top)}px`,
+      );
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(tray);
+    if (tray.nextElementSibling) ro.observe(tray.nextElementSibling);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+      root.style.removeProperty("--layer-bottom-inset");
+    };
+  }, [open]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const stopFns = useRef<Array<() => void>>([]);
@@ -186,6 +224,37 @@ export default function BarcodeScanner({
     [],
   );
 
+  /** preguntar al catálogo por un código, y dejar la respuesta en su tarjeta */
+  const lookup = useCallback(
+    async (key: string, code: string) => {
+      patch(key, { status: "looking" });
+      try {
+        const r = await fetch(`/api/discogs/barcode?code=${encodeURIComponent(code)}`);
+        const data = await r.json().catch(() => ({}));
+        // el límite del catálogo y su caída no son «no encontrado» (F5)
+        if (r.status === 429 || data?.error === "rate_limited") return patch(key, { status: "busy" });
+        if (r.status === 503 || data?.error === "unavailable")
+          return patch(key, { status: "unavailable" });
+        if (!r.ok) return patch(key, { status: "error" });
+        const results: Match[] = data.results ?? [];
+        if (results.length === 0) return patch(key, { status: "notfound" });
+
+        // Already on a shelf of yours: say so instead of quietly queueing a
+        // second copy — the usual reason you are scanning is to find out.
+        const known = vinilosRef.current.find((v) => v.discogsId === results[0].id);
+        const holder =
+          known && collectionsRef.current.find((c) => c.vinylIds.includes(known.id));
+        if (holder) return patch(key, { status: "known", results, knownIn: holder.name });
+
+        patch(key, { status: "ready", results });
+      } catch {
+        // sin red: lo mismo que un catálogo que no contesta, y se reintenta igual
+        patch(key, { status: "unavailable" });
+      }
+    },
+    [patch],
+  );
+
   const handleCode = useCallback(
     async (raw: string) => {
       const code = raw.replace(/\s/g, "");
@@ -202,31 +271,21 @@ export default function BarcodeScanner({
 
       const key = `${code}-${Math.round(now)}`;
       setScans((s) => [{ key, code, status: "looking", results: [], pick: 0 }, ...s]);
-
-      try {
-        const r = await fetch(`/api/discogs/barcode?code=${encodeURIComponent(code)}`);
-        const data = await r.json();
-        const results: Match[] = data.results ?? [];
-        if (results.length === 0) return patch(key, { status: "notfound" });
-
-        // Already on a shelf of yours: say so instead of quietly queueing a
-        // second copy — the usual reason you are scanning is to find out.
-        const known = vinilosRef.current.find((v) => v.discogsId === results[0].id);
-        const holder =
-          known && collectionsRef.current.find((c) => c.vinylIds.includes(known.id));
-        if (holder) return patch(key, { status: "known", results, knownIn: holder.name });
-
-        patch(key, { status: "ready", results });
-      } catch {
-        patch(key, { status: "error" });
-      }
+      await lookup(key, code);
     },
-    [patch],
+    [lookup],
   );
+
+  /* Sin sesión, a entrar en cuanto se sepa. `gate` no se mueve mientras la
+     sesión carga, y cambia cuando termina: por eso está en las dependencias.
+     Al ir a /entrar la pantalla se desmonta, y la cámara no llega a pedirse. */
+  useEffect(() => {
+    if (open && blocked) gate();
+  }, [open, blocked, gate]);
 
   // camera + decoder
   useEffect(() => {
-    if (!open) return;
+    if (!open || blocked) return;
     let dead = false;
     setError(null);
 
@@ -292,7 +351,7 @@ export default function BarcodeScanner({
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     };
-  }, [open, handleCode]);
+  }, [open, blocked, handleCode]);
 
   /**
    * Every run starts with an empty tray, and starts pointed at your collection.
@@ -367,10 +426,14 @@ export default function BarcodeScanner({
     const listName = target?.name ?? "tu colección";
     setCommitting(true);
 
-    const done: Array<{ vinylId: string; wasNew: boolean }> = [];
+    const done: Array<{ vinylId: string; key: string }> = [];
     const failed: string[] = [];
+    /* el guardado ya ha dicho por qué no (con «Reintentar» si sirve); el
+       aviso del escáner no puede taparlo con uno que no dice nada más */
+    let saveFailed = false;
     for (const s of list) {
       const match = s.results[s.pick];
+      let vinyl: Vinyl | null = null;
       try {
         const res = await fetch("/api/discogs/release", {
           method: "POST",
@@ -379,31 +442,42 @@ export default function BarcodeScanner({
         });
         const payload = await res.json();
         if (!payload.vinyl) throw new Error("no vinyl");
-        const wasNew = !vinilosRef.current.some((v) => v.id === payload.vinyl.id);
-        onSaveToList(payload.vinyl, listId);
-        done.push({ vinylId: payload.vinyl.id, wasNew });
+        vinyl = payload.vinyl as Vinyl;
       } catch {
         failed.push(match?.title ?? s.code);
+        continue;
       }
+      // uno detrás de otro y esperando cada guardado: solo cuenta lo guardado
+      if ((await onSaveToList(vinyl, listId)) === false) {
+        saveFailed = true;
+        failed.push(match?.title ?? s.code);
+        continue;
+      }
+      done.push({ vinylId: vinyl.id, key: s.key });
     }
 
     setCommitting(false);
-    onClose();
+    /* Lo que no se ha guardado no se pierde: el escáner sigue abierto con
+       esas tarjetas en la bandeja, y «Añadir» otra vez es el reintento. Con
+       veinte discos escaneados y el metro sin cobertura, cerrar era perder
+       los veinte. */
+    if (failed.length === 0) onClose();
+    else {
+      const saved = new Set(done.map((d) => d.key));
+      setScans((l) => l.filter((x) => !saved.has(x.key)));
+    }
 
     if (done.length === 0) {
-      return toast.show("No se pudo añadir ninguno de los discos.", { tone: "error" });
+      if (saveFailed) return;
+      return toast.show("No se ha añadido ninguno. Vuelve a pulsar «Añadir».", { tone: "error" });
     }
     const what =
-      done.length === 1
-        ? `${list[0].results[list[0].pick]?.title ?? "El disco"} → ${listName}`
-        : `${done.length} discos → ${listName}`;
+      done.length === 1 ? `Añadido a ${listName}` : `${done.length} discos añadidos a ${listName}`;
     toast.undo(
       failed.length ? `${what} · ${failed.length} sin añadir` : what,
-      () =>
-        done.forEach((d) =>
-          // brand new to the library → undo takes it out entirely
-          d.wasNew ? onDeleteVinyl(d.vinylId) : onRemoveFromList(d.vinylId, listId),
-        ),
+      // cada disco vuelve a donde estaba antes (ver ShelfApp.handleUndoAdd),
+      // con el id que devolvió el guardado, nunca alternando
+      () => done.forEach((d) => onUndoAdd(d.vinylId, listId)),
       { media: { src: list[0].results[list[0].pick]?.thumb } },
     );
   };
@@ -557,7 +631,7 @@ export default function BarcodeScanner({
       {/* --------------------------------------------------------- the tray */}
       {/* Newest on top, floating over the camera, never pushing the viewfinder.
           Capped at three because the fourth is already history. */}
-      <div className="relative z-20 shrink-0 px-3">
+      <div ref={trayRef} className="relative z-20 shrink-0 px-3">
         {buried > 0 && (
           <p className="pb-2 text-center text-caption text-paper/50">y {buried} antes</p>
         )}
@@ -574,6 +648,7 @@ export default function BarcodeScanner({
                 onSearchManually(s.code);
                 onClose();
               }}
+              onRetry={() => void lookup(s.key, s.code)}
             />
           ))}
         </AnimatePresence>
@@ -666,6 +741,7 @@ export default function BarcodeScanner({
             >
               <input
                 name="name"
+                maxLength={RACK_NAME_MAX}
                 autoFocus
                 placeholder="Nombre del rack"
                 className="h-12 w-full rounded-control bg-fill-subtle px-3 text-body text-content outline-none placeholder:text-content-faint"
@@ -821,6 +897,7 @@ function ScanCard({
   onStageAnyway,
   onOpen,
   onManual,
+  onRetry,
 }: {
   scan: Scan;
   depth: number;
@@ -828,6 +905,7 @@ function ScanCard({
   onStageAnyway: () => void;
   onOpen: () => void;
   onManual: () => void;
+  onRetry: () => void;
 }) {
   const { status, results, pick } = scan;
   const match = results[pick];
@@ -836,9 +914,11 @@ function ScanCard({
   const action =
     status === "known"
       ? { label: "Añadir igual", run: onStageAnyway }
-      : status === "notfound" || status === "error"
-        ? { label: "Buscar a mano", run: onManual }
-        : null;
+      : status === "busy" || status === "unavailable"
+        ? { label: "Reintentar", run: onRetry }
+        : status === "notfound" || status === "error"
+          ? { label: "Buscar a mano", run: onManual }
+          : null;
 
   const line =
     status === "looking"
@@ -849,6 +929,8 @@ function ScanCard({
           ? scan.code
           : status === "error"
             ? "No se pudo leer la ficha"
+            : status === "busy" || status === "unavailable"
+              ? scan.code
             : [edition(match) || match?.label, others > 0 && `+${others} ediciones`]
                 .filter(Boolean)
                 .join(" · ");
@@ -897,8 +979,21 @@ function ScanCard({
       )}
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sub font-medium text-paper">
-          {match?.title ?? (status === "notfound" ? "Sin ficha para ese código" : scan.code)}
+        {/* el aviso del catálogo en dos líneas si hace falta: cortado a la
+            mitad no se entiende que hay que esperar */}
+        <span
+          className={`block text-sub font-medium text-paper ${
+            status === "busy" || status === "unavailable" ? "line-clamp-2" : "truncate"
+          }`}
+        >
+          {match?.title ??
+            (status === "notfound"
+              ? "Sin ficha para ese código"
+              : status === "busy"
+                ? "El catálogo va lento. Prueba en unos segundos."
+                : status === "unavailable"
+                  ? "No hemos podido consultar el catálogo"
+                  : scan.code)}
         </span>
         <span className="mt-0.5 flex items-center gap-1 truncate text-caption text-paper/55">
           <span className="truncate">{line}</span>

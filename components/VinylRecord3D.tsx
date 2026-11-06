@@ -4,6 +4,8 @@ import { Canvas, useFrame, useLoader } from "@react-three/fiber";
 import { Suspense, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { TextureLoader } from "three";
+import { hasWebGL } from "@/lib/webgl";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 type Props = {
   coverUrl: string;
@@ -28,8 +30,11 @@ export default function VinylRecord3D({
   className,
   protrude = 0,
 }: Props) {
+  // decoration: without WebGL the disc simply is not drawn, never a crash
+  if (!hasWebGL()) return null;
   return (
     <div className={className} style={{ width: "100%", height: "100%" }}>
+      <ErrorBoundary>
       <Canvas
         camera={{ position: [0, 0, 3.2], fov: 38 }}
         dpr={[1, 2]}
@@ -42,6 +47,7 @@ export default function VinylRecord3D({
           <Disc coverUrl={coverUrl} spinning={spinning} rpm={rpm} protrude={protrude} />
         </Suspense>
       </Canvas>
+      </ErrorBoundary>
     </div>
   );
 }

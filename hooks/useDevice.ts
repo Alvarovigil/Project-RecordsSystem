@@ -72,8 +72,13 @@ function measure(): Device {
 
   // A coarse pointer on a wide screen is a tablet; a fine pointer on a narrow
   // one is a small browser window, which is still a desktop interface.
+  //
+  // For a finger, the short side decides, not the width: a phone lying on its
+  // side is 812px wide and still a phone. Judged by width it became a tablet,
+  // got the desktop chrome, and the "Gira el teléfono" screen (phone-only)
+  // never mounted. A tablet's short side is 768 or more, so it stays a tablet.
   let device: DeviceClass;
-  if (coarse) device = w <= PHONE_MAX ? "phone" : "tablet";
+  if (coarse) device = Math.min(w, window.innerHeight) <= PHONE_MAX ? "phone" : "tablet";
   else device = w <= PHONE_MAX ? "phone" : w <= TABLET_MAX ? "tablet" : "desktop";
 
   return {

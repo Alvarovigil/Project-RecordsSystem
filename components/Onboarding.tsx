@@ -183,7 +183,7 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
           className="flex items-center justify-between border-b border-paper/10 px-6 py-3"
           style={isPhone ? { paddingTop: "calc(var(--safe-top) + 14px)" } : undefined}
         >
-          <span className="mono text-[12px] uppercase tracking-[0.22em] text-paper/50">
+          <span className="mono text-micro uppercase tracking-[0.22em] text-paper/50">
             {step === "identity" ? "Tu nombre" : "Tu colección"}
           </span>
         </div>
@@ -291,7 +291,7 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
               <span className="mono">rackr.club/u/{username || "tu-nombre"}</span>
             </p>
 
-            {error && <p className="mt-3 text-center text-sub text-[#ff6b57]">{error}</p>}
+            {error && <p className="mt-3 text-center text-sub text-danger">{error}</p>}
 
             <button
               onClick={saveIdentity}

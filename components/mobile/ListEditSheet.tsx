@@ -6,7 +6,7 @@ import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import Confirm from "@/components/ui/Confirm";
 import { useToast, ToastIcon } from "@/components/ui/Toast";
 import CollaboratorsSheet from "@/components/community/CollaboratorsSheet";
-import { SORT_LABELS, type SortMode, type Collection } from "@/lib/collections";
+import { SORT_LABELS, type SortMode, type Collection, RACK_NAME_MAX } from "@/lib/collections";
 import { coverFor } from "@/lib/cover";
 import type { Vinyl } from "@/lib/types";
 import type { ListVisibility } from "@/lib/data/types";
@@ -109,13 +109,14 @@ export default function ListEditSheet({
         {pane === "root" && (
           <>
             <div className="px-5 pb-1 pt-4">
-              <label className="text-caption uppercase tracking-label text-content-muted" htmlFor="list-name">
+              <label className="label text-content-muted" htmlFor="list-name">
                 Nombre
               </label>
               <input
                 id="list-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                maxLength={RACK_NAME_MAX}
                 onBlur={commitName}
                 enterKeyHint="done"
                 className="mt-2 h-11 w-full rounded-control border border-line-strong bg-transparent px-3 text-body text-paper outline-none transition-colors focus:border-line-focus"
@@ -190,7 +191,7 @@ export default function ListEditSheet({
                     <button
                       onClick={() => onRemoveRecord(list.id, v.id)}
                       aria-label={`Quitar ${v.title} de ${list.name}`}
-                      className="pressable flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-content-muted transition-colors hover:border-[#ff6b57] hover:text-[#ff6b57]"
+                      className="pressable flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line text-content-muted transition-colors hover:border-danger hover:text-danger"
                     >
                       <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden>
                         <path d="M2 6h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />

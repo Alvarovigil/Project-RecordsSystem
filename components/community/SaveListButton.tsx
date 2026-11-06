@@ -7,6 +7,7 @@ import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import { useToast, ToastIcon } from "@/components/ui/Toast";
 import { useSaves } from "@/hooks/useListFlags";
 import { useEntryGate, useIsVisitor } from "@/hooks/useSession";
+import { leaveLayers } from "@/hooks/useBackToClose";
 
 /**
  * Keeping a list somebody else made.
@@ -65,7 +66,8 @@ export default function SaveListButton({
           // just saved is an offer the user has to finish themselves
           action: {
             label: "Ver",
-            onClick: () => router.push(`/coleccion?lista=${listId}`),
+            // la hoja puede estar aún saliendo del historial: que no se la trague
+            onClick: () => leaveLayers(() => router.push(`/coleccion?lista=${listId}`)),
           },
         });
       } else {
@@ -121,7 +123,7 @@ export default function SaveListButton({
         <button
           onClick={() => setMenu(true)}
           aria-label={`Más opciones de ${listTitle}`}
-          className="pressable flex h-11 w-9 items-center justify-center text-content-muted transition-colors hover:text-paper"
+          className="pressable hit flex h-11 w-9 items-center justify-center text-content-muted transition-colors hover:text-paper"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden>
             <circle cx="8" cy="3.2" r="1.35" fill="currentColor" />

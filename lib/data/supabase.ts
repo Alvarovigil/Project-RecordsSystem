@@ -152,6 +152,24 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     return data?.id as string | undefined;
   };
 
+  /**
+   * Lo mismo, para escribir: un fallo de red no es «ese disco no existe».
+   *
+   * `releaseIdOf` devuelve undefined tanto si no está como si no se ha podido
+   * preguntar, y las escrituras lo tomaban por «nada que hacer» y terminaban
+   * bien. La app decía «Guardado» sin haber guardado nada.
+   */
+  const releaseIdForWrite = async (slug: string) => {
+    const { data, error } = await sb.from("releases").select("id").eq("slug", slug).maybeSingle();
+    if (error) throw new Error(error.message);
+    return (data as { id: string } | null)?.id;
+  };
+
+  /** una respuesta de Supabase con error es un fallo, no un silencio */
+  const check = ({ error }: { error: { message: string; code?: string } | null }) => {
+    if (error) throw new Error(error.message);
+  };
+
   const requireUser = async () => {
     const { data } = await sb.auth.getUser();
     if (!data.user) throw new Error("Sin sesión");
@@ -267,14 +285,15 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       // The catalogue is shared: if the record is already there we reuse it
       // rather than making a private copy — that is what lets us answer "who
       // else has this record?".
-      const { data: existing } = await sb
+      const { data: existing, error: lookup } = await sb
         .from("releases")
         .select("id")
         .eq("slug", release.id)
         .maybeSingle();
+      if (lookup) throw new Error(lookup.message);
       if (existing) return release;
 
-      await sb.from("releases").insert({
+      const { error: inserted } = await sb.from("releases").insert({
         slug: release.id,
         discogs_id: release.discogsId,
         title: release.title,
@@ -289,19 +308,24 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         tracklist: release.tracklist,
         created_by: userId,
       });
+      // 23505: otra persona lo metió a la vez; el disco está, que es lo que importa
+      if (inserted && inserted.code !== "23505") throw new Error(inserted.message);
       return release;
     },
 
     async deleteRelease(releaseSlug) {
       const userId = await requireUser();
-      const id = await releaseIdOf(releaseSlug);
+      const id = await releaseIdForWrite(releaseSlug);
       if (!id) return;
-      const { data: lists } = await sb.from("lists").select("id").eq("owner_id", userId);
-      await sb
-        .from("list_items")
-        .delete()
-        .eq("release_id", id)
-        .in("list_id", (lists ?? []).map((l) => l.id));
+      const { data: lists, error } = await sb.from("lists").select("id").eq("owner_id", userId);
+      if (error) throw new Error(error.message);
+      check(
+        await sb
+          .from("list_items")
+          .delete()
+          .eq("release_id", id)
+          .in("list_id", (lists ?? []).map((l) => l.id)),
+      );
     },
 
     async listLists() {
@@ -404,26 +428,30 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     },
 
     async addToList(listId, releaseSlug) {
-      const id = await releaseIdOf(releaseSlug);
-      if (!id) return;
-      const { count } = await sb
+      const id = await releaseIdForWrite(releaseSlug);
+      // sin la ficha en el catálogo no hay nada que guardar: eso es un fallo
+      if (!id) throw new Error("El disco no está en el catálogo");
+      const { count, error } = await sb
         .from("list_items")
         .select("*", { count: "exact", head: true })
         .eq("list_id", listId);
+      if (error) throw new Error(error.message);
       // Ya estar es no hacer nada. Un upsert reescribía la fila (y movía el
       // disco al final), y desde 0020 reescribir es solo cosa de la posición.
-      await sb
-        .from("list_items")
-        .upsert(
-          { list_id: listId, release_id: id, position: count ?? 0 },
-          { onConflict: "list_id,release_id", ignoreDuplicates: true },
-        );
+      check(
+        await sb
+          .from("list_items")
+          .upsert(
+            { list_id: listId, release_id: id, position: count ?? 0 },
+            { onConflict: "list_id,release_id", ignoreDuplicates: true },
+          ),
+      );
     },
 
     async removeFromList(listId, releaseSlug) {
-      const id = await releaseIdOf(releaseSlug);
+      const id = await releaseIdForWrite(releaseSlug);
       if (!id) return;
-      await sb.from("list_items").delete().eq("list_id", listId).eq("release_id", id);
+      check(await sb.from("list_items").delete().eq("list_id", listId).eq("release_id", id));
     },
 
     async reorderList(listId, fromIndex, toIndex) {

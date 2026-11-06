@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import LayerLink from "@/components/ui/LayerLink";
 import { useEntryGate, useIsVisitor } from "@/hooks/useSession";
 import Sheet, { SheetRow } from "@/components/ui/Sheet";
 import Avatar from "@/components/ui/Avatar";
@@ -78,7 +78,8 @@ export default function RecordSheet({
   activeListId: string;
   playing: boolean;
   onTogglePlay: (v: Vinyl) => void;
-  onAddTo: (listId: string, v: Vinyl) => void;
+  /** resuelve a si se ha guardado de verdad, cuando quien lo da lo sabe */
+  onAddTo: (listId: string, v: Vinyl) => Promise<boolean> | void;
   onRemoveFromActive: (v: Vinyl) => void;
   onDelete: (v: Vinyl) => void;
   /**
@@ -124,6 +125,19 @@ export default function RecordSheet({
      una caja vacía, que es justo lo que no queremos enseñar de un rack lleno */
   const [rackCovers, setRackCovers] = useState<Record<string, string[]>>({});
   const [friends, setFriends] = useState<FriendWithRecord[]>([]);
+  /**
+   * «Quién más lo tiene» llegó tarde: va debajo de las canciones.
+   *
+   * La tarjeta va encima de la lista de canciones, y si aparece cuando ya
+   * estás leyendo, todo lo de debajo baja y el dedo que iba a una pista cae
+   * en otra. El sitio se decide una sola vez: a los 300 ms (mientras la ficha
+   * aún está entrando), o antes si las dos respuestas ya han llegado. Si para
+   * entonces hay algo que enseñar, arriba; si no, debajo de las canciones,
+   * donde no empuja nada que se esté mirando. Después no se mueve: antes, con
+   * los racks a los 200 ms y las personas a los 400, se pintaba arriba y a los
+   * 300 saltaba abajo.
+   */
+  const [whoAt, setWhoAt] = useState<"pending" | "top" | "bottom">("pending");
   const [picking, setPicking] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -155,23 +169,48 @@ export default function RecordSheet({
 
   useEffect(() => {
     if (!vinyl) return;
+    let alive = true;
     setElsewhere([]);
     setFriends([]);
-    repo
+    setWhoAt("pending");
+    /** si ya hay algo que enseñar en el momento de decidir */
+    let has = false;
+    let decided = false;
+    const decide = () => {
+      if (!alive || decided) return;
+      decided = true;
+      setWhoAt(has ? "top" : "bottom");
+    };
+    const late = setTimeout(decide, 300);
+    const lists = repo
       .listsWithRelease(vinyl.id)
       .then((ls) => {
+        if (!alive) return;
+        if (ls.length) has = true;
         setElsewhere(ls);
         if (ls.length)
           repo
             .coversOfLists(ls.map((l) => l.id))
-            .then(setRackCovers)
+            .then((c) => alive && setRackCovers(c))
             .catch(() => {});
       })
       .catch(() => {});
-    repo
+    const people = repo
       .friendsWithRelease(vinyl.id)
-      .then(setFriends)
+      .then((f) => {
+        if (!alive) return;
+        if (f.length) has = true;
+        setFriends(f);
+      })
       .catch(() => {});
+    void Promise.allSettled([lists, people]).then(() => {
+      clearTimeout(late);
+      decide();
+    });
+    return () => {
+      alive = false;
+      clearTimeout(late);
+    };
   }, [repo, vinyl]);
 
   if (!vinyl) return null;
@@ -208,14 +247,49 @@ export default function RecordSheet({
    * we just added to" or the record would end up owned and unwished, which is
    * neither of the two states it was ever in.
    */
-  const acquire = (listId?: string) => {
+  const acquire = async (listId?: string) => {
     const v = vinyl;
     if (!listId || !v) return;
-    onAddTo(listId, v);
+    // «hecho» solo si está hecho: si falla, el aviso de error ya ha salido
+    if ((await onAddTo(listId, v)) === false) return;
     const name = collections.find((c) => c.id === listId)?.name ?? "tu colección";
     toast.undo(
-      `${v.title} → ${name}`,
+      `Añadido a ${name}`,
       () => wishlist && onAddTo(wishlist.id, v),
+      { media: { src: coverFor(v) } },
+    );
+  };
+
+  /**
+   * A deseos, con la cuenta delante y el camino de vuelta detrás.
+   *
+   * Pasar a deseos saca el disco de tu colección y de todos sus racks (la
+   * regla de 0021: o lo tienes o lo quieres). Desde «Guardar en» se hacía sin
+   * avisar y sin deshacer. Ahora se confirma diciendo cuántos racks pierde, y
+   * «Deshacer» lo vuelve a meter donde estaba: primero en la colección (que lo
+   * saca de deseos) y después en cada rack, al final de cada uno.
+   */
+  const ownedIn = vinyl
+    ? collections.filter(
+        (c) => c.kind !== "wishlist" && !c.sharedBy && c.vinylIds.includes(vinyl.id),
+      )
+    : [];
+  const racksHolding = ownedIn.filter((c) => (c.kind ?? "custom") === "custom").length;
+  const moveToWishlist = async () => {
+    const v = vinyl;
+    if (!v || !wishlist) return;
+    // la colección primero: es la que lo saca de deseos al volver
+    const before = [...ownedIn].sort(
+      (a, b) => Number((a.kind ?? "custom") === "custom") - Number((b.kind ?? "custom") === "custom"),
+    );
+    if ((await onAddTo(wishlist.id, v)) === false) return;
+    toast.undo(
+      "Movido a tus deseos",
+      async () => {
+        for (const c of before) {
+          if ((await onAddTo(c.id, v)) === false) return;
+        }
+      },
       { media: { src: coverFor(v) } },
     );
   };
@@ -225,6 +299,99 @@ export default function RecordSheet({
    * knows about discs and sides now (it has to, to page between them), and
    * where a record is kept is answered by the save control and its sheet.
    */
+
+  const whoCard = (friends.length > 0 || elsewhere.length > 0) && (
+    <Card title="Quién más lo tiene" padded={false}>
+      {friends.length > 0 &&
+        (friends.length <= 3 ? (
+          /**
+           * Con dos o tres, filas; con más, carril.
+           *
+           * Un carril de círculos grandes con dos caras deja media
+           * pantalla vacía y obliga a cortar el nombre del rack a
+           * la mitad — «Prensados q…», que no dice nada. En fila,
+           * cada persona se lleva el ancho entero: la cara, su
+           * nombre y en qué rack lo tiene, sin recortar. El carril
+           * empieza a tener sentido cuando hay bastantes caras
+           * como para que la fila cortada signifique «hay más».
+           */
+          <ul className="px-2">
+            {friends.map((f) => (
+              <li key={f.user.id}>
+                <LayerLink
+                  href={`/u/${f.user.username}`}
+                  onNavigate={onClose}
+                  className="pressable flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-fill-subtle"
+                >
+                  <Avatar
+                    name={f.user.displayName}
+                    handle={f.user.username}
+                    src={f.user.avatarUrl}
+                    size="md"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-body text-paper">
+                      {f.user.displayName}
+                    </span>
+                    <span className="block truncate text-caption text-content-muted">
+                      en {f.viaListTitle}
+                    </span>
+                  </span>
+                </LayerLink>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <ul className="rail flex gap-4 px-5 pb-1 pr-10" style={{ scrollPaddingLeft: "1.25rem" }}>
+            {friends.slice(0, 12).map((f) => (
+              <li key={f.user.id} className="w-[76px] shrink-0">
+                <LayerLink
+                  href={`/u/${f.user.username}`}
+                  onNavigate={onClose}
+                  className="pressable block text-center"
+                >
+                  <Avatar
+                    name={f.user.displayName}
+                    handle={f.user.username}
+                    src={f.user.avatarUrl}
+                    size="lg"
+                  />
+                  <span className="mt-2 block truncate text-caption text-paper">
+                    {f.user.displayName}
+                  </span>
+                  <span className="block truncate text-caption text-content-faint">
+                    {f.viaListTitle}
+                  </span>
+                </LayerLink>
+              </li>
+            ))}
+          </ul>
+        ))}
+
+      {elsewhere.length > 0 && (
+        <>
+          {friends.length > 0 && (
+            <h4 className="px-5 pb-1 pt-5 label text-content-faint">
+              En estos racks
+            </h4>
+          )}
+          <ul className="px-2">
+            {elsewhere.slice(0, 6).map((l) => (
+              <li key={l.id}>
+                <RackRow
+                  rack={rackOfList(l, (rackCovers[l.id] ?? [])[0] ?? null)}
+                  density="compact"
+                  showOwner
+                  className="rounded-md px-3"
+                  onClick={onClose}
+                />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </Card>
+  );
 
   return (
     <>
@@ -256,7 +423,7 @@ export default function RecordSheet({
               onClick={() => onTogglePlay(vinyl)}
               disabled={!vinyl.previewUrl}
               aria-label={playing ? "Pausar" : `Escuchar ${vinyl.title}`}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-paper/25 text-paper transition hover:border-paper/60 disabled:opacity-30"
+              className="hit flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-paper/25 text-paper transition hover:border-paper/60 disabled:opacity-30"
             >
               {playing ? (
                 <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden>
@@ -458,98 +625,7 @@ export default function RecordSheet({
                * string, and a photograph of somebody you follow is a person.
                * That difference is the whole feature.
                */}
-              {(friends.length > 0 || elsewhere.length > 0) && (
-                <Card title="Quién más lo tiene" padded={false}>
-                  {friends.length > 0 &&
-                    (friends.length <= 3 ? (
-                      /**
-                       * Con dos o tres, filas; con más, carril.
-                       *
-                       * Un carril de círculos grandes con dos caras deja media
-                       * pantalla vacía y obliga a cortar el nombre del rack a
-                       * la mitad — «Prensados q…», que no dice nada. En fila,
-                       * cada persona se lleva el ancho entero: la cara, su
-                       * nombre y en qué rack lo tiene, sin recortar. El carril
-                       * empieza a tener sentido cuando hay bastantes caras
-                       * como para que la fila cortada signifique «hay más».
-                       */
-                      <ul className="px-2">
-                        {friends.map((f) => (
-                          <li key={f.user.id}>
-                            <Link
-                              href={`/u/${f.user.username}`}
-                              onClick={onClose}
-                              className="pressable flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-fill-subtle"
-                            >
-                              <Avatar
-                                name={f.user.displayName}
-                                handle={f.user.username}
-                                src={f.user.avatarUrl}
-                                size="md"
-                              />
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-body text-paper">
-                                  {f.user.displayName}
-                                </span>
-                                <span className="block truncate text-caption text-content-muted">
-                                  en {f.viaListTitle}
-                                </span>
-                              </span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <ul className="rail flex gap-4 px-5 pb-1 pr-10" style={{ scrollPaddingLeft: "1.25rem" }}>
-                        {friends.slice(0, 12).map((f) => (
-                          <li key={f.user.id} className="w-[76px] shrink-0">
-                            <Link
-                              href={`/u/${f.user.username}`}
-                              onClick={onClose}
-                              className="pressable block text-center"
-                            >
-                              <Avatar
-                                name={f.user.displayName}
-                                handle={f.user.username}
-                                src={f.user.avatarUrl}
-                                size="lg"
-                              />
-                              <span className="mt-2 block truncate text-caption text-paper">
-                                {f.user.displayName}
-                              </span>
-                              <span className="block truncate text-caption text-content-faint">
-                                {f.viaListTitle}
-                              </span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    ))}
-
-                  {elsewhere.length > 0 && (
-                    <>
-                      {friends.length > 0 && (
-                        <h4 className="px-5 pb-1 pt-5 text-caption uppercase tracking-label text-content-faint">
-                          En estos racks
-                        </h4>
-                      )}
-                      <ul className="px-2">
-                        {elsewhere.slice(0, 6).map((l) => (
-                          <li key={l.id}>
-                            <RackRow
-                              rack={rackOfList(l, (rackCovers[l.id] ?? [])[0] ?? null)}
-                              density="compact"
-                              showOwner
-                              className="rounded-md px-3"
-                              onClick={onClose}
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </Card>
-              )}
+              {whoAt === "top" && whoCard}
 
               {/* One disc at a time, its sides under it, and the titles
                   playable — see Tracklist. */}
@@ -560,6 +636,8 @@ export default function RecordSheet({
                 loading={playLoading}
                 onPlayTrack={onPlayTrack ?? (() => {})}
               />
+
+              {whoAt === "bottom" && whoCard}
 
               {/* Folded away under the songs, which is where the question
                   belongs in time: you decide to listen, you decide to keep it,
@@ -629,7 +707,7 @@ export default function RecordSheet({
                   />
                 </svg>
               }
-              label="Mover a la lista de deseos"
+              label="Mover a deseos"
               onClick={() => {
                 setMenuOpen(false);
                 setToWishlist(true);
@@ -682,15 +760,16 @@ export default function RecordSheet({
         open={toWishlist}
         onClose={() => setToWishlist(false)}
         title="Pasará a tus deseos"
-        body={`${vinyl.title} saldrá de tu colección y de los racks en los que lo tengas guardado. Un disco está en una cosa o en la otra, nunca en las dos.`}
+        body={`Se quitará de tu colección${
+          racksHolding > 0
+            ? ` y de ${racksHolding} ${racksHolding === 1 ? "rack" : "racks"}`
+            : ""
+        }. Un disco o lo tienes o lo quieres: no puede estar en los dos sitios.`}
         confirmLabel="Mover a deseos"
         danger={false}
         onConfirm={() => {
           setToWishlist(false);
-          if (wishlist) onAddTo(wishlist.id, vinyl);
-          toast.show(`${vinyl.title} → Lista de deseos`, {
-            media: { src: coverFor(vinyl) },
-          });
+          void moveToWishlist();
         }}
       />
 
@@ -730,11 +809,15 @@ export default function RecordSheet({
           setPicking(false);
           if (acquiring) {
             setAcquiring(false);
-            return acquire(listId);
+            return void acquire(listId);
           }
+          // a deseos desde aquí también pasa por la confirmación, si lo tienes
+          if (listId === wishlist?.id && ownedIn.length > 0) return setToWishlist(true);
           const name = collections.find((c) => c.id === listId)?.name ?? "tu rack";
-          onAddTo(listId, vinyl);
-          toast.show(`Guardado en ${name}`, { media: { src: coverFor(vinyl) } });
+          void (async () => {
+            if ((await onAddTo(listId, vinyl)) === false) return;
+            toast.show(`Añadido a ${name}`, { media: { src: coverFor(vinyl) } });
+          })();
         }}
         onRemove={(listId) => {
           const name = collections.find((c) => c.id === listId)?.name ?? "ese rack";

@@ -36,6 +36,12 @@ export type Collection = {
 const KEY = "vinilos.collections.v1";
 const ACTIVE_KEY = "vinilos.activeCollection";
 
+/**
+ * El nombre de un rack, como mucho. La base no pone límite; este es el de la
+ * interfaz, para que un pegado largo no rompa ni una fila ni una portada.
+ */
+export const RACK_NAME_MAX = 80;
+
 export const DEFAULT_ID = "default";
 export const WISHLIST_ID = "wishlist";
 export const PRIMARY_IDS = [DEFAULT_ID, WISHLIST_ID] as const;

@@ -70,40 +70,12 @@ function fadeIn(audio: HTMLAudioElement, to: number, ms: number) {
  * the needle, the needle hands over to the song, and the control that stays on
  * screen drives the same element.
  */
-export default function SoundGate({
-  title = "Tu colección de vinilos, más allá de la estantería.",
-  body = "Organiza, descubre y comparte tu colección con el club.",
-  cta = "Vamos allá",
-}: {
-  /**
-   * The door's words, because the same door now stands in front of two rooms.
-   *
-   * The mechanism is identical everywhere — a page out of focus, one press,
-   * the music starting — but what is behind it is not, and a door that says
-   * the same thing regardless of what it opens is a door that has stopped
-   * saying anything.
+export default function SoundGate() {
+  /*
+   * Sin puerta: la página llega abierta y la música es una oferta («Poner
+   * música»). La puerta que la tapaba en cada visita se retiró en F4 y su
+   * código se quedó sin uso (F5): fuera.
    */
-  title?: string;
-  body?: string;
-  cta?: string;
-} = {}) {
-  /**
-   * Open from the start: the door no longer stands in front of the page.
-   *
-   * It used to blur the landing on every visit until you chose between
-   * "Vamos allá" and "Entrar en silencio" — a decision about audio before you
-   * had seen what the place is, asked again each time, and on /qr it hid the
-   * very code the page exists to show. The music stays, as an offer: the player
-   * in the corner says «Poner música» until somebody wants it. The gate and its
-   * words are kept for whoever wants the door back (`entered` starts false).
-   */
-  const [entered, setEntered] = useState(true);
-  /**
-   * The door does not slam in your face on arrival. The page lands clear —
-   * a moment of the shelf actually running — and only then does the blur roll
-   * in with the message on top.
-   */
-  const [armed, setArmed] = useState(false);
 
   const [tracks, setTracks] = useState<Track[]>([]);
   /**
@@ -169,22 +141,6 @@ export default function SoundGate({
   const queue = useRef<Track[]>([]);
   const cursor = useRef(0);
 
-  useEffect(() => {
-    const t = setTimeout(() => setArmed(true), 900);
-    return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    if (!armed) return;
-    document.documentElement.dataset.landing = entered ? "entered" : "gate";
-    return () => {
-      // Never remove it — set it to the open state instead. The blur is a
-      // 1.6s transition, so a single frame without the attribute is enough to
-      // start playing that transition backwards, and a remount then plays it
-      // forwards again: the page appears to flash and re-blur itself.
-      document.documentElement.dataset.landing = "entered";
-    };
-  }, [entered, armed]);
 
   // the stack of records, fetched once per page load and kept (see loadJukebox)
   const alive = useRef(true);
@@ -284,13 +240,6 @@ export default function SoundGate({
     [playAt],
   );
 
-  const enter = useCallback(
-    (withSound: boolean) => {
-      setEntered(true);
-      if (withSound) dropNeedle(cursor.current);
-    },
-    [dropNeedle],
-  );
 
   // the queue is ready as soon as the list is
   useEffect(() => {
@@ -410,74 +359,9 @@ export default function SoundGate({
 
   return (
     <>
-      {!entered && (
-        <div className="landing-gate fixed inset-0 z-[80] flex-col items-center justify-center px-6 pb-24 text-center">
-          {/**
-           * The door says what the place is, in the words the place uses
-           * everywhere else.
-           *
-           * It used to be one long sentence in the middle of the screen and a
-           * button the size of a headline — the button was the biggest thing
-           * on the page, so the first thing anybody read was an instruction
-           * about audio rather than what they had arrived at.
-           *
-           * Now it reads in the order the outside world already meets this in:
-           * the name, the line that rides beside it everywhere, and then what
-           * it is for. The same three lines as the shared card and the app
-           * listing, so arriving here confirms what brought you rather than
-           * introducing something new.
-           */}
-          <span aria-hidden className="mono flex items-center text-[15px] text-paper/50">
-            <Bars animate />
-          </span>
-
-          {/* No name here: the mark is on screen above this, dimmed but
-              legible, and printing "RACKR CLUB" underneath it says the same
-              thing twice in two typefaces. */}
-          <h1 className="mt-7 max-w-[18ch] text-[30px] leading-[1.1] tracking-[-0.02em] text-paper md:max-w-[20ch] md:text-[44px]">
-            {title}
-          </h1>
-          <p className="mt-4 max-w-[34ch] text-[15px] leading-relaxed text-paper/60 md:text-[17px]">
-            {body}
-          </p>
-
-          <button
-            onClick={() => enter(true)}
-            className="pressable mt-9 inline-flex h-11 select-none items-center gap-2.5 rounded-full bg-paper px-6 text-[13px] font-medium uppercase tracking-[0.07em] text-ink transition-colors hover:bg-paper/85"
-          >
-            {/* The icon carries the part the words dropped: this one turns the
-                sound on. "Vamos allá" is the invitation; the speaker is the
-                small print, and it belongs in a shape rather than in four more
-                words. */}
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <path
-                d="M3.2 6.1h2.1L8.4 3.4v9.2L5.3 9.9H3.2z"
-                fill="currentColor"
-              />
-              <path
-                d="M10.6 6.2a2.6 2.6 0 0 1 0 3.6M12.4 4.4a5.1 5.1 0 0 1 0 7.2"
-                stroke="currentColor"
-                strokeWidth="1.3"
-                strokeLinecap="round"
-              />
-            </svg>
-            {cta}
-          </button>
-
-          <button
-            onClick={() => enter(false)}
-            style={{ bottom: "calc(var(--safe-bottom) + 32px)" }}
-            className="absolute left-1/2 -translate-x-1/2 text-[12px] uppercase tracking-[0.05em] text-paper/60 underline-offset-4 transition hover:text-paper hover:underline sm:text-[13px]"
-          >
-            Entrar en silencio
-          </button>
-        </div>
-      )}
-
       {/* Above the "Sobre el proyecto" link on a phone rather than beside it:
           two corner labels on a 390px row printed straight through each other.
           On a wider screen they have their own corners back. */}
-      {entered && (
         <div
           onMouseEnter={() => setPeeking(true)}
           onMouseLeave={() => setPeeking(false)}
@@ -546,7 +430,6 @@ export default function SoundGate({
             </button>
           )}
         </div>
-      )}
     </>
   );
 }

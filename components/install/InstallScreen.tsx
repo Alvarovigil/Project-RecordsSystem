@@ -227,7 +227,7 @@ export default function InstallScreen({ url }: { url: string }) {
          * for an installed web app is entirely made of seconds.
          */}
         <section className="mt-14 border-t border-line pt-9">
-          <h2 className="text-caption uppercase tracking-label text-content-muted">
+          <h2 className="label text-content-muted">
             Por qué en la pantalla de inicio
           </h2>
           <div className="mt-5">

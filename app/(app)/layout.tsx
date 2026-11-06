@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { MotionConfig } from "framer-motion";
 import { PlaybackProvider } from "@/lib/playback-context";
 import MiniPlayer from "@/components/app/MiniPlayer";
 import Onboarding from "@/components/Onboarding";
@@ -15,13 +16,17 @@ import { ToastProvider } from "@/components/ui/Toast";
  * which for the same reason must not be remounted per route.
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
+  // reducedMotion="user": with «reduce motion» on in the system, every sheet,
+  // toast and spring in the app keeps its fades and drops the travel.
   return (
-    <PlaybackProvider>
-      <ToastProvider>
-        <AppShell>{children}</AppShell>
-        <Onboarding />
-        <MiniPlayer />
-      </ToastProvider>
-    </PlaybackProvider>
+    <MotionConfig reducedMotion="user">
+      <PlaybackProvider>
+        <ToastProvider>
+          <AppShell>{children}</AppShell>
+          <Onboarding />
+          <MiniPlayer />
+        </ToastProvider>
+      </PlaybackProvider>
+    </MotionConfig>
   );
 }

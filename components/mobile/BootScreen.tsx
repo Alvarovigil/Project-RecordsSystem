@@ -23,18 +23,26 @@ import { SITE_NAME } from "@/lib/site";
  * Once per launch, never on navigation. Coming back to the collection from
  * Explorar must never show this; that is what made the old desktop loader feel
  * like page loads, and it is why the flag that tracks it lives outside React.
+ *
+ * Painted from the server's HTML (no `ssr: false`, no lazy chunk) and used as
+ * the route's `loading.tsx` too, so the first frame of the collection is
+ * always this and never black. It sits under the tab bar rather than over
+ * it: the bar is already there from the server, and a way out that appears,
+ * vanishes and reappears is the app assembling in public again.
  */
-export default function BootScreen({ leaving }: { leaving: boolean }) {
+export default function BootScreen({ leaving = false }: { leaving?: boolean }) {
   return (
     <div
+      role="status"
+      aria-label="Cargando la colección"
       aria-hidden={leaving}
-      className={`fixed inset-0 z-[80] flex flex-col items-center justify-center gap-5 bg-ink transition-[opacity,filter] duration-700 ease-out ${
+      className={`fixed inset-0 z-[45] flex flex-col items-center justify-center gap-5 bg-ink transition-[opacity,filter] duration-700 ease-out ${
         leaving ? "pointer-events-none opacity-0 blur-md" : "opacity-100 blur-0"
       }`}
       style={{ paddingBottom: "var(--safe-bottom)" }}
     >
       <Mark size={52} spinning />
-      <p className="text-caption uppercase tracking-label text-content-faint">{SITE_NAME}</p>
+      <p className="label text-content-faint">{SITE_NAME}</p>
     </div>
   );
 }

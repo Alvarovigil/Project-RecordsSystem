@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { DISCOGS_UA } from "@/lib/discogs";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
+import { catalogueFetch, catalogueRoom, rateLimitedResponse } from "@/lib/discogs-budget";
 
 /**
  * Read at request time, never at module scope.
@@ -30,7 +30,7 @@ type DiscogsResult = {
 };
 
 function stripAccents(s: string) {
-  return s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 function norm(s: string) {
@@ -40,38 +40,38 @@ function norm(s: string) {
 /**
  * How this request went upstream, so the interface can say so.
  *
- * A search here fans out into a dozen Discogs queries, and Discogs allows
- * sixty a minute. When it starts refusing them this route used to return an
- * empty list — indistinguishable, from the outside, from "that record does not
- * exist". Two people searching at once was enough to make the app look broken
- * and the catalogue look empty. The counting is cheap; the honesty is not
- * optional.
+ * Discogs allows sixty queries a minute for the whole application. When it
+ * starts refusing them this route used to return an empty list —
+ * indistinguishable, from the outside, from "that record does not exist". The
+ * counting is cheap; the honesty is not optional.
  */
-type Health = { ok: number; failed: number; rateLimited: boolean };
+type Health = { ok: number; failed: number; rateLimited: boolean; retryAfter: number };
 
-async function discogsSearch(params: Record<string, string>, health: Health) {
+async function discogsSearch(
+  params: Record<string, string>,
+  health: Health,
+  signal?: AbortSignal,
+) {
   const url = new URL("https://api.discogs.com/database/search");
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("per_page", "100");
-  try {
-    const r = await fetch(url, {
-      headers: { "User-Agent": DISCOGS_UA, Authorization: `Discogs token=${token()}` },
-      next: { revalidate: 60 },
-    });
-    if (!r.ok) {
-      health.failed += 1;
-      // 429 is the documented limit; Discogs also answers 502/503 under load
-      if (r.status === 429) health.rateLimited = true;
-      return [] as DiscogsResult[];
-    }
-    health.ok += 1;
-    const data = await r.json();
-    return (data.results ?? []) as DiscogsResult[];
-  } catch {
+  const r = await catalogueFetch(url, { signal, revalidate: 60 });
+  if (r.kind === "rate_limited") {
+    health.failed += 1;
+    health.rateLimited = true;
+    health.retryAfter = Math.max(health.retryAfter, r.retryAfter);
+    return [] as DiscogsResult[];
+  }
+  if (r.kind === "failed") {
     health.failed += 1;
     return [] as DiscogsResult[];
   }
+  health.ok += 1;
+  return ((r.data as { results?: DiscogsResult[] })?.results ?? []) as DiscogsResult[];
 }
+
+/** a partir de cuántas filas útiles se da la búsqueda por buena y no se pregunta más */
+const ENOUGH = 8;
 
 export async function GET(req: NextRequest) {
   if (!token()) {
@@ -89,6 +89,8 @@ export async function GET(req: NextRequest) {
   const artistOnly = req.nextUrl.searchParams.get("artist")?.trim();
   const raw = artistOnly ?? req.nextUrl.searchParams.get("q")?.trim();
   if (!raw) return Response.json({ results: [] });
+  // una o dos letras no son una búsqueda: no se gasta el minuto en ellas
+  if (!artistOnly && norm(raw).length < 2) return Response.json({ results: [] });
 
   /**
    * The cache is checked before a single upstream request is made.
@@ -101,10 +103,10 @@ export async function GET(req: NextRequest) {
   const sb = getSupabaseAdminClient();
   // a separate cache namespace: the same words asked two different ways are
   // two different answers
-  /* La versión va en la clave: las filas guardadas se filtraron con la regla
-     blanda anterior, y sin cambiar la clave los VHS seguirían saliendo de la
-     caché durante días. */
-  const cacheKey = artistOnly ? `artist:v2:${norm(raw)}` : `v2:${norm(raw)}`;
+  /* La versión va en la clave. v2: las filas guardadas se filtraron con la
+     regla blanda anterior (los VHS). v3: hasta aquí se guardaban también las
+     respuestas a medias por el límite, y alguna se quedaría un mes. */
+  const cacheKey = artistOnly ? `artist:v3:${norm(raw)}` : `v3:${norm(raw)}`;
   if (sb && cacheKey) {
     const { data } = await sb
       .from("discogs_search_cache")
@@ -125,49 +127,85 @@ export async function GET(req: NextRequest) {
   }
 
   const stripped = stripAccents(raw);
-  const variants = raw === stripped ? [raw] : [raw, stripped];
+  const hasAccents = raw !== stripped;
   const normQ = norm(raw);
+  const signal = req.signal;
 
-  // Broad queries — we rely on the soft post-filter (drops explicit CDs /
-  // cassettes / digital) and on scoring to surface vinyl results, instead of
-  // a strict server-side format filter that was hiding too many edge cases
-  // (soundtracks, reissues, etc).
-  const queries: Record<string, string>[] = [];
+  /**
+   * La cascada, por etapas y solo hasta donde haga falta.
+   *
+   * Antes cada búsqueda lanzaba de golpe cinco consultas, más dos por cada
+   * hueco entre palabras, y el doble si había tildes: «fleetwood mac rumours»
+   * eran nueve, y escribir la frase entera costaba más que el minuto entero
+   * del catálogo. Casi siempre la primera pareja ya trae lo que se busca.
+   *
+   * 1. Texto libre, ediciones y masters: 2 consultas.
+   * 2. Si salen menos de ocho filas útiles: por artista, por título y, si hay
+   *    tildes, el texto libre sin ellas. 3 o 4 más.
+   * 3. Si sigue corto y son varias palabras: artista + título partiendo la
+   *    frase (como mucho por dos sitios). Hasta 4 más.
+   *
+   * Antes de cada etapa se mira si cabe en el presupuesto del minuto; si no
+   * cabe, se para y se dice que la respuesta va a medias.
+   */
+  const stages: Record<string, string>[][] = [];
   if (artistOnly) {
-    for (const v of variants) {
-      queries.push({ artist: v, type: "release" });
-      queries.push({ artist: v, type: "master" });
-    }
-  } else
-  for (const v of variants) {
-    queries.push({ artist: v, type: "release" });
-    queries.push({ release_title: v, type: "release" });
-    queries.push({ query: v, type: "release" });
-    queries.push({ query: v, type: "master" });
-    queries.push({ artist: v, type: "master" });
-
-    // Multi-word queries: try splitting into "artist + release" pairs at every
-    // boundary. Eg. "etta james at last" → tries artist=etta + title=james at last,
-    // artist=etta james + title=at last, artist=etta james at + title=last, …
-    // Captures cases where Discogs's q= doesn't tokenise nicely (album titled
-    // "At Last!", artist "Etta James", etc.).
-    const tokens = v.split(/\s+/);
+    stages.push([
+      { artist: raw, type: "release" },
+      { artist: raw, type: "master" },
+    ]);
+    if (hasAccents)
+      stages.push([
+        { artist: stripped, type: "release" },
+        { artist: stripped, type: "master" },
+      ]);
+  } else {
+    stages.push([
+      { query: raw, type: "release" },
+      { query: raw, type: "master" },
+    ]);
+    const second: Record<string, string>[] = [
+      { artist: raw, type: "release" },
+      { artist: raw, type: "master" },
+      { release_title: raw, type: "release" },
+    ];
+    if (hasAccents) second.push({ query: stripped, type: "release" });
+    stages.push(second);
+    // "etta james at last" → artist=etta james + title=at last, …
+    // Discogs's q= does not always tokenise an artist and a title together.
+    const tokens = stripped.split(/\s+/).filter(Boolean);
     if (tokens.length >= 2) {
-      for (let i = 1; i < tokens.length; i++) {
+      const splits: Record<string, string>[] = [];
+      const cuts = tokens.length === 2 ? [1] : [1, 2];
+      for (const i of cuts) {
         const artist = tokens.slice(0, i).join(" ");
         const title = tokens.slice(i).join(" ");
-        queries.push({ artist, release_title: title, type: "release" });
-        queries.push({ artist, release_title: title, type: "master" });
+        splits.push({ artist, release_title: title, type: "release" });
+        splits.push({ artist, release_title: title, type: "master" });
       }
+      stages.push(splits);
     }
   }
 
-  const health: Health = { ok: 0, failed: 0, rateLimited: false };
-  const all = await Promise.all(queries.map((q) => discogsSearch(q, health)));
+  const health: Health = { ok: 0, failed: 0, rateLimited: false, retryAfter: 0 };
+  const flat: DiscogsResult[] = [];
+  for (const [i, stage] of stages.entries()) {
+    if (signal.aborted) return new Response(null, { status: 499 });
+    if (i > 0 && usefulCount(flat) >= ENOUGH) break;
+    if (catalogueRoom() < stage.length) {
+      // no cabe: mejor decir que va a medias que chocar con el 429
+      health.rateLimited = true;
+      health.retryAfter = Math.max(health.retryAfter, 10);
+      break;
+    }
+    const got = await Promise.all(stage.map((q) => discogsSearch(q, health, signal)));
+    flat.push(...got.flat());
+    if (health.rateLimited) break;
+  }
+  if (signal.aborted) return new Response(null, { status: 499 });
 
   // dedupe by master_id, preferring RELEASES over masters (releases carry
   // format / cover / year info we need; masters are sparser).
-  const flat = all.flat();
   const byKey = new Map<string, DiscogsResult>();
   for (const r of flat) {
     const key = r.master_id ? `m${r.master_id}` : `r${r.id}-${r.type ?? ""}`;
@@ -272,12 +310,15 @@ export async function GET(req: NextRequest) {
   }));
 
   /**
-   * Only a real answer is stored. An empty result is far more often Discogs
-   * throttling us — it replies with an empty list rather than an error — than
-   * it is a record that does not exist, and caching that would turn a
-   * momentary limit into a permanent "no such album".
+   * Only a whole answer is stored.
+   *
+   * An empty result is far more often Discogs throttling us than a record that
+   * does not exist, and a half answer — some queries in, others refused — is
+   * worse: stored, it came back for a month with no word that it was missing
+   * half the rows. So: something found, and nothing failed on the way.
    */
-  if (sb && cacheKey && results.length > 0) {
+  const whole = !health.rateLimited && health.failed === 0;
+  if (sb && cacheKey && results.length > 0 && whole) {
     void sb
       .from("discogs_search_cache")
       .upsert({ query: cacheKey, results, created_at: new Date().toISOString() })
@@ -288,16 +329,32 @@ export async function GET(req: NextRequest) {
   }
 
   /**
+   * El límite se dice con su código: 429, `{ error: "rate_limited", retryAfter }`
+   * y la cabecera Retry-After. Las filas que sí llegaron viajan también
+   * (`results`, `degraded`), para que la interfaz pueda enseñarlas con el aviso.
+   */
+  if (health.rateLimited) {
+    return rateLimitedResponse(health.retryAfter || 30, { results, degraded: "rate-limit" });
+  }
+
+  /**
    * `degraded` says the answer is incomplete and why. The interface turns it
    * into a sentence; nothing here decides what that sentence is.
    */
-  const degraded = health.rateLimited
-    ? "rate-limit"
-    : health.ok === 0 && health.failed > 0
-      ? "down"
-      : health.failed > 0
-        ? "partial"
-        : null;
+  const degraded =
+    health.ok === 0 && health.failed > 0 ? "down" : health.failed > 0 ? "partial" : null;
 
   return Response.json({ results, degraded });
+}
+
+/** filas que acabarían en pantalla: las que son disco o no dicen qué son */
+function usefulCount(rows: DiscogsResult[]) {
+  const seen = new Set<string>();
+  for (const r of rows) {
+    const fmts = r.format ?? [];
+    if (fmts.length && !fmts.some((f) => /vinyl|\blp\b|7"|10"|12"|shellac|flexi|acetate/i.test(f)))
+      continue;
+    seen.add(r.master_id ? `m${r.master_id}` : `r${r.id}`);
+  }
+  return seen.size;
 }
