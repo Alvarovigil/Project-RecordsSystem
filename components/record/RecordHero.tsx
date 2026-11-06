@@ -2,6 +2,7 @@
 
 import LayerLink from "@/components/ui/LayerLink";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * La cabecera de un disco. La misma para todos los discos.
  *
@@ -36,8 +37,7 @@ export function RecordGround({ cover }: { cover: string }) {
       aria-hidden
       className="pointer-events-none absolute inset-x-0 -top-16 h-[94svh] overflow-hidden"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={cover} alt="" className="h-full w-full scale-125 object-cover blur-2xl" />
+      <RetryImg src={cover} alt="" className="h-full w-full scale-125 object-cover blur-2xl" />
       <div
         className="absolute inset-0"
         style={{
@@ -90,8 +90,7 @@ export function RecordHero({
   return (
     <>
       <div className="relative mx-auto mt-3 w-[76%]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <RetryImg
           src={cover}
           alt={`Portada de ${title}`}
           className="relative aspect-square w-full rounded-[3px] object-cover shadow-[0_26px_60px_rgba(0,0,0,0.62)]"

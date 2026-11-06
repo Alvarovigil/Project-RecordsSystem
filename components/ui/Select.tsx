@@ -73,7 +73,7 @@ export default function Select<T extends string>({
         aria-expanded={open}
         aria-label={label}
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 text-[12px] text-paper/80 transition-colors hover:text-paper"
+        className="flex items-center gap-1.5 text-caption text-paper/80 transition-colors hover:text-paper"
       >
         {current?.label ?? ""}
         <svg
@@ -109,7 +109,7 @@ export default function Select<T extends string>({
                   onChange(o.value);
                   setOpen(false);
                 }}
-                className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[12px] transition-colors ${
+                className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-caption transition-colors ${
                   active ? "text-paper" : "text-paper/60 hover:bg-paper/[0.06] hover:text-paper"
                 }`}
               >
@@ -120,7 +120,7 @@ export default function Select<T extends string>({
                   className={`h-1 w-1 shrink-0 rounded-full ${active ? "bg-accent" : "bg-transparent"}`}
                 />
                 <span className="flex-1 truncate">{o.label}</span>
-                {o.hint && <span className="mono shrink-0 text-[12px] text-content-muted">{o.hint}</span>}
+                {o.hint && <span className="mono shrink-0 text-caption text-content-muted">{o.hint}</span>}
               </button>
             );
           })}

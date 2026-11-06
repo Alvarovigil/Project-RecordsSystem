@@ -7,6 +7,7 @@ import { useImagesReady } from "@/hooks/useImagesReady";
 import Verified from "@/components/ui/Verified";
 import type { SuggestedProfile } from "@/lib/data/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 /** The sleeve that stands for a record nobody has chosen yet. */
 const EMPTY_SLEEVE = "/sleeve-vacio.jpg";
 
@@ -64,8 +65,7 @@ export default function PersonCard({ profile }: { profile: SuggestedProfile }) {
         }`}
       >
         {(covers.length ? covers : [EMPTY_SLEEVE]).map((src, i, all) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <RetryImg
             key={`${src}-${i}`}
             src={src}
             alt=""

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * A train of sleeves crossing the screen and bouncing off the edges.
  *
@@ -163,8 +164,7 @@ export default function NotFoundTrain({ covers }: { covers: string[] }) {
             zIndex: covers.length - i,
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <RetryImg
             src={src}
             alt=""
             className="h-full w-full rounded-[3px] object-cover shadow-[0_18px_50px_rgba(0,0,0,0.6)]"

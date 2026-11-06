@@ -76,7 +76,7 @@ export default function Onboarding({ onDone }: { onDone?: () => void }) {
     return () => {
       alive = false;
     };
-  }, [user, profile, supabase]);
+  }, [user, profile, supabase, googleAvatar]);
 
   // the tour, on request (Ajustes → Cómo funciona): the slides alone, and back
   const [touring, setTouring] = useState(false);

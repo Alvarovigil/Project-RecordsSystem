@@ -6,6 +6,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { coverFor } from "@/lib/cover";
 import type { Vinyl } from "@/lib/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * The shelf on a phone: the same room, entered from the other side.
  *
@@ -321,8 +322,7 @@ function Sleeve({
         aria-label={`${vinyl.title}, ${vinyl.artist}`}
       >
         <span className="relative block">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <RetryImg
             src={coverFor(vinyl)}
             alt=""
             draggable={false}

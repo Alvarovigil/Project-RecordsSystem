@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * The five ideas, shown in the app's own interface.
  *
@@ -52,8 +53,7 @@ export function SceneCollection() {
       <div className="grid grid-cols-2 gap-x-4 gap-y-7 px-2">
         {covers.map(([c, t, a], i) => (
           <motion.div key={c} {...rise(i)}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src(c)} alt="" className="aspect-square w-full rounded-[3px] object-cover" />
+            <RetryImg src={src(c)} alt="" className="aspect-square w-full rounded-[3px] object-cover" />
             <span className="mt-2 block truncate text-sub font-medium text-paper">{t}</span>
             <span className="block truncate text-caption text-content-muted">{a}</span>
           </motion.div>
@@ -150,9 +150,8 @@ export function SceneScanner() {
   return (
     <Stage>
       <div className="px-2">
-        <div className="relative overflow-hidden rounded-[14px] bg-black px-5 pb-5 pt-8">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+        <div className="relative overflow-hidden rounded-lg bg-black px-5 pb-5 pt-8">
+          <RetryImg
             src={src("noga-erez-the-vandalist-31803860")}
             alt=""
             className="absolute inset-0 h-full w-full scale-125 object-cover opacity-35 blur-[2px]"
@@ -187,8 +186,7 @@ export function SceneScanner() {
             transition={{ delay: 0.7, type: "spring", damping: 30, stiffness: 400 }}
             className="relative mt-6 flex items-center gap-3 rounded-lg bg-white/[0.16] px-3 py-2.5 backdrop-blur-2xl"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <RetryImg
               src={src("noga-erez-the-vandalist-31803860")}
               alt=""
               className="h-11 w-11 shrink-0 rounded-md object-cover"
@@ -218,8 +216,7 @@ export function SceneWishlist() {
         <div className="grid grid-cols-2 gap-x-4">
           {wished.map((c, i) => (
             <motion.div key={c} {...rise(i)} className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src(c)} alt="" className="aspect-square w-full rounded-[3px] object-cover" />
+              <RetryImg src={src(c)} alt="" className="aspect-square w-full rounded-[3px] object-cover" />
               {/* the tick that ends a want: the real one, in the real glass */}
               {i === 0 && (
                 <motion.span
@@ -245,8 +242,7 @@ export function SceneWishlist() {
           className="mt-5 flex justify-center"
         >
           <span className="flex items-center gap-2.5 rounded-full bg-[#1b1b1b] py-1.5 pl-1.5 pr-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src(wished[0])} alt="" className="h-8 w-8 rounded-full object-cover" />
+            <RetryImg src={src(wished[0])} alt="" className="h-8 w-8 rounded-full object-cover" />
             <span className="text-sub text-paper">Dune → Mi Colección</span>
           </span>
         </motion.div>
@@ -268,7 +264,7 @@ function Person({
   initials: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-[14px] bg-fill-subtle p-3">
+    <div className="flex items-center gap-3 rounded-lg bg-fill-subtle p-3">
       <span className="mono flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-paper/10 text-caption text-paper/70">
         {initials}
       </span>
@@ -291,11 +287,10 @@ function RackCard({
   covers: string[];
 }) {
   return (
-    <div className="flex items-center gap-3.5 rounded-[14px] bg-fill-subtle p-3">
+    <div className="flex items-center gap-3.5 rounded-lg bg-fill-subtle p-3">
       <span className="flex shrink-0 overflow-hidden rounded-[3px]">
         {covers.map((c) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img key={c} src={src(c)} alt="" className="h-11 w-11 object-cover" />
+          <RetryImg key={c} src={src(c)} alt="" className="h-11 w-11 object-cover" />
         ))}
       </span>
       <span className="min-w-0 flex-1">

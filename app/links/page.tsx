@@ -31,7 +31,7 @@ const LINKS = [
     label: "Instalar la app",
     hint: "En la pantalla de inicio, sin tienda",
   },
-  { href: "/", label: "Qué es Rackr Club", hint: "La casa, con el estante girando" },
+  { href: "/", label: "Qué es Rackr Club", hint: "La casa, con la estantería girando" },
   { href: "/explorar", label: "Explorar", hint: "Racks y gente que colecciona" },
   { href: "/qr", label: "El QR", hint: "Para enseñárselo a alguien en persona" },
 ];

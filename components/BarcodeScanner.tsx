@@ -11,6 +11,7 @@ import { useEntryGate, useWriteBlocked } from "@/hooks/useSession";
 import { useBackToClose } from "@/hooks/useBackToClose";
 import { useFullLayer } from "@/hooks/useFullLayer";
 
+import RetryImg from "@/components/ui/RetryImg";
 type Match = {
   id: number;
   title: string;
@@ -830,9 +831,8 @@ export default function BarcodeScanner({
               }}
               className="pressable flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-paper/[0.05]"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               {m.thumb ? (
-                <img src={m.thumb} alt="" className="h-11 w-11 shrink-0 rounded-md object-cover" />
+                <RetryImg src={m.thumb} alt="" className="h-11 w-11 shrink-0 rounded-md object-cover" />
               ) : (
                 <span className="h-11 w-11 shrink-0 rounded-md bg-paper/10" />
               )}
@@ -964,8 +964,7 @@ function ScanCard({
       }`}
     >
       {match?.thumb ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <RetryImg
           src={match.thumb}
           alt=""
           className={`h-11 w-11 shrink-0 rounded-md object-cover ${

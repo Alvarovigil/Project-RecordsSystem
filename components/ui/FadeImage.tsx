@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * Una imagen que cambia por otra sin dar un salto.
  *
@@ -63,8 +64,7 @@ export default function FadeImage({
 
   return (
     <span className={`relative block overflow-hidden ${className}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <RetryImg
         src={shown}
         alt={alt}
         loading={eager ? "eager" : "lazy"}
@@ -72,8 +72,7 @@ export default function FadeImage({
         className={`absolute inset-0 h-full w-full ${imgClassName}`}
       />
       {next && (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
+        <RetryImg
           src={next}
           alt=""
           draggable={false}

@@ -700,7 +700,10 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
     },
 
     async popularLists() {
-      const { data } = await sb
+      /* Un fallo no es una lista vacía: si se devolvía [], Explorar decía
+         «todavía no hay racks» con mala cobertura en vez de «no hemos podido
+         cargar Explorar · Reintentar». Vacío y bien es []; mal, se lanza. */
+      const { data, error } = await sb
         .from("lists")
         .select("*, profiles!lists_owner_id_fkey!inner(username, display_name, avatar_url)")
         .eq("visibility", "public")
@@ -712,6 +715,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
         .order("like_count", { ascending: false })
         .order("item_count", { ascending: false })
         .limit(24);
+      if (error) throw error;
       return ((data ?? []) as any[]).map(withOwner);
     },
 
@@ -724,7 +728,7 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
        * a suggestion.
        */
       const { data, error } = await sb.rpc("people_for_me", { max_rows: 24 });
-      if (error) return [];
+      if (error) throw error;
       return ((data ?? []) as any[]).map((r) => ({
         id: r.id,
         username: r.username,

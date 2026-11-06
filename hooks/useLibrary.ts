@@ -8,6 +8,7 @@ import { useRepository } from "./useRepository";
 import { repositoryKey } from "@/lib/data";
 import { readSnapshot, writeSnapshot } from "@/lib/data/snapshot";
 import { useToast } from "@/components/ui/Toast";
+import { revertOptimistic } from "@/lib/optimistic";
 
 /** lo que la estantería sabe de tu biblioteca en un momento dado */
 type LibState = {
@@ -90,7 +91,8 @@ export function useLibrary() {
    * synchronously during the first render, which means the collection is on
    * screen in the same frame the component mounts. See lib/data/snapshot.
    */
-  const seed = useMemo(() => readSnapshot(repositoryKey()), [repo]);
+  // solo para el estado inicial: lo que valga después no se vuelve a leer
+  const seed = useMemo(() => readSnapshot(repositoryKey()), []);
 
   const [releases, setReleases] = useState<Vinyl[]>(seed?.releases ?? []);
   const [lists, setLists] = useState<List[]>(seed?.lists ?? []);
@@ -195,8 +197,9 @@ export function useLibrary() {
   const act = useCallback<Act>(
     async (fn, optimistic, say, retrying = false) => {
       const before = stateRef.current;
+      let next = before;
       if (optimistic) {
-        const next = optimistic(before);
+        next = optimistic(before);
         stateRef.current = next;
         setReleases(next.releases);
         setLists(next.lists);
@@ -205,14 +208,18 @@ export function useLibrary() {
       try {
         await fn();
       } catch (e) {
-        /* Vuelta a lo que había. No se relee: con la red caída la relectura
+        /* Vuelta atrás, pero solo de lo suyo: se deshace lo que cambió esta
+           escritura sobre lo que hay ahora, no se vuelve a la foto de antes —
+           otra escritura en vuelo puede haber cambiado la estantería después
+           (lib/optimistic). No se relee: con la red caída la relectura
            también falla, y algunas lecturas devuelven vacío en vez de fallar —
            una estantería vacía es peor mentira que la que estamos arreglando. */
         if (optimistic) {
-          stateRef.current = before;
-          setReleases(before.releases);
-          setLists(before.lists);
-          setItemsByList(before.items);
+          const back = revertOptimistic(stateRef.current, before, next);
+          stateRef.current = back;
+          setReleases(back.releases);
+          setLists(back.lists);
+          setItemsByList(back.items);
         }
         const failure = failureOf(e, say?.failed ?? "No se ha guardado");
         toast.show(failure.text, {

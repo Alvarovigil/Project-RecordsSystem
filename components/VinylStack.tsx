@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
 
+import RetryImg from "@/components/ui/RetryImg";
 const VinylRecord3D = dynamic(() => import("./VinylRecord3D"), { ssr: false });
 
 type Props = {
@@ -121,8 +122,7 @@ function Sleeve({ vinyl, active }: { vinyl: Vinyl; active: boolean }) {
         border: "1px solid rgba(255,255,255,0.07)",
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <RetryImg
         src={cover}
         alt={`${vinyl.artist} — ${vinyl.title}`}
         className="h-full w-full object-cover"

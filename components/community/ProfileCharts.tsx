@@ -50,7 +50,7 @@ export default function ProfileCharts({
       <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
         {/* ---------------------------------------------------- los géneros */}
         {genres.length > 0 && (
-          <div className="rounded-[14px] bg-fill-subtle p-4">
+          <div className="rounded-lg bg-fill-subtle p-4">
             <p className="text-micro uppercase tracking-label text-content-faint">Géneros</p>
             <ul className="mt-3 space-y-2.5">
               {genres.map((g, i) => (
@@ -81,7 +81,7 @@ export default function ProfileCharts({
 
         {/* ---------------------------------------------------- las décadas */}
         {dec.length > 1 && (
-          <div className="rounded-[14px] bg-fill-subtle p-4">
+          <div className="rounded-lg bg-fill-subtle p-4">
             <p className="text-micro uppercase tracking-label text-content-faint">Por décadas</p>
             {/* Un histograma con sus huecos: sin las décadas vacías esto sería
                 un ranking, y el agujero de los ochenta dice tanto como el pico
@@ -105,7 +105,7 @@ export default function ProfileCharts({
 
         {/* ------------------------------------------------- los de siempre */}
         {artists.length > 0 && (
-          <div className="rounded-[14px] bg-fill-subtle p-4">
+          <div className="rounded-lg bg-fill-subtle p-4">
             <p className="text-micro uppercase tracking-label text-content-faint">
               Artistas destacados
             </p>
@@ -132,7 +132,7 @@ export default function ProfileCharts({
 
         {/* ----------------------------------------------------- los sellos */}
         {labels.length > 0 && (
-          <div className="rounded-[14px] bg-fill-subtle p-4">
+          <div className="rounded-lg bg-fill-subtle p-4">
             <p className="text-micro uppercase tracking-label text-content-faint">Sellos</p>
             <ul className="mt-3 space-y-2.5">
               {labels.map((l, i) => (

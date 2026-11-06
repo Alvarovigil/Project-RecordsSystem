@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import ShelfApp from "@/components/ShelfApp";
-import BootScreen from "@/components/mobile/BootScreen";
+import { ShelfLoading } from "@/components/mobile/BootScreen";
 import DemoBand from "@/components/DemoBand";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -29,7 +29,7 @@ export default function DemoPage() {
       {/* se entra escribiendo la dirección: que se sepa que no es tuya (F5).
           Sin cuentas en este sitio, la estantería sí es tuya y no hay banda */}
       {isSupabaseConfigured && <DemoBand />}
-      <Suspense fallback={<BootScreen />}>
+      <Suspense fallback={<ShelfLoading path="/demo" />}>
         <ShelfApp />
       </Suspense>
     </>

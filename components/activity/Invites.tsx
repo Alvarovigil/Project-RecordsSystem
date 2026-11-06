@@ -36,7 +36,7 @@ export default function Invites({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="pressable mb-8 flex w-full items-center gap-3 rounded-[14px] bg-fill-subtle px-4 py-3.5 text-left transition-colors hover:bg-fill"
+        className="pressable mb-8 flex w-full items-center gap-3 rounded-lg bg-fill-subtle px-4 py-3.5 text-left transition-colors hover:bg-fill"
       >
         <span className="flex shrink-0 -space-x-2">
           {invites.slice(0, 3).map((i) => (

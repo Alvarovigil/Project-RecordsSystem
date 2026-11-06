@@ -163,7 +163,11 @@ export default function CatalogueSheet({
   const cover = item?.cover_image ?? item?.thumb ?? "/sleeve-vacio.jpg";
 
   return (
-    <RecordScreen open={Boolean(item)} onClose={onClose}>
+    <RecordScreen
+      open={Boolean(item)}
+      onClose={onClose}
+      label={item ? (artist ? `${album}, de ${artist}` : album) : undefined}
+    >
       {item && (
         <>
           <RecordTopBar

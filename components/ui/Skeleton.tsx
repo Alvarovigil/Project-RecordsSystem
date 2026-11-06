@@ -163,7 +163,7 @@ export function SkeletonRows({ n = 4 }: { n?: number }) {
   return (
     <ul aria-hidden className="space-y-3">
       {Array.from({ length: n }).map((_, i) => (
-        <li key={i} className="flex items-center gap-3.5 rounded-[14px] bg-fill-subtle p-3">
+        <li key={i} className="flex items-center gap-3.5 rounded-lg bg-fill-subtle p-3">
           <Skeleton className="h-11 w-11 shrink-0" />
           <span className="min-w-0 flex-1">
             <SkeletonText w={i % 2 ? "50%" : "68%"} />

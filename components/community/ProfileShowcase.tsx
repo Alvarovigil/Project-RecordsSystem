@@ -5,6 +5,7 @@ import { coverFor } from "@/lib/cover";
 import { cleanArtist } from "@/lib/artist";
 import type { Vinyl } from "@/lib/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * Tus tres: los discos con los que alguien decide presentarse.
  *
@@ -42,7 +43,7 @@ export function Standouts({
       <section className="pb-10">
         <button
           onClick={onEdit}
-          className="pressable flex w-full items-center gap-3 rounded-[14px] border border-dashed border-line-strong px-4 py-5 text-left transition-colors hover:border-line-focus"
+          className="pressable flex w-full items-center gap-3 rounded-lg border border-dashed border-line-strong px-4 py-5 text-left transition-colors hover:border-line-focus"
         >
           <span className="flex shrink-0 gap-1.5">
             {[0, 1, 2].map((i) => (
@@ -129,8 +130,7 @@ export function InCommon({
         {records.slice(0, 20).map((v) => (
           <li key={v.id} className="w-[96px] shrink-0 snap-start">
             <button onClick={() => onOpen(v)} className="pressable block w-full text-left">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <RetryImg
                 src={coverFor(v)}
                 alt={v.title}
                 loading="lazy"

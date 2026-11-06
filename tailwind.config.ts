@@ -76,9 +76,25 @@ export default {
         caption: ["var(--t-caption)", { lineHeight: "1.35" }],
         micro: ["var(--t-micro)", { lineHeight: "1.3" }],
         tab: ["var(--t-tab)", { lineHeight: "1.3" }],
+        chrome: ["var(--t-chrome)", { lineHeight: "1" }],
       },
       letterSpacing: {
         label: "var(--track-label)",
+      },
+      /**
+       * Las transparencias que se usan fuera de la escala de 5 en 5.
+       *
+       * Sin declararlas, `bg-ink/72` no genera nada y el cristal de las
+       * cabeceras se queda en transparente: el texto blanco encima de una
+       * portada clara deja de leerse justo cuando importa.
+       */
+      opacity: {
+        12: "0.12",
+        38: "0.38",
+        72: "0.72",
+        78: "0.78",
+        88: "0.88",
+        92: "0.92",
       },
       transitionDuration: {
         fast: "var(--d-fast)",
@@ -91,6 +107,9 @@ export default {
       },
       spacing: {
         tap: "var(--tap)",
+        "tap-lg": "var(--tap-lg)",
+        badge: "var(--badge)",
+        "badge-inset": "var(--badge-inset)",
         safeTop: "var(--safe-top)",
         safeBottom: "var(--safe-bottom)",
         tabbar: "var(--tabbar-h)",

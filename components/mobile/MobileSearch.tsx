@@ -22,6 +22,7 @@ import type { Vinyl } from "@/lib/types";
 import CatalogueNotice from "@/components/ui/CatalogueNotice";
 import CatalogueSheet from "@/components/CatalogueSheet";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * Adding a record, on a phone.
  *
@@ -191,7 +192,12 @@ export default function MobileSearch({
 
   return (
     <>
-      <div className="fixed inset-0 z-[60] flex flex-col bg-surface">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Buscar un disco"
+        className="fixed inset-0 z-[60] flex flex-col bg-surface"
+      >
         {/* ------------------------------------------------------- the field */}
         <div
           className="shrink-0 border-b border-line px-4 pb-3"
@@ -370,8 +376,7 @@ export default function MobileSearch({
                       className="pressable flex items-center gap-3 py-3"
                     >
                       {search.artistPhotos[a.slug] ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <RetryImg
                           src={search.artistPhotos[a.slug]}
                           alt=""
                           className="h-11 w-11 shrink-0 rounded-full object-cover"
@@ -601,8 +606,7 @@ function Thumb({ src }: { src?: string | null }) {
   return (
     <span className="h-12 w-12 shrink-0 overflow-hidden rounded-sm bg-fill-subtle">
       {src && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
+        <RetryImg src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
       )}
     </span>
   );

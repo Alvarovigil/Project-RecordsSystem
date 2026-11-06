@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 
+import RetryImg from "@/components/ui/RetryImg";
 /** Tiny spinning vinyl used as a now-viewing indicator. */
 export default function MiniVinyl({
   coverUrl,
@@ -37,8 +38,7 @@ export default function MiniVinyl({
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-full"
         style={{ width: size * 0.42, height: size * 0.42 }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={coverUrl} alt="" className="h-full w-full object-cover" />
+        <RetryImg src={coverUrl} alt="" className="h-full w-full object-cover" />
       </div>
       {/* spindle */}
       <div className="absolute left-1/2 top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black" />

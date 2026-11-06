@@ -64,7 +64,7 @@ export default function SettingsPage() {
            * qué cuenta son estos ajustes?» cuando se tienen dos.
            */}
           {shown && (
-            <div className="mt-7 flex items-center gap-4 rounded-[14px] bg-fill-subtle p-4">
+            <div className="mt-7 flex items-center gap-4 rounded-lg bg-fill-subtle p-4">
               <Avatar
                 name={shown.displayName}
                 handle={shown.username}
@@ -145,7 +145,7 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
       {/* un escalón por debajo del subtítulo de cada fila: así la etiqueta del
           grupo se lee como lo que encabeza y no como otra fila más */}
       <h2 className="label text-content-faint">{title}</h2>
-      <ul className="mt-3 overflow-hidden rounded-[14px] bg-fill-subtle">{children}</ul>
+      <ul className="mt-3 overflow-hidden rounded-lg bg-fill-subtle">{children}</ul>
     </section>
   );
 }

@@ -6,6 +6,7 @@ import { coverFor } from "@/lib/cover";
 import { cleanArtist } from "@/lib/artist";
 import type { Vinyl } from "@/lib/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * Elegir con qué te presentas.
  *
@@ -74,8 +75,7 @@ export default function PickThreeSheet({
                     aria-label={`Quitar ${v.title}`}
                     className="pressable relative block w-full"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <RetryImg
                       src={coverFor(v)}
                       alt=""
                       className="aspect-square w-full rounded-[3px] object-cover"
@@ -128,8 +128,7 @@ export default function PickThreeSheet({
                   className={`pressable block w-full text-left ${full ? "opacity-35" : ""}`}
                 >
                   <span className="relative block">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <RetryImg
                       src={coverFor(v)}
                       alt=""
                       loading="lazy"

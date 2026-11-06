@@ -20,6 +20,7 @@ const kindOf = (cols: Collection[], id: string) =>
 const isPrimaryIn = (cols: Collection[], id: string) => kindOf(cols, id) !== "custom";
 import type { Vinyl } from "@/lib/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -283,7 +284,7 @@ export default function CollectionsOverlay({
                     <h2 className="text-[22px] font-medium leading-tight tracking-tight flex items-center gap-2">
                       {active.name}
                       {isPrimaryIn(collections, active.id) && (
-                        <span className="text-paper/30 mt-1" title="Rack predefinido">
+                        <span className="text-content-faint mt-1" title="Rack predefinido">
                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                             <rect x="2.5" y="5.5" width="7" height="5" rx="0.6" stroke="currentColor" />
                             <path d="M4 5.5V4a2 2 0 1 1 4 0v1.5" stroke="currentColor" />
@@ -458,8 +459,7 @@ export default function CollectionsOverlay({
                           {/* a strip of covers says more than a count */}
                           <span className="flex h-9 w-9 shrink-0 overflow-hidden rounded-sm bg-paper/[0.06]">
                             {cover && (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
+                              <RetryImg
                                 src={cover.cover as string}
                                 alt=""
                                 className="h-full w-full object-cover"
@@ -470,7 +470,7 @@ export default function CollectionsOverlay({
                             <span className="flex items-center gap-1.5">
                               <span className="truncate text-[14px] text-paper">{c.name}</span>
                               {isPrimaryIn(collections, c.id) && (
-                                <span className="text-paper/25" title="Rack predefinido">
+                                <span className="text-content-faint" title="Rack predefinido">
                                   <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                                     <rect x="2.5" y="5.5" width="7" height="5" rx="0.6" stroke="currentColor" />
                                     <path d="M4 5.5V4a2 2 0 1 1 4 0v1.5" stroke="currentColor" />
@@ -578,8 +578,7 @@ export default function CollectionsOverlay({
                             <span className="relative shrink-0">
                               <span className="flex h-9 w-9 overflow-hidden rounded-sm bg-paper/[0.06]">
                                 {covers[0] && (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={covers[0]} alt="" className="h-full w-full object-cover" />
+                                  <RetryImg src={covers[0]} alt="" className="h-full w-full object-cover" />
                                 )}
                               </span>
                               {/* A shadow, not a ring.
@@ -935,8 +934,7 @@ function EditPanel({
                     reading two columns of type is proofreading; with the
                     sleeve there you recognise what you are about to remove
                     before you have finished reading its title. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <RetryImg
                   src={coverFor(v)}
                   alt=""
                   loading="lazy"
@@ -960,7 +958,7 @@ function EditPanel({
                       onToggleVinyl(editing.id, v.id);
                     }
                   }}
-                  className="reveal-on-hover text-[12px] uppercase tracking-[0.16em] text-paper/30 hover:text-red-400 transition px-2"
+                  className="reveal-on-hover text-micro uppercase tracking-[0.16em] text-content-faint hover:text-danger transition px-2"
                   aria-label={isLibrary ? "Eliminar permanentemente" : "Quitar"}
                 >
                   {isLibrary ? "Eliminar" : "Quitar"}
@@ -1021,8 +1019,7 @@ function EditPanel({
                     onClick={() => onToggleVinyl(editing.id, v.id)}
                     className="group/add flex w-full items-center gap-2 rounded-control px-3 py-2 text-left text-[12px] text-paper/55 transition hover:bg-paper/[0.04]"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <RetryImg
                       src={coverFor(v)}
                       alt=""
                       loading="lazy"
@@ -1034,7 +1031,7 @@ function EditPanel({
                     </span>
                     <span
                       aria-hidden
-                      className="shrink-0 text-[13px] text-paper/25 transition group-hover/add:text-paper"
+                      className="shrink-0 text-sub text-content-faint transition group-hover/add:text-paper"
                     >
                       +
                     </span>

@@ -59,7 +59,7 @@ export default function RackInfoSheet({
       <div className="px-5 pb-6 pt-2">
         <ul className="grid grid-cols-2 gap-2.5">
           {facts.map((f) => (
-            <li key={f.k} className="rounded-[14px] bg-fill-subtle px-4 py-3.5">
+            <li key={f.k} className="rounded-lg bg-fill-subtle px-4 py-3.5">
               <p className="text-micro uppercase tracking-label text-content-faint">{f.k}</p>
               <p className="mt-1.5 truncate text-body leading-snug text-paper">{f.v}</p>
               {f.note && <p className="mt-0.5 truncate text-caption text-content-muted">{f.note}</p>}

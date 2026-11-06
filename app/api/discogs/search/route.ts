@@ -1,6 +1,15 @@
 import { NextRequest } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
-import { catalogueFetch, catalogueRoom, rateLimitedResponse } from "@/lib/discogs-budget";
+import {
+  catalogueFetch,
+  catalogueRoom,
+  clientCallRoom,
+  clientCallWait,
+  clientKey,
+  clientRequestWait,
+  rateLimitedResponse,
+  spendClientCalls,
+} from "@/lib/discogs-budget";
 
 /**
  * Read at request time, never at module scope.
@@ -126,6 +135,18 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  /**
+   * Lo que no estaba en la caché va al catálogo, y eso ya cuenta para quien
+   * pregunta: veinte búsquedas por minuto y por dirección (ver
+   * lib/discogs-budget). Mismo contrato que el límite del catálogo, para que la
+   * interfaz no tenga que distinguir uno de otro.
+   */
+  const who = clientKey(req.headers);
+  const gateWait = clientRequestWait("search", who);
+  if (gateWait > 0) {
+    return rateLimitedResponse(gateWait, { results: [], degraded: "rate-limit" });
+  }
+
   const stripped = stripAccents(raw);
   const hasAccents = raw !== stripped;
   const normQ = norm(raw);
@@ -198,6 +219,13 @@ export async function GET(req: NextRequest) {
       health.retryAfter = Math.max(health.retryAfter, 10);
       break;
     }
+    if (clientCallRoom(who) < stage.length) {
+      // lo mismo, pero con la parte del minuto que le toca a esta persona
+      health.rateLimited = true;
+      health.retryAfter = Math.max(health.retryAfter, clientCallWait(who, stage.length));
+      break;
+    }
+    spendClientCalls(who, stage.length);
     const got = await Promise.all(stage.map((q) => discogsSearch(q, health, signal)));
     flat.push(...got.flat());
     if (health.rateLimited) break;

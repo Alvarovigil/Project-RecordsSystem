@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { coverFor, paletteCoverDataUri } from "@/lib/cover";
+import RetryImg from "@/components/ui/RetryImg";
 
 /**
  * A person, at four sizes and never at a fifth.
@@ -85,8 +86,7 @@ export default function Avatar({
       }`}
     >
       {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" className="h-full w-full object-cover" />
+        <RetryImg src={src} alt="" className="h-full w-full object-cover" />
       ) : (
         initials || "?"
       )}
@@ -117,18 +117,16 @@ export function Cover({
   /** for the first screenful: skip the lazy round trip */
   eager?: boolean;
 }) {
-  const [failed, setFailed] = useState(false);
   /**
    * The last line of defence against an empty square.
    *
    * If the image cannot be fetched at all — both hosts down, a URL that has
    * stopped answering — and this is a record rather than a bare src, the
-   * sleeve is drawn from the record's own palette instead. `coverFor` has
-   * always been able to do that; nothing was ever asking it to after a
-   * failure.
+   * sleeve is drawn from the record's own palette instead. Los reintentos
+   * antes de llegar ahí (y el no enseñar nunca el icono roto) son de
+   * RetryImg, la misma pieza que usan todas las portadas de la app.
    */
-  const given = src ?? (vinyl ? coverFor(vinyl) : null);
-  const url = failed && vinyl ? paletteCoverDataUri(vinyl) : given;
+  const url = src ?? (vinyl ? coverFor(vinyl) : null);
   const [shown, setShown] = useState(false);
 
   /**
@@ -160,17 +158,15 @@ export function Cover({
         // the flicker you see scrolling any image list on the web. The square
         // underneath is already the right shape and the right colour, so the
         // picture only has to arrive into it.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <RetryImg
           src={url}
+          fallback={vinyl ? paletteCoverDataUri(vinyl) : undefined}
           alt={alt}
           loading={eager ? "eager" : "lazy"}
           decoding="async"
           onLoad={() => setShown(true)}
-          onError={() => {
-            if (vinyl && !failed) setFailed(true);
-            else setShown(true);
-          }}
+          // sin disco ni portada posible: la superficie neutra, sin esqueleto latiendo
+          onError={() => setShown(true)}
           // cached images can be complete before React ever attaches onLoad
           ref={(el) => {
             if (el?.complete && el.naturalWidth > 0) setShown(true);

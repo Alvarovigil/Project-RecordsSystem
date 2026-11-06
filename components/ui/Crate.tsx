@@ -2,6 +2,7 @@
 
 import { useImagesReady } from "@/hooks/useImagesReady";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * A list, as a crate with records in it.
  *
@@ -131,8 +132,7 @@ export default function Crate({
               top: pct((s.foot - SLEEVE) / CARD),
             }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <RetryImg
               src={src}
               alt=""
               loading="lazy"
@@ -153,8 +153,7 @@ export default function Crate({
 
       {/* the crate, at its own proportions and anchored to the bottom, so it is
           never stretched by whatever shape it is placed in */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <RetryImg
         src="/crate.png"
         alt=""
         draggable={false}

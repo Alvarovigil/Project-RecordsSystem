@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { useDevice } from "@/hooks/useDevice";
 import { useBackToClose } from "@/hooks/useBackToClose";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 
 /**
  * The one way this app shows something on top of something else.
@@ -87,10 +88,15 @@ export default function Sheet({
         onClose();
       }
     };
-    document.body.dataset.sheetOpen = "1";
+    // a count, not a flag: with one sheet over another, closing the top one
+    // must not hand the scroll back to the page under both
+    const body = document.body;
+    body.dataset.sheetOpen = String((Number(body.dataset.sheetOpen) || 0) + 1);
     window.addEventListener("keydown", onKey);
     return () => {
-      delete document.body.dataset.sheetOpen;
+      const left = (Number(body.dataset.sheetOpen) || 1) - 1;
+      if (left > 0) body.dataset.sheetOpen = String(left);
+      else delete body.dataset.sheetOpen;
       window.removeEventListener("keydown", onKey);
     };
   }, [open, onClose]);
@@ -117,7 +123,7 @@ export default function Sheet({
             className="absolute inset-0 bg-ink/78 backdrop-blur-md"
           />
           {isPhone ? (
-            <PhoneSheet size={size} onClose={onClose}>
+            <PhoneSheet size={size} open={open} onClose={onClose}>
               {!bare && (
                 <Header
                   id={titleId}
@@ -183,16 +189,42 @@ export default function Sheet({
  */
 function PhoneSheet({
   size,
+  open,
   onClose,
   children,
 }: {
   size: "auto" | "tall" | "full";
+  /** falso mientras sale: deja de escuchar al teclado en cuanto se cierra */
+  open: boolean;
   onClose: () => void;
   children: React.ReactNode;
 }) {
   const y = useMotionValue(0);
   const dim = useTransform(y, [0, 260], [1, 0.4]);
+  // the keyboard covers the bottom of the screen without resizing it (Android's
+  // default): the sheet stands on top of it, so its button stays in reach
+  const keyboard = useKeyboardInset(open);
   const scrollRef = useRef<HTMLDivElement>(null);
+  /**
+   * Con el teclado arriba, el campo a la vista.
+   *
+   * La hoja sube y encoge, pero su contenido se desplaza por dentro: un campo
+   * al final de una lista larga («Rack nuevo», debajo de todos tus racks) se
+   * quedaba fuera de la parte visible, debajo del teclado, aunque la hoja ya
+   * hubiera subido. El navegador lo había colocado antes de que la hoja
+   * encogiera; aquí se vuelve a colocar después.
+   */
+  useEffect(() => {
+    if (!keyboard) return;
+    const frame = requestAnimationFrame(() => {
+      const el = document.activeElement;
+      if (el instanceof HTMLElement && scrollRef.current?.contains(el)) {
+        // el campo y lo que va con él (el botón de crear de su misma fila)
+        (el.closest("form") ?? el).scrollIntoView({ block: "nearest" });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [keyboard]);
   // dragging is only allowed to start when the content is at its top; otherwise
   // the gesture belongs to the list and stealing it makes scrolling feel broken
   const [atTop, setAtTop] = useState(true);
@@ -207,8 +239,8 @@ function PhoneSheet({
     if (far || fast) onClose();
   };
 
-  const height =
-    size === "full" ? "calc(100dvh - var(--safe-top) - 8px)" : size === "tall" ? "min(88dvh, 760px)" : undefined;
+  const room = `calc(100dvh - var(--safe-top) - 8px - ${keyboard}px)`;
+  const height = size === "full" ? room : size === "tall" ? `min(88dvh, 760px, ${room})` : undefined;
 
   return (
     <motion.div
@@ -216,7 +248,7 @@ function PhoneSheet({
       animate={{ y: 0 }}
       exit={{ y: "100%" }}
       transition={SPRING}
-      style={{ y, height, maxHeight: "calc(100dvh - var(--safe-top) - 8px)", opacity: dim }}
+      style={{ y, height, maxHeight: room, marginBottom: keyboard, opacity: dim }}
       drag={atTop ? "y" : false}
       dragDirectionLock
       // no travel upward, and a soft ceiling so a hard pull still shows life
@@ -227,8 +259,9 @@ function PhoneSheet({
     >
       <div ref={scrollRef} onScroll={onScroll} className="scroll-y flex min-h-0 flex-1 flex-col">
         {children}
-        {/* the home indicator is not a place to put a button */}
-        <div style={{ height: "var(--safe-bottom)" }} className="shrink-0" />
+        {/* the home indicator is not a place to put a button (with the
+            keyboard up it is under the keys, so there is nothing to clear) */}
+        <div style={{ height: keyboard ? 0 : "var(--safe-bottom)" }} className="shrink-0" />
       </div>
     </motion.div>
   );

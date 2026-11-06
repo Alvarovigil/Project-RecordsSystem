@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { isAdmin } from "@/lib/admin/auth";
 import { getAccount, getUserDetail } from "@/lib/admin/queries";
 
+import RetryImg from "@/components/ui/RetryImg";
 export const dynamic = "force-dynamic";
 
 export default async function AdminUser({
@@ -41,8 +42,7 @@ export default async function AdminUser({
           <div className="flex items-start gap-4">
             <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-paper/10 text-[15px] text-paper/60">
               {profile.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                <RetryImg src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
               ) : (
                 profile.display_name?.slice(0, 2).toUpperCase()
               )}
@@ -189,8 +189,7 @@ export default async function AdminUser({
                       <li key={i.releases.slug} title={`${i.releases.artist} — ${i.releases.title}`}>
                         <span className="block h-10 w-10 overflow-hidden bg-paper/[0.06]">
                           {i.releases.cover_url && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={i.releases.cover_url} alt="" className="h-full w-full object-cover" />
+                            <RetryImg src={i.releases.cover_url} alt="" className="h-full w-full object-cover" />
                           )}
                         </span>
                       </li>
@@ -244,7 +243,7 @@ function Fact({
     <div className="bg-ink px-4 py-4">
       <div className="mono text-[12px] uppercase tracking-[0.18em] text-paper/50">{label}</div>
       <div
-        className={`mt-1.5 truncate text-[14px] ${tone === "warn" ? "text-[#ff6b57]" : "text-paper/85"}`}
+        className={`mt-1.5 truncate text-sub ${tone === "warn" ? "text-danger" : "text-paper/85"}`}
         title={value}
       >
         {value}

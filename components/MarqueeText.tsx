@@ -48,7 +48,16 @@ export default function MarqueeText({ children, className, speed = 60 }: Props) 
      * the same question: is there more text here than there is room for.
      */
     const measure = () => {
-      const overflow = outer.scrollWidth > outer.clientWidth + 1;
+      /* Ya en marcha, el contenedor lleva dos copias y su scrollWidth siempre
+         se pasa: así nunca volvía a pararse aunque el texto ya cupiera (la
+         cabecera de la colección le da más sitio después de medirse). Se mide
+         una copia, sin su respiro (pr-10). */
+      const inner = innerRef.current;
+      const running = Boolean(inner?.classList.contains("pr-10"));
+      // el respiro está en rem: al 130 % ya no son 40px
+      const breath = running && inner ? parseFloat(getComputedStyle(inner).paddingRight) || 0 : 0;
+      const textW = running && inner ? inner.scrollWidth - breath : outer.scrollWidth;
+      const overflow = textW > outer.clientWidth + 1;
       setOverflows(overflow);
       if (overflow) {
         // travel is one copy plus the gap; in marquee mode the container holds

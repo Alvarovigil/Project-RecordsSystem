@@ -1,7 +1,15 @@
 import { NextRequest } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 import { artistSlug } from "@/lib/artist";
-import { catalogueFetch, catalogueWaitSeconds } from "@/lib/discogs-budget";
+import {
+  catalogueFetch,
+  catalogueWaitSeconds,
+  clientCallWait,
+  clientKey,
+  clientRequestWait,
+  rateLimitedResponse,
+  spendClientCalls,
+} from "@/lib/discogs-budget";
 
 /**
  * One artist, identified rather than matched.
@@ -47,25 +55,39 @@ const norm = (s: string) =>
     .trim();
 
 /**
+ * Quién pregunta, y si alguna consulta se quedó sin hacer por el límite (suyo
+ * o de la instancia): una respuesta así no se guarda en la caché.
+ */
+type Asker = { who: string; limited: boolean };
+
+/**
  * Through the shared budget, like search and barcode: the artist calls spend
  * the same quota, and a 429 here has to make everyone wait, not only this
  * route. A refusal or a wait reads as «nothing», as a failed fetch always did.
+ * Each call also counts against the asker's own share of the minute.
  */
-async function discogs(path: string): Promise<any> {
+async function discogs(path: string, asker: Asker): Promise<any> {
+  if (clientCallWait(asker.who) > 0) {
+    asker.limited = true;
+    return null;
+  }
+  spendClientCalls(asker.who);
   const r = await catalogueFetch(`https://api.discogs.com${path}`, { revalidate: 3600 });
+  if (r.kind === "rate_limited") asker.limited = true;
   return r.kind === "ok" ? r.data : null;
 }
 
 /** the id of the artist credited on a record the shelf already holds */
-async function artistOfRelease(releaseId: string) {
-  const d = await discogs(`/releases/${encodeURIComponent(releaseId)}`);
+async function artistOfRelease(releaseId: string, asker: Asker) {
+  const d = await discogs(`/releases/${encodeURIComponent(releaseId)}`, asker);
   const a = d?.artists?.[0];
   return a?.id ? { id: Number(a.id), name: String(a.name) } : null;
 }
 
-async function artistByName(name: string) {
+async function artistByName(name: string, asker: Asker) {
   const d = await discogs(
     `/database/search?type=artist&per_page=10&q=${encodeURIComponent(name)}`,
+    asker,
   );
   const rows: { id: number; title: string; thumb?: string }[] = d?.results ?? [];
   if (rows.length === 0) return null;
@@ -84,6 +106,16 @@ export async function GET(req: NextRequest) {
   const photosFor = req.nextUrl.searchParams.get("photos")?.trim();
   if (!q && !fromRelease && !givenId && !photosFor)
     return Response.json({ error: "q required" }, { status: 400 });
+
+  const asker: Asker = { who: clientKey(req.headers), limited: false };
+  /* La petición cuenta para quien pregunta solo cuando va a salir al
+     catálogo: lo que contesta la caché no le cuesta nada a nadie. */
+  let gated = false;
+  const gateWait = () => {
+    if (gated) return 0;
+    gated = true;
+    return clientRequestWait("artist", asker.who);
+  };
 
   /**
    * Cache-only mode, for the search box.
@@ -125,9 +157,10 @@ export async function GET(req: NextRequest) {
 
     // Las caras son un adorno: con el minuto gastado no se pide ninguna, y la
     // búsqueda de discos se queda con lo que quede.
-    if (catalogueWaitSeconds() > 0) return Response.json({ artists: [] });
+    if (catalogueWaitSeconds() > 0 || gateWait() > 0) return Response.json({ artists: [] });
     const found = await discogs(
       `/database/search?type=artist&per_page=25&q=${encodeURIComponent(photosFor)}`,
+      asker,
     );
     const artists = ((found?.results ?? []) as { title?: string; thumb?: string }[])
       .map((a) => {
@@ -176,8 +209,12 @@ export async function GET(req: NextRequest) {
 
   let ident: { id: number; name: string } | null = null;
   if (givenId) ident = { id: Number(givenId), name: q ?? "" };
-  if (!ident && fromRelease) ident = await artistOfRelease(fromRelease);
-  if (!ident && q) ident = await artistByName(q);
+  if (!ident) {
+    const wait = gateWait();
+    if (wait > 0) return rateLimitedResponse(wait, { artist: null, releases: [] });
+  }
+  if (!ident && fromRelease) ident = await artistOfRelease(fromRelease, asker);
+  if (!ident && q) ident = await artistByName(q, asker);
   if (!ident) return Response.json({ artist: null, releases: [] });
 
   const sb = getSupabaseAdminClient();
@@ -195,9 +232,13 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  {
+    const wait = gateWait();
+    if (wait > 0) return rateLimitedResponse(wait, { artist: null, releases: [] });
+  }
   const [profile, discography] = await Promise.all([
-    discogs(`/artists/${ident.id}`),
-    discogs(`/artists/${ident.id}/releases?sort=year&sort_order=desc&per_page=100`),
+    discogs(`/artists/${ident.id}`, asker),
+    discogs(`/artists/${ident.id}/releases?sort=year&sort_order=desc&per_page=100`, asker),
   ]);
 
   /**
@@ -295,7 +336,8 @@ export async function GET(req: NextRequest) {
       );
   }
 
-  if (sb) {
+  // a medias por el límite no se guarda: volvería un mes sin sus discos
+  if (sb && !asker.limited) {
     void sb
       .from("discogs_search_cache")
       .upsert({ query: key, results: payload }, { onConflict: "query" })

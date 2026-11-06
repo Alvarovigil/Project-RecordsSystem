@@ -42,7 +42,7 @@ export default function CatalogueNotice({
   return (
     <div
       role="status"
-      className={`flex items-start gap-2.5 rounded-[14px] bg-fill-subtle text-content-muted ${
+      className={`flex items-start gap-2.5 rounded-lg bg-fill-subtle text-content-muted ${
         compact ? "px-3 py-2.5" : "px-4 py-3"
       }`}
     >

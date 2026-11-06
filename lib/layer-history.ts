@@ -34,6 +34,19 @@
  */
 
 export const LAYER_KEY = "__rackrLayer";
+/**
+ * The address of the page under the layers, kept on a layer's entry only
+ * while every entry between it and that page has the same address. A reload
+ * can then walk back over its own dead entries knowing exactly where it
+ * lands; without it (an old entry, a `router.replace` in between) the walk is
+ * not safe and the mark is only cleaned.
+ */
+export const BASE_KEY = "__rackrBase";
+
+function baseOf(state: unknown): string | null {
+  const v = (state as Record<string, unknown> | null | undefined)?.[BASE_KEY];
+  return typeof v === "string" ? v : null;
+}
 
 export function layerOf(state: unknown): number {
   const v = (state as Record<string, unknown> | null | undefined)?.[LAYER_KEY];
@@ -93,7 +106,10 @@ export function createLayerHistory(env: LayerEnv) {
   const mark = (n: number) => {
     const base = { ...((h.state as object | null) ?? {}) } as Record<string, unknown>;
     if (n > 0) base[LAYER_KEY] = n;
-    else delete base[LAYER_KEY];
+    else {
+      delete base[LAYER_KEY];
+      delete base[BASE_KEY];
+    }
     h.replaceState(base, "");
   };
 
@@ -177,8 +193,19 @@ export function createLayerHistory(env: LayerEnv) {
 
     while (pending.length) {
       const l = pending.shift()!;
-      const mine = layerOf(h.state) + 1;
-      h.pushState({ ...((h.state as object | null) ?? {}), [LAYER_KEY]: mine }, "");
+      const below = h.state;
+      const mine = layerOf(below) + 1;
+      // the chain down to the page holds only if the entry below is the page
+      // itself or carries an intact chain to this same address
+      const here = env.path();
+      const chain = layerOf(below) === 0 || baseOf(below) === here ? here : null;
+      const next: Record<string, unknown> = {
+        ...((below as object | null) ?? {}),
+        [LAYER_KEY]: mine,
+      };
+      if (chain) next[BASE_KEY] = chain;
+      else delete next[BASE_KEY];
+      h.pushState(next, "");
       l.mine = mine;
       l.state = "pushed";
       pushed.push(l);
@@ -258,12 +285,37 @@ export function createLayerHistory(env: LayerEnv) {
       return pushed.length > 0 || pending.length > 0 || awaiting || floor !== null || scheduled;
     },
 
-    /** on mount: a mark with nothing open is a leftover from before a reload */
+    /**
+     * On mount: a mark with nothing open is a leftover from before a reload.
+     *
+     * The entries under it are dead too — the same page, once per layer — and
+     * cost one «atrás» each. When the entry vouches that all of them have
+     * this address (`BASE_KEY`), history walks back over them in one `go()`
+     * and lands on the page itself; the popstate is ours and closes nobody.
+     * Otherwise there is no way to know where `go()` would land, so the mark
+     * is only cleaned and the dead entries stay.
+     */
     settle() {
       if (awaiting || pushed.length || pending.length) return;
-      if (layerOf(h.state) > 0) mark(0);
+      const stale = layerOf(h.state);
+      const path = env.path();
+      if (stale > 0 && baseOf(h.state) === path) {
+        cur = stale;
+        curPath = path;
+        awaiting = true;
+        cancelGuard = env.timer(() => {
+          cancelGuard = null;
+          awaiting = false;
+          cur = layerOf(h.state);
+          curPath = env.path();
+          schedule();
+        }, POP_GUARD_MS);
+        h.go(-stale);
+        return;
+      }
+      if (stale > 0) mark(0);
       cur = 0;
-      curPath = env.path();
+      curPath = path;
     },
   };
 }

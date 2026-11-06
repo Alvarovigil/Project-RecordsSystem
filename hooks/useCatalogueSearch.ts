@@ -394,9 +394,15 @@ export function useCatalogueSearch({
   /* Se mira si hay artistas, no cuántos: cuando llegan las filas del catálogo
      la cuenta cambia, y eso no debe cancelar la petición de caras en vuelo. */
   const hasArtists = artists.length > 0;
+  /* Solo detrás de la búsqueda principal, y cuando ya ha contestado a ESTA
+     frase. Antes bastaba con que la frase pasara la puerta y llevara medio
+     segundo quieta, así que las consultas intermedias — «radiohead», luego
+     «radiohead in» — pedían cada una sus caras y gastaban del mismo minuto
+     del catálogo que la búsqueda. Si la frase cambia antes de la respuesta,
+     no sale nada. */
+  const answered = answeredKey !== null && answeredKey === key;
   useEffect(() => {
-    // la misma puerta que la búsqueda: frase asentada, tres letras, sin espera
-    if (mode !== "vinyls" || !(force || shouldSearchCatalogue(key)) || !hasArtists) return;
+    if (mode !== "vinyls" || !answered || !hasArtists) return;
     if (askedPhotos.current.has(key)) return;
     let alive = true;
     const controller = new AbortController();
@@ -417,13 +423,13 @@ export function useCatalogueSearch({
           // abortada antes de contestar: que se pueda volver a pedir
           if (controller.signal.aborted) askedPhotos.current.delete(key);
         });
-    }, CATALOGUE_DEBOUNCE_MS);
+    }, 0);
     return () => {
       alive = false;
       clearTimeout(t);
       controller.abort();
     };
-  }, [mode, key, hasArtists, force]);
+  }, [mode, key, hasArtists, answered]);
 
   const noteSave = useCallback((key: string, record: SaveRecord) => {
     setSavedIn((m) => ({ ...m, [key]: record }));

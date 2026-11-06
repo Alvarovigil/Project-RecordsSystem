@@ -16,6 +16,7 @@ import CatalogueNotice from "./ui/CatalogueNotice";
 import { useCatalogueSearch, type DiscogsResult as SearchResult } from "@/hooks/useCatalogueSearch";
 import { useEntryGate } from "@/hooks/useSession";
 
+import RetryImg from "@/components/ui/RetryImg";
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -238,7 +239,7 @@ export default function SearchOverlay({
             onTargetChange={setTargetId}
             onCreateList={onCreateList}
           />
-          <span className="mono hidden text-[12px] uppercase tracking-[0.18em] text-paper/25 sm:block">
+          <span className="mono hidden text-micro uppercase tracking-[0.18em] text-content-faint sm:block">
             ↑↓ moverse · ↵ {rows[cursor]?.kind === "local" ? "ir al disco" : "guardar"}
           </span>
         </div>
@@ -325,8 +326,7 @@ export default function SearchOverlay({
                       className="flex items-center gap-3 px-2 py-3 transition hover:bg-paper/5"
                     >
                       {artistPhotos[a.slug] ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <RetryImg
                           src={artistPhotos[a.slug]}
                           alt=""
                           className="h-12 w-12 shrink-0 rounded-full object-cover"
@@ -378,8 +378,7 @@ export default function SearchOverlay({
                     className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left hover:bg-paper/5 transition px-2"
                   >
                     {v.cover ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={v.cover} alt="" className="w-12 h-12 object-cover rounded-sm" />
+                      <RetryImg src={v.cover} alt="" className="w-12 h-12 object-cover rounded-sm" />
                     ) : (
                       <div className="w-12 h-12 bg-paper/10 rounded-sm" />
                     )}
@@ -441,8 +440,7 @@ export default function SearchOverlay({
                     className="flex min-w-0 flex-1 items-center gap-3 px-2 py-3 text-left transition hover:bg-paper/5"
                   >
                     {r.thumb ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.thumb} alt="" className="w-12 h-12 object-cover rounded-sm" />
+                      <RetryImg src={r.thumb} alt="" className="w-12 h-12 object-cover rounded-sm" />
                     ) : (
                       <div className="w-12 h-12 bg-paper/10 rounded-sm" />
                     )}

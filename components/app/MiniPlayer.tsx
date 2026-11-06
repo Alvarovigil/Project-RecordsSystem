@@ -10,6 +10,7 @@ import RecordSheet from "@/components/mobile/RecordSheet";
 import { useLibrary } from "@/hooks/useLibrary";
 import type { Vinyl } from "@/lib/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * The player that follows you around.
  *
@@ -53,8 +54,7 @@ export default function MiniPlayer() {
           aria-label={`Abrir ${nowPlaying.title}`}
           className="pressable h-10 w-10 shrink-0 overflow-hidden bg-paper/[0.06] sm:h-11 sm:w-11"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={coverFor(nowPlaying)} alt="" className="h-full w-full object-cover" />
+          <RetryImg src={coverFor(nowPlaying)} alt="" className="h-full w-full object-cover" />
         </button>
 
         {/**

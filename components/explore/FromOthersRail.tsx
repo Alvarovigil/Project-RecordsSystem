@@ -7,6 +7,7 @@ import { coverFor } from "@/lib/cover";
 import type { ListWithRecord } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 export type Find = {
   vinyl: Vinyl;
   /** de qué rack ha salido, y de quién: es la mitad del hallazgo */
@@ -106,8 +107,7 @@ export default function FromOthersRail({
       {finds.map((f) => (
         <li key={f.vinyl.id} className="w-[142px] shrink-0 snap-start sm:w-[164px]">
           <button onClick={() => onOpen(f)} className="pressable block w-full text-left">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <RetryImg
               src={coverFor(f.vinyl)}
               alt=""
               loading="lazy"

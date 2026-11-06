@@ -6,6 +6,7 @@ import { coverFor } from "@/lib/cover";
 import type { CoverOption } from "@/app/api/discogs/covers/route";
 import type { Vinyl } from "@/lib/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * Cambiar la portada por la que de verdad tienes en las manos.
  *
@@ -89,8 +90,7 @@ export default function CoverPicker({
                     className="pressable block w-full text-left"
                   >
                     <span className="relative block">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <RetryImg
                         src={c.url}
                         alt=""
                         loading="lazy"

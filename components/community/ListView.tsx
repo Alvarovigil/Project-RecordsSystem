@@ -26,6 +26,7 @@ import type { ListWithRecord } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 import { listTitleFor } from "@/lib/list-title";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * A list, whoever made it.
  *
@@ -173,8 +174,7 @@ export default function ListView({
          */}
         <div className="relative h-[46svh] max-h-[420px] w-full overflow-hidden">
           {ground ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={ground} alt="" className="h-full w-full scale-125 object-cover blur-2xl" />
+            <RetryImg src={ground} alt="" className="h-full w-full scale-125 object-cover blur-2xl" />
           ) : (
             <div className="h-full w-full bg-fill-subtle" />
           )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import ShareSheet from "@/components/ShareSheet";
 import { SITE_URL } from "@/lib/site";
@@ -46,6 +46,23 @@ import type { Vinyl } from "@/lib/types";
 
 /** el aviso de «sin 3D» ya se dio en este dispositivo */
 const NO_3D_TOLD = "rackr:no-3d-told";
+
+/** la misma clave que el escritorio: la vista que elegiste es la tuya en los dos */
+const VIEW_KEY = "vinilos:view";
+
+/**
+ * La vista con la que se abre. La primera vez, el estante (es la entrada);
+ * después, la última que eligió la persona. Solo se pinta en el cliente
+ * (ShelfApp no monta esto hasta medir el dispositivo), pero se protege igual.
+ */
+function readView(): "shelf" | "grid" {
+  if (typeof window === "undefined") return "shelf";
+  try {
+    return localStorage.getItem(VIEW_KEY) === "grid" ? "grid" : "shelf";
+  } catch {
+    return "shelf";
+  }
+}
 
 /**
  * The crate, on a phone.
@@ -150,7 +167,16 @@ export default function MobileShelf({
    * Two different jobs wearing the same clothes is how people end up pressing
    * the wrong one.
    */
-  const [view, setView] = useState<"shelf" | "grid">("shelf");
+  const [view, setView] = useState<"shelf" | "grid">(readView);
+  /** el cambio a mano se recuerda; la caída a cuadrícula por falta de 3D, no */
+  const chooseView = (next: "shelf" | "grid") => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      // sin almacenamiento: la vista vale para esta visita
+    }
+  };
   const [switching, setSwitching] = useState(false);
 
   /**
@@ -177,6 +203,83 @@ export default function MobileShelf({
     }
     if (!told) toast.show("La estantería en 3D no ha cargado. Te la enseñamos en cuadrícula.");
   }, [toast]);
+  /**
+   * Qué cabe en la cabecera, medido.
+   *
+   * A 360 con la letra al 130 % no caben a la vez la palabra del botón de
+   * vista y el nombre del rack. Se decide con números, no a ojo:
+   *   0 — todo: la palabra dentro del botón y el nombre en una línea;
+   *   1 — el botón de vista se queda en icono (la palabra sigue en su
+   *       etiqueta) y el nombre entero en una línea;
+   *   2 — el nombre en dos líneas, quieto;
+   *   3 — ni así (un nombre muy largo): una línea que se desplaza, como
+   *       antes, y el botón conserva su palabra porque quitarla no arregla nada.
+   * El ancho de cada cosa sale de la letra con la que de verdad se pinta
+   * (dos sondas invisibles) y de los tokens de la cabecera.
+   */
+  const viewCaption = view === "shelf" ? "Cuadrícula" : "Estantería";
+  const headerRowRef = useRef<HTMLDivElement>(null);
+  const nameProbeRef = useRef<HTMLSpanElement>(null);
+  const capProbeRef = useRef<HTMLSpanElement>(null);
+  const [fit, setFit] = useState<0 | 1 | 2 | 3>(0);
+  useEffect(() => {
+    const row = headerRowRef.current;
+    const np = nameProbeRef.current;
+    const cp = capProbeRef.current;
+    const ctx = document.createElement("canvas").getContext("2d");
+    if (!row || !np || !cp || !ctx) return;
+    const num = (v: string) => parseFloat(v) || 0;
+    const fontOf = (el: Element) => {
+      const c = getComputedStyle(el);
+      return `${c.fontWeight} ${c.fontSize} ${c.fontFamily}`;
+    };
+    const measure = () => {
+      const root = getComputedStyle(document.documentElement);
+      const tap = num(root.getPropertyValue("--tap-lg")) || 48;
+      const pad = num(root.getPropertyValue("--chrome-pad")) || 12;
+      const tight = num(root.getPropertyValue("--chrome-pad-tight")) || 8;
+      const gap = num(getComputedStyle(row).columnGap);
+      // la cápsula del nombre: su relleno, el hueco y la flecha (11)
+      const base = row.clientWidth - 3 * gap - 2 * tap - 6 - 11;
+      const room = base - 2 * pad;
+      // en dos líneas la cápsula aprieta su relleno; 1px de margen para que
+      // un redondeo no parta una palabra por la mitad
+      const roomTwo = base - 2 * tight - 1;
+      ctx.font = fontOf(cp);
+      // el botón con palabra: la palabra y 8px a cada lado (px-2)
+      const capW = Math.max(tap, Math.ceil(ctx.measureText(viewCaption).width) + 16);
+      ctx.font = fontOf(np);
+      const w = (t: string) => ctx.measureText(t).width;
+      const one = w(activeName);
+      const twoLines = (max: number) => {
+        let lines = 1;
+        let line = 0;
+        for (const word of activeName.split(/\s+/)) {
+          const ww = w(word);
+          if (ww > max) return false;
+          const next = line === 0 ? ww : line + w(" ") + ww;
+          if (next <= max) line = next;
+          else {
+            lines += 1;
+            line = ww;
+          }
+        }
+        return lines <= 2;
+      };
+      setFit(
+        one <= room - capW ? 0 : one <= room - tap ? 1 : twoLines(roomTwo - tap) ? 2 : 3,
+      );
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(row);
+    let alive = true;
+    void document.fonts?.ready.then(() => alive && measure());
+    return () => {
+      alive = false;
+      ro.disconnect();
+    };
+  }, [activeName, viewCaption]);
   const canScan = useCanScan();
   const isCollection = findCollection(collections)?.id === activeListId;
   /**
@@ -245,23 +348,38 @@ export default function MobileShelf({
   }, [repo, savedLists]);
 
   return (
-    <div className="relative min-h-screen-d bg-surface">
+    <main className="relative min-h-screen-d bg-surface">
+      {/* el nombre del rack ya está en la cápsula, pero como botón; quien
+          recorre la página por títulos necesita también el título */}
+      <h1 className="sr-only">{activeName}</h1>
       {/* ------------------------------------------------------- the chrome */}
       <header
-        className="fixed inset-x-0 top-0 z-40 px-3"
+        className="fixed inset-x-0 top-0 z-40 px-[var(--chrome-pad)]"
         style={{ paddingTop: "calc(var(--safe-top) + 10px)" }}
       >
-        <div className="flex items-center gap-2">
+        {/* sondas invisibles: con qué letra se pintan el nombre y la palabra */}
+        <span ref={nameProbeRef} aria-hidden className="pointer-events-none invisible absolute whitespace-nowrap text-sub font-medium">
+          {activeName}
+        </span>
+        <span ref={capProbeRef} aria-hidden className="pointer-events-none invisible absolute whitespace-nowrap text-chrome font-medium">
+          {viewCaption}
+        </span>
+        <div ref={headerRowRef} className="flex items-center gap-[var(--chrome-gap)]">
           {/* The two views of the same records. Only the one you are in is
               drawn: a two-segment pill spends a whole slot showing you the
               thing you already chose, and up here every pixel is cover art
               you are covering up. Tap and it flips. */}
+          {/* El dibujo y la palabra dicen adónde vas, no dónde estás: quien
+              no lee iconos lee «Cuadrícula» y sabe qué pasa al tocar. */}
           <RoundButton
-            label={view === "shelf" ? "Ver en cuadrícula" : "Ver el estante"}
-            onClick={() => setView(view === "shelf" ? "grid" : "shelf")}
+            label={view === "shelf" ? "Ver en cuadrícula" : "Ver la estantería"}
+            /* sin palabra solo cuando quitarla deja el nombre entero; si el
+               nombre no va a caber de ninguna manera (3), la palabra se queda */
+            caption={fit === 0 || fit === 3 ? viewCaption : undefined}
+            onClick={() => chooseView(view === "shelf" ? "grid" : "shelf")}
             disabled={no3d && view === "grid"}
           >
-            {view === "shelf" ? <ShelfIcon /> : <GridIcon />}
+            {view === "shelf" ? <GridIcon /> : <ShelfIcon />}
           </RoundButton>
 
           {/* Which list you are in — the centre of the header, because it is
@@ -270,7 +388,7 @@ export default function MobileShelf({
           <div className="flex min-w-0 flex-1 justify-center">
             <button
               onClick={() => setSwitching(true)}
-              aria-label={`Rack actual: ${activeName}. Cambiar de rack`}
+              aria-label={`Rack actual: ${activeName}, ${vinilos.length === 1 ? "1 disco" : `${vinilos.length} discos`}. Cambiar de rack`}
               /**
                * A ceiling, or the marquee never runs.
                *
@@ -280,12 +398,30 @@ export default function MobileShelf({
                * at 62% of the screen it has to give, and a name too long to
                * read at a glance starts moving instead of being cut.
                */
-              className="pressable flex h-12 max-w-[48vw] items-center gap-1.5 rounded-full bg-ink/72 px-4 text-paper/90 backdrop-blur-xl"
+              className={`pressable flex h-tap-lg min-w-0 items-center gap-[6px] rounded-full bg-ink/72 text-paper/90 backdrop-blur-xl ${
+                fit === 2 ? "px-[var(--chrome-pad-tight)]" : "px-[var(--chrome-pad)]"
+              }`}
             >
-              <MarqueeText className="min-w-0 text-sub font-medium">
-                {activeName}
-              </MarqueeText>
-              <span className="shrink-0 text-sub text-paper/50">{vinilos.length}</span>
+              {fit === 2 ? (
+                /* no cabe en una línea pero sí en dos: quieto y entero, y el
+                   número se queda para quien escucha (está en la etiqueta) */
+                <span aria-hidden className="line-clamp-2 min-w-0 break-words text-center text-sub font-medium leading-tight">
+                  {activeName}
+                </span>
+              ) : (
+              /* Primero cabe el nombre. Si con el contador al lado no cabe
+                 (letra al 130 %, o un nombre largo), el contador baja a una
+                 segunda línea dentro de la misma cápsula en vez de empujar
+                 el nombre a desplazarse solo. */
+              <span className="flex min-w-0 flex-wrap items-baseline justify-center gap-x-1.5 leading-tight">
+                <MarqueeText className="min-w-0 max-w-full text-sub font-medium leading-tight">
+                  {activeName}
+                </MarqueeText>
+                <span aria-hidden className="shrink-0 text-caption leading-tight text-content-secondary">
+                  {vinilos.length}
+                </span>
+              </span>
+              )}
               <svg
                 width="11"
                 height="11"
@@ -325,7 +461,7 @@ export default function MobileShelf({
             </svg>
             <span
               aria-hidden
-              className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-paper text-ink"
+              className="absolute right-badge-inset top-badge-inset flex h-badge w-badge items-center justify-center rounded-full bg-paper text-ink"
             >
               <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
                 <path d="M4 1v6M1 4h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -609,7 +745,7 @@ export default function MobileShelf({
         }
         onRemoveRecord={onRemoveRecordFromList}
       />
-    </div>
+    </main>
   );
 }
 
@@ -674,42 +810,19 @@ function CoverGrid({
     <div data-scrollable className="scroll-y h-screen-d px-4" style={pad}>
       <ul className="grid grid-cols-2 gap-x-4 gap-y-7">
         {vinilos.map((v, i) => (
-          <li key={v.id}>
-            <button onClick={() => onOpen(v)} className="pressable block w-full text-left">
+          <li key={v.id} className="relative">
+            <button
+              onClick={() => onOpen(v)}
+              aria-label={`Abrir ${v.title}, de ${v.artist}`}
+              className="pressable block w-full text-left"
+            >
               <span className="relative block">
                 <Cover
+                  vinyl={v}
                   src={coverFor(v)}
                   eager={i < 6}
                   className="aspect-square w-full rounded-[3px]"
                 />
-                {/**
-                 * Going down the wishlist is the one pass where the same
-                 * decision repeats — you got these three, you did not get
-                 * those. Opening each record to say so is four taps for a
-                 * one-bit answer, so the answer lives on the cover.
-                 */}
-                {onAcquire && (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Ya tengo ${v.title}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAcquire(v);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key !== "Enter" && e.key !== " ") return;
-                      e.stopPropagation();
-                      e.preventDefault();
-                      onAcquire(v);
-                    }}
-                    className="pressable hit absolute bottom-1.5 right-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-ink/72 text-paper/90 backdrop-blur-xl"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
-                      <path d="M2.5 7.4 L5.6 10.5 L11.5 3.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
-                )}
                 {v.id === nowPlayingId && (
                   <span
                     aria-label="Sonando"
@@ -720,6 +833,30 @@ function CoverGrid({
               <span className="mt-2 block truncate text-sub font-medium text-paper">{v.title}</span>
               <span className="block truncate text-caption text-content-muted">{v.artist}</span>
             </button>
+            {/**
+             * Going down the wishlist is the one pass where the same
+             * decision repeats — you got these three, you did not get
+             * those. Opening each record to say so is four taps for a
+             * one-bit answer, so the answer lives on the cover.
+             *
+             * Al lado del botón de la portada y no dentro: un botón dentro de
+             * otro no se puede alcanzar bien con el lector de pantalla. La
+             * capa transparente mide lo mismo que la portada y lo coloca en
+             * su esquina.
+             */}
+            {onAcquire && (
+              <span className="pointer-events-none absolute inset-x-0 top-0 aspect-square">
+                <button
+                  onClick={() => onAcquire(v)}
+                  aria-label={`Ya tengo ${v.title}`}
+                  className="pressable hit pointer-events-auto absolute bottom-1.5 right-1.5 flex h-9 w-9 items-center justify-center rounded-full bg-ink/72 text-paper/90 backdrop-blur-xl"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                    <path d="M2.5 7.4 L5.6 10.5 L11.5 3.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </span>
+            )}
           </li>
         ))}
       </ul>
@@ -738,11 +875,14 @@ function ShelfWait() {
 
 function RoundButton({
   label,
+  caption,
   onClick,
   children,
   disabled = false,
 }: {
   label: string;
+  /** la palabra visible bajo el círculo; fuera del flujo, no le quita sitio al nombre del rack */
+  caption?: string;
   onClick: () => void;
   children: React.ReactNode;
   disabled?: boolean;
@@ -762,9 +902,18 @@ function RoundButton({
        * thumb aims at without looking, where 44 is the floor you are allowed
        * to hit.
        */
-      className="pressable relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink/72 text-paper/90 backdrop-blur-xl disabled:opacity-40"
+      /* Con palabra, la misma cápsula de cristal crece hacia abajo y a lo
+         ancho lo justo: el dibujo arriba, la palabra debajo, todo un botón. */
+      className={`pressable relative flex shrink-0 items-center justify-center rounded-full bg-ink/72 text-paper/90 backdrop-blur-xl disabled:opacity-40 ${
+        caption ? "min-h-tap-lg min-w-tap-lg flex-col gap-1.5 px-2 py-2.5" : "h-tap-lg w-tap-lg"
+      }`}
     >
       {children}
+      {caption && (
+        <span aria-hidden className="whitespace-nowrap text-chrome font-medium">
+          {caption}
+        </span>
+      )}
     </button>
   );
 }

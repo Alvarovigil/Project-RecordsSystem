@@ -38,7 +38,7 @@ export default function DemoNotice() {
           setHidden(true);
         }}
         aria-label="Descartar"
-        className="text-paper/30 transition hover:text-paper"
+        className="text-content-faint transition hover:text-paper"
       >
         <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
           <path d="M2 2 L12 12 M12 2 L2 12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />

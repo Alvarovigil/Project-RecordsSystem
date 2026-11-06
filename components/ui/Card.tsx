@@ -29,7 +29,7 @@ export default function Card({
 }) {
   return (
     <section
-      className={`overflow-hidden rounded-[14px] bg-fill-subtle ${padded ? "p-5" : "py-5"}`}
+      className={`overflow-hidden rounded-lg bg-fill-subtle ${padded ? "p-5" : "py-5"}`}
     >
       {title && (
         <header

@@ -50,7 +50,7 @@ function Card({
   visual: React.ReactNode;
 }) {
   return (
-    <li className="overflow-hidden rounded-[14px] bg-fill-subtle">
+    <li className="overflow-hidden rounded-lg bg-fill-subtle">
       <div aria-hidden className="flex h-[104px] items-center justify-center bg-ink/40 px-5">
         {visual}
       </div>

@@ -14,6 +14,7 @@ import {
   type Profile,
 } from "@/lib/data";
 
+import RetryImg from "@/components/ui/RetryImg";
 type View =
   | { kind: "record" }
   | { kind: "list"; id: string }
@@ -303,7 +304,7 @@ function RecordView({
               <li key={f.user.id}>
                 <button
                   onClick={() => onOpenProfile(f.user.id)}
-                  className="pressable flex w-full items-center gap-3 rounded-[14px] bg-fill-subtle p-3 text-left transition hover:bg-fill"
+                  className="pressable flex w-full items-center gap-3 rounded-lg bg-fill-subtle p-3 text-left transition hover:bg-fill"
                 >
                   <Avatar user={f.user} size={40} />
                   <span className="min-w-0 flex-1">
@@ -431,8 +432,7 @@ function ListView({
                     v.id === currentId ? "outline outline-1 outline-paper/30 outline-offset-2" : ""
                   }`}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <RetryImg
                     src={coverFor(v)}
                     alt=""
                     loading="lazy"
@@ -551,12 +551,11 @@ function ListRow({
   return (
     <button
       onClick={onOpen}
-      className="group pressable flex w-full items-center gap-3.5 rounded-[14px] bg-fill-subtle p-3 text-left transition hover:bg-fill"
+      className="group pressable flex w-full items-center gap-3.5 rounded-lg bg-fill-subtle p-3 text-left transition hover:bg-fill"
     >
       <span className="flex shrink-0 overflow-hidden rounded-[3px]">
         {covers.map((v) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img key={v.id} src={coverFor(v)} alt="" className="h-11 w-11 object-cover" />
+          <RetryImg key={v.id} src={coverFor(v)} alt="" className="h-11 w-11 object-cover" />
         ))}
       </span>
       <span className="min-w-0 flex-1">
@@ -608,8 +607,7 @@ function Avatar({
       aria-hidden
     >
       {user.avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
+        <RetryImg src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
       ) : (
         initials
       )}

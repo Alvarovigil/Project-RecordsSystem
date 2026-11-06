@@ -149,7 +149,7 @@ function WebviewDoor() {
       {/* On its own ground: it sits over the moving shelf, and a sentence
           that has to be read and followed needs to win over whatever sleeve
           is passing behind it. */}
-      <p className="max-w-[36ch] rounded-[14px] bg-[rgb(var(--ink-rgb)/0.6)] px-4 py-2.5 text-center text-[14px] leading-relaxed text-paper/90 backdrop-blur-md">
+      <p className="max-w-[36ch] rounded-lg bg-[rgb(var(--ink-rgb)/0.6)] px-4 py-2.5 text-center text-sub leading-relaxed text-paper/90 backdrop-blur-md">
         {IN_APP_NOTE}
       </p>
       <Link

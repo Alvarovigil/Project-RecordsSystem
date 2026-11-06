@@ -20,12 +20,14 @@ import RecordSheet from "@/components/mobile/RecordSheet";
 import { usePlaybackContext } from "@/lib/playback-context";
 import { useLibrary } from "@/hooks/useLibrary";
 import { useEntryGate, useIsVisitor } from "@/hooks/useSession";
+import { layersBusy } from "@/hooks/useBackToClose";
 import { useCatalogueSearch } from "@/hooks/useCatalogueSearch";
 import { useToast } from "@/components/ui/Toast";
 import { coverFor } from "@/lib/cover";
 import type { ActivityEvent, ListWithRecord, SuggestedProfile } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 /** the sample shelf is nobody's, so for a visitor nothing counts as owned */
 const NOTHING: Set<string> = new Set();
 
@@ -71,7 +73,50 @@ export default function ExploreView() {
   const inputRef = useRef<HTMLInputElement>(null);
   /** only the phone pill cares: it stays open while the cursor is in it */
 
-  const [query, setQuery] = useState("");
+  /**
+   * The search lives in the address as `?q=`, not only in this component.
+   *
+   * «Guardar» without a session goes to /entrar, and coming back — «atrás»,
+   * or the `next` after signing in — remounts this screen: a search held only
+   * in state came back empty, and the person had to type it again to find
+   * the record they had just tried to keep.
+   */
+  const [query, setQuery] = useState(() => params.get("q") ?? "");
+  /** the client has mounted: what only it knows (your shelf) can be drawn */
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  /** no network, or the last read failed: the skeleton gives way to a retry */
+  const [offline, setOffline] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    const sync = () => setOffline(!navigator.onLine);
+    // the connection is back: read again, without anybody pressing anything
+    const back = () => {
+      setOffline(false);
+      setRetry((n) => n + 1);
+    };
+    sync();
+    window.addEventListener("online", back);
+    window.addEventListener("offline", sync);
+    return () => {
+      window.removeEventListener("online", back);
+      window.removeEventListener("offline", sync);
+    };
+  }, []);
+
+  // the query into the address, replacing the entry (typing is not a place to
+  // go back to). Not while a layer owns history: its entry has this address
+  // and a different one would read as a navigation.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const q = query.trim();
+    if ((url.searchParams.get("q") ?? "") === q) return;
+    if (layersBusy()) return;
+    if (q) url.searchParams.set("q", q);
+    else url.searchParams.delete("q");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  }, [query]);
   const [scope, setScope] = useState<Scope>("all");
   const [lists, setLists] = useState<ListWithRecord[]>([]);
   /**
@@ -206,6 +251,17 @@ export default function ExploreView() {
   useEffect(() => {
     let alive = true;
     const q = query.trim();
+    setFailed(false);
+    /* A read that never answers (offline, the session refreshing against no
+       network) is a failure too: past this, it says so instead of pulsing. */
+    const slow = setTimeout(() => alive && setFailed(true), 12000);
+    const done = () => clearTimeout(slow);
+    const fail = () => {
+      clearTimeout(slow);
+      if (!alive) return;
+      setLoading(false);
+      setFailed(true);
+    };
 
     if (!q) {
       setLoading(true);
@@ -213,18 +269,23 @@ export default function ExploreView() {
         .activity()
         .then((e) => setPulse(e.filter((x) => !x.mine)))
         .catch(() => setPulse([]));
-      Promise.all([repo.popularLists(), repo.suggestedProfiles()])
+      /* Cada mitad por su lado: si fallan los racks, se dice; si solo
+         fallan las personas, los racks se enseñan igual. */
+      Promise.allSettled([repo.popularLists(), repo.suggestedProfiles()])
         .then(([l, p]) => {
           if (!alive) return;
-          setLists(l);
-          setPeople(p);
+          if (l.status === "rejected") return fail();
+          done();
+          setLists(l.value);
+          setPeople(p.status === "fulfilled" ? p.value : []);
           setLoading(false);
         })
         // without this a failed read leaves the skeleton pulsing for ever,
         // which is the one state that never resolves itself
-        .catch(() => alive && setLoading(false));
+        .catch(fail);
       return () => {
         alive = false;
+        clearTimeout(slow);
       };
     }
 
@@ -235,20 +296,22 @@ export default function ExploreView() {
       Promise.all([repo.searchLists(q), repo.searchProfiles(q)])
         .then(([l, p]) => {
           if (!alive) return;
+          done();
           setLists(l);
           setPeople(
             p.map((x) => ({ ...x, shared: 0, mutuals: 0, followers: 0, covers: [], chosen: false })),
           );
           setLoading(false);
         })
-        .catch(() => alive && setLoading(false));
+        .catch(fail);
     }, 220);
 
     return () => {
       alive = false;
       clearTimeout(t);
+      clearTimeout(slow);
     };
-  }, [repo, query, library]);
+  }, [repo, query, library, retry]);
 
   const remember = useCallback((q: string) => {
     const clean = q.trim();
@@ -307,6 +370,9 @@ export default function ExploreView() {
 
   return (
     <Page width="full">
+      {/* Sin título visible (ver abajo), pero quien recorre la página por
+          títulos con el lector de pantalla sí necesita uno. */}
+      <h1 className="sr-only">Explorar</h1>
       {/**
        * The field is the top of the page, because it is the page.
        *
@@ -551,7 +617,21 @@ export default function ExploreView() {
             title="Racks que vale la pena abrir"
             note="Montados con criterio, no carpetas."
           >
-            {loading && lists.length === 0 ? (
+            {(offline || failed) && lists.length === 0 ? (
+              /* Sin red el esqueleto latía para siempre: no decía ni «espera»
+                 ni «algo ha fallado». Ahora lo dice, y al volver la conexión
+                 se vuelve a pedir solo. */
+              <EmptyState
+                compact
+                title={offline ? "Sin conexión" : "No hemos podido cargar Explorar"}
+                body={
+                  offline
+                    ? "Cuando vuelva la conexión, esto se carga solo."
+                    : "Puede ser la conexión. Prueba otra vez en un momento."
+                }
+                action={{ label: "Reintentar", onClick: () => setRetry((n) => n + 1) }}
+              />
+            ) : loading && lists.length === 0 ? (
               <SkeletonRackRail n={5} />
             ) : lists.length === 0 ? (
               /* A heading with nothing under it is the worst of both: it does
@@ -560,10 +640,12 @@ export default function ExploreView() {
               <EmptyState
                 compact
                 title="Todavía no hay racks que enseñarte"
-                body="O nadie ha publicado un rack público, o no hemos podido leerlas. Prueba a recargar; si sigue vacío, busca algo concreto."
+                body="O nadie ha publicado un rack público, o no hemos podido leerlos. Prueba a recargar; si sigue vacío, busca algo concreto."
+                /* se vuelve a pedir aquí mismo: recargar la página entera
+                   tiraba lo que ya estaba escrito en el buscador */
                 action={{
-                  label: "Recargar",
-                  onClick: () => window.location.reload(),
+                  label: "Reintentar",
+                  onClick: () => setRetry((n) => n + 1),
                 }}
               />
             ) : (
@@ -593,6 +675,9 @@ export default function ExploreView() {
             )}
           </Section>
 
+          {/* sin red y sin nadie que enseñar, el aviso de arriba ya lo dice:
+              aquí solo quedaría un título sobre nada */}
+          {!((offline || failed) && people.length === 0) && (
           <Section
             /* Sin sesión no hay un «tú» con el que comparar: la estantería
                de la que saldría el parecido es la de ejemplo. */
@@ -617,6 +702,7 @@ export default function ExploreView() {
               ))}
             </ul>
           </Section>
+          )}
 
           {/**
            * Las dos listas del catálogo, debajo del club y no encima.
@@ -632,7 +718,8 @@ export default function ExploreView() {
           <WantedRail
             // la lista se pide una vez al montar: si la sesión se resuelve
             // después, se vuelve a pedir con el filtro que toca
-            key={visitor ? "visitor" : "member"}
+            // y otra vez si vuelve la conexión
+            key={`${visitor ? "visitor" : "member"}-${retry}`}
             title="Lo que todo el mundo busca"
             subtitle={`Los vinilos de ${new Date().getFullYear()} más perseguidos ahora mismo.${
               visitor ? "" : " Sin lo que ya tienes."
@@ -649,8 +736,11 @@ export default function ExploreView() {
           />
 
           {/* sin sesión el género saldría de la estantería de ejemplo */}
-          {topGenre && !visitor && (
+          {/* tu estantería solo existe en el cliente: en el servidor y en la
+              hidratación no hay género, o React pinta dos árboles distintos */}
+          {mounted && topGenre && !visitor && (
             <WantedRail
+              key={retry}
               title={`Tu estantería tira a ${topGenre.toLowerCase()}`}
               genre={topGenre}
               subtitle="Lo más perseguido del género, sin lo que ya tienes."
@@ -758,8 +848,7 @@ export default function ExploreView() {
                           >
                             <span className="block aspect-square w-full overflow-hidden rounded-[3px] bg-fill-subtle">
                               {row.r.thumb && (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
+                                <RetryImg
                                   src={row.r.cover_image ?? row.r.thumb}
                                   alt=""
                                   loading="lazy"

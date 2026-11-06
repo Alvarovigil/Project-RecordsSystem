@@ -27,8 +27,8 @@ export default function DemoBand() {
           .demo-band { display: flex; }
         }
       `}</style>
-      <div
-        role="note"
+      <aside
+        aria-label="Colección de ejemplo"
         /* de cristal, como las demás barras de arriba en el teléfono: se lee
            igual sin un corte recto encima de la estantería */
         className="demo-band fixed inset-x-0 top-0 z-[95] items-center justify-center gap-3 border-b border-line bg-ink/70 px-4 text-caption leading-tight text-content-secondary backdrop-blur-xl"
@@ -44,7 +44,7 @@ export default function DemoBand() {
         >
           Entrar
         </Link>
-      </div>
+      </aside>
     </>
   );
 }

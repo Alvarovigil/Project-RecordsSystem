@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "@/hooks/useSession";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * Identity in the top bar.
  *
@@ -58,8 +59,7 @@ export default function AccountMenu() {
         className="group relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-paper/25 mono text-[12px] text-paper/80 transition-all duration-fast hover:scale-105 hover:border-paper hover:shadow-[0_0_0_3px_rgba(245,243,238,0.10)]"
       >
         {profile?.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <RetryImg
             src={profile.avatarUrl}
             alt=""
             className="h-full w-full object-cover brightness-90 transition duration-fast group-hover:brightness-110"

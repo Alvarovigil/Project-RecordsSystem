@@ -3,7 +3,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { Suspense } from "react";
 import ShelfApp from "@/components/ShelfApp";
-import BootScreen from "@/components/mobile/BootScreen";
+import { ShelfLoading } from "@/components/mobile/BootScreen";
 import { FAKE_SESSION } from "@/lib/dev-session";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export default async function ShelfPage() {
   // the fake session browses the placeholder shelf, not a Supabase one
   if (!isSupabaseConfigured || FAKE_SESSION) {
     return (
-      <Suspense fallback={<BootScreen />}>
+      <Suspense fallback={<ShelfLoading path="/coleccion" />}>
         <ShelfApp />
       </Suspense>
     );
@@ -29,7 +29,7 @@ export default async function ShelfPage() {
   if (!data.user) redirect("/");
 
   return (
-    <Suspense fallback={<BootScreen />}>
+    <Suspense fallback={<ShelfLoading path="/coleccion" />}>
       <ShelfApp authenticated />
     </Suspense>
   );

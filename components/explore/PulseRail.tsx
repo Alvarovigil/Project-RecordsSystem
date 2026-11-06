@@ -5,6 +5,7 @@ import Avatar from "@/components/ui/Avatar";
 import { SkeletonRows } from "@/components/ui/Skeleton";
 import type { ActivityEvent } from "@/lib/data/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * Lo que está pasando ahora mismo en las estanterías de los demás.
  *
@@ -38,8 +39,7 @@ export default function PulseRail({ events }: { events: ActivityEvent[] | null }
             {/* la portada delante: es lo único de la línea que se reconoce sin
                 leer, y lo que hace que esto sea una estantería y no un registro */}
             {e.release?.cover ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <RetryImg
                 src={e.release.cover}
                 alt=""
                 loading="lazy"

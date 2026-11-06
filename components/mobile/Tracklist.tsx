@@ -213,7 +213,9 @@ export default function Tracklist({
                         </span>
 
                         <span
-                          className={`min-w-0 flex-1 truncate ${
+                          /* dos líneas antes que cortar: con la letra al 130 % en
+                             un teléfono estrecho, una sola dejaba ocho letras */
+                          className={`min-w-0 flex-1 line-clamp-2 break-words ${
                             current ? "text-accent" : playable ? "text-paper" : "text-content-muted"
                           }`}
                         >

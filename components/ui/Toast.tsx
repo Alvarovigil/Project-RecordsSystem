@@ -12,6 +12,7 @@ import {
 } from "react";
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * What just happened, and how to take it back.
  *
@@ -306,8 +307,7 @@ function ToastCard({
 function Thumb({ media, error }: { media?: Media; error?: boolean }) {
   if (media?.src) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <RetryImg
         src={media.src}
         alt=""
         className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-line-strong"

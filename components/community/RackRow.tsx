@@ -5,6 +5,7 @@ import LayerLink from "@/components/ui/LayerLink";
 import SharedMark from "@/components/ui/SharedMark";
 import { rackCaption, type RackView } from "@/lib/rack";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * Un rack, en una línea. La única.
  *
@@ -37,6 +38,7 @@ export default function RackRow({
   as,
   onClick,
   trailing,
+  wrap = false,
   className = "",
 }: {
   rack: RackView;
@@ -52,16 +54,23 @@ export default function RackRow({
   onClick?: () => void;
   /** el control de la derecha: la flecha, el check, los tres puntos */
   trailing?: React.ReactNode;
+  /**
+   * Nombre y pie en hasta dos líneas en vez de cortados. Donde la fila va
+   * dentro de algo estrecho (la ficha de un disco) y el pie lleva quién lo
+   * hizo, «de Álvaro Rodv…» no dice de quién es.
+   */
+  wrap?: boolean;
   className?: string;
 }) {
   const tile = density === "tile";
+  const cut = wrap ? "line-clamp-2 break-words" : "truncate";
 
   const body = (
     <>
       <RackMark rack={rack} size={tile ? 44 : 36} />
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-body text-paper">{rack.title}</span>
+          <span className={`${cut} text-body text-paper`}>{rack.title}</span>
           {rack.sharedWith && (
             <span className="shrink-0 text-content-faint">
               <SharedMark title={`Compartida con ${rack.sharedWith}`} />
@@ -76,7 +85,7 @@ export default function RackRow({
             </span>
           )}
         </span>
-        <span className="mt-0.5 block truncate text-caption text-content-muted">
+        <span className={`mt-0.5 block ${cut} text-caption text-content-muted`}>
           {rackCaption(rack, { owner: showOwner })}
         </span>
       </span>
@@ -135,8 +144,7 @@ export function RackMark({ rack, size = 44 }: { rack: RackView; size?: number })
            difuminada al fondo de la caja. Es lo mismo que hace la ficha de un
            disco a pantalla completa, a cuarenta píxeles — y evita que una fila
            de racks sea una fila de cuadrados grises idénticos. */
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <RetryImg
           src={rack.cover}
           alt=""
           aria-hidden
@@ -149,8 +157,7 @@ export function RackMark({ rack, size = 44 }: { rack: RackView; size?: number })
         /* El disco, asomando por encima del panel frontal: 62% de ancho y con
            el pie metido dentro de la caja, que es lo que lo pone «dentro» y no
            «detrás». */
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <RetryImg
           src={rack.cover}
           alt=""
           loading="lazy"

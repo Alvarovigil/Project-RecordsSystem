@@ -42,6 +42,7 @@ import { useSearchParams } from "next/navigation";
 import BootScreen from "@/components/mobile/BootScreen";
 import { isColdEntry } from "@/lib/launch";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * The 3D shelf, fetched only if it is going to be shown.
  *
@@ -168,13 +169,22 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   const [specsOpen, setSpecsOpen] = useState(false);
 
   // remember the last used view
+  /* hasta leer la guardada, la vista es el «shelf» por defecto: escribirla
+     entonces pisaba la elegida (también la del móvil, que usa la misma clave) */
+  const [viewRead, setViewRead] = useState(false);
   useEffect(() => {
-    const v = localStorage.getItem("vinilos:view");
-    if (v === "grid" || v === "shelf") setView(v);
+    try {
+      const v = localStorage.getItem("vinilos:view");
+      if (v === "grid" || v === "shelf") setView(v);
+    } catch {}
+    setViewRead(true);
   }, []);
   useEffect(() => {
-    localStorage.setItem("vinilos:view", view);
-  }, [view]);
+    if (!viewRead) return;
+    try {
+      localStorage.setItem("vinilos:view", view);
+    } catch {}
+  }, [view, viewRead]);
 
   // fade everything when the active collection changes
   useEffect(() => {
@@ -185,18 +195,19 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
 
   // The overlays speak the older Collection shape; adapting here keeps them
   // untouched while the data underneath moves to the repository.
+  const { lists: libLists, idsOf: libIdsOf, fromCache: libFromCache } = lib;
   const resolvedCollections = useMemo<Collection[]>(
     () =>
-      lib.lists.map((l) => ({
+      libLists.map((l) => ({
         id: l.id,
         name: l.title,
-        vinylIds: lib.idsOf(l.id),
+        vinylIds: libIdsOf(l.id),
         sortBy: l.sortBy,
         kind: l.kind,
         visibility: l.visibility,
         sharedBy: l.sharedBy,
       })),
-    [lib.lists, lib.idsOf],
+    [libLists, libIdsOf],
   );
   const activeCollection =
     resolvedCollections.find((c) => c.id === activeCollectionId) ?? null;
@@ -234,7 +245,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
      * pages. If the library came from the snapshot, the shelf is already
      * correct — show it.
      */
-    if (lib.fromCache) {
+    if (libFromCache) {
       setHydrated(true);
       return;
     }
@@ -260,7 +271,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
       img.onerror = tick;
       img.src = u;
     });
-  }, [lib.ready, vinilos]);
+  }, [lib.ready, libFromCache, vinilos]);
 
   /**
    * How long the opening screen stays: until the app is finished, and a beat
@@ -1236,7 +1247,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                   if (v !== view) handleClose();
                   setView(v);
                 }}
-                aria-label={v === "shelf" ? "Vista colección" : "Vista cuadrícula"}
+                aria-label={v === "shelf" ? "Vista estantería" : "Vista cuadrícula"}
                 aria-pressed={view === v}
                 className={`flex h-[26px] w-[30px] items-center justify-center transition ${
                   view === v
@@ -1343,8 +1354,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             <span className="relative shrink-0">
               <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-paper/10 mono text-[12px] text-paper/60">
                 {foreign.list.owner.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={foreign.list.owner.avatarUrl} alt="" className="h-full w-full object-cover" />
+                  <RetryImg src={foreign.list.owner.avatarUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
                   foreign.list.owner.displayName.slice(0, 2).toUpperCase()
                 )}
@@ -1440,8 +1450,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
             >
               {active && (
                 <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <RetryImg
                     src={coverFor(active)}
                     alt=""
                     className="absolute inset-0 h-full w-full rounded-full object-cover"
@@ -1559,7 +1568,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                   <span>Escanear</span>
                 </button>
               ) : (
-                <div className="px-5 py-3 mono text-[12px] uppercase tracking-[0.22em] text-paper/30 border-l border-paper/10 flex items-center">
+                <div className="px-5 py-3 mono text-micro uppercase tracking-[0.22em] text-content-faint border-l border-paper/10 flex items-center">
                   Tecla /
                 </div>
               )}

@@ -14,6 +14,7 @@ import { groupActivity, namesOf, type ActivityGroup } from "@/lib/activity";
 import Invites from "@/components/activity/Invites";
 import type { ActivityEvent } from "@/lib/data/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * Actividad: what is moving around your collection.
  *
@@ -91,6 +92,7 @@ export default function ActivityView() {
   if (visitor) {
     return (
       <Page width="full">
+        <h1 className="sr-only">Actividad</h1>
         <EmptyState
           title="Aquí se ve lo que mueve tu gente"
           body="Cuando entres y sigas a alguien, verás los discos que añade, los racks que publica y quién se guarda los tuyos."
@@ -103,6 +105,8 @@ export default function ActivityView() {
 
   return (
     <Page width="full">
+      {/* sin título visible (ver abajo), pero sí para quien navega por títulos */}
+      <h1 className="sr-only">Actividad</h1>
       {/* No heading. The bar already says Actividad and marks it as where you
           are; repeating it here would cost the top of the screen to tell you
           something you pressed a button to do. The first day label does the
@@ -222,8 +226,7 @@ function Row({ group: g }: { group: ActivityGroup }) {
        * parezca una estantería y no un registro de auditoría.
        */}
       {g.releases[0]?.cover && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <RetryImg
           src={g.releases[0].cover}
           alt=""
           loading="lazy"

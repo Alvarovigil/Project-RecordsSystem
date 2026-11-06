@@ -1,5 +1,12 @@
 import { NextRequest } from "next/server";
-import { catalogueFetch, rateLimitedResponse } from "@/lib/discogs-budget";
+import {
+  catalogueFetch,
+  clientCallWait,
+  clientKey,
+  clientRequestWait,
+  rateLimitedResponse,
+  spendClientCalls,
+} from "@/lib/discogs-budget";
 
 /**
  * Read at request time, never at module scope.
@@ -69,6 +76,11 @@ export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get("code")?.trim();
   if (!code) return Response.json({ error: "code required" }, { status: 400 });
 
+  // cada escaneo pregunta al catálogo: cuenta para quien escanea (lib/discogs-budget)
+  const who = clientKey(req.headers);
+  const gateWait = clientRequestWait("barcode", who);
+  if (gateWait > 0) return rateLimitedResponse(gateWait, { code });
+
   /**
    * Las formas del código, de una en una y parando en cuanto una acierta.
    *
@@ -80,6 +92,12 @@ export async function GET(req: NextRequest) {
   let anyAnswered = false;
   for (const v of variants(code)) {
     if (req.signal.aborted) return new Response(null, { status: 499 });
+    const mine = clientCallWait(who);
+    if (mine > 0) {
+      limited = mine;
+      break;
+    }
+    spendClientCalls(who);
     const r = await byBarcode(v, req.signal);
     if (r.kind === "rate_limited") {
       limited = r.retryAfter;

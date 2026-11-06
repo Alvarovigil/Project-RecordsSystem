@@ -29,7 +29,7 @@ export function Step({
   children?: React.ReactNode;
 }) {
   return (
-    <li className="rounded-[14px] bg-fill-subtle p-4">
+    <li className="rounded-lg bg-fill-subtle p-4">
       <div className="flex items-start gap-3.5">
         <span className="mono mt-px flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-paper text-[12px] font-medium text-ink">
           {n}
@@ -127,7 +127,7 @@ export function HomeScreenDrop() {
             alt=""
             className="aspect-square w-full rounded-[11px] shadow-[0_6px_18px_rgba(0,0,0,0.6)]"
           />
-          <span className="absolute -inset-1 rounded-[14px] ring-2 ring-accent/70" />
+          <span className="absolute -inset-1 rounded-lg ring-2 ring-accent/70" />
         </span>
         {[3, 4, 5, 6].map((n) => (
           <span key={n} className="aspect-square rounded-[11px] bg-paper/[0.07]" />

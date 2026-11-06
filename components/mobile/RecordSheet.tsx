@@ -156,9 +156,10 @@ export default function RecordSheet({
   /* Un disco que acaba de entrar en casa se abre con la hoja de racks puesta:
      colocarlo es lo siguiente que se hace, y es la continuación del gesto que
      lo guardó, no una acción nueva. */
+  const openId = vinyl?.id;
   useEffect(() => {
-    if (vinyl && pickOnOpen && !visitor) setPicking(true);
-  }, [vinyl?.id, pickOnOpen, visitor]);
+    if (openId && pickOnOpen && !visitor) setPicking(true);
+  }, [openId, pickOnOpen, visitor]);
 
   /* Mientras se mira un disco, su artista se va pidiendo por detrás: el enlace
      está ahí y hay bastantes posibilidades de que se pulse. Si se pulsa, no
@@ -330,10 +331,10 @@ export default function RecordSheet({
                     size="md"
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-body text-paper">
+                    <span className="line-clamp-2 break-words text-body text-paper">
                       {f.user.displayName}
                     </span>
-                    <span className="block truncate text-caption text-content-muted">
+                    <span className="line-clamp-2 break-words text-caption text-content-muted">
                       en {f.viaListTitle}
                     </span>
                   </span>
@@ -382,6 +383,7 @@ export default function RecordSheet({
                   rack={rackOfList(l, (rackCovers[l.id] ?? [])[0] ?? null)}
                   density="compact"
                   showOwner
+                  wrap
                   className="rounded-md px-3"
                   onClick={onClose}
                 />
@@ -409,7 +411,11 @@ export default function RecordSheet({
        * is a button in the corner rather than a gesture that competes with
        * reading a tracklist.
        */}
-      <RecordScreen open={Boolean(vinyl)} onClose={onClose}>
+      <RecordScreen
+        open={Boolean(vinyl)}
+        onClose={onClose}
+        label={vinyl ? `${vinyl.title}, de ${vinyl.artist}` : undefined}
+      >
         <RecordTopBar
           onClose={onClose}
           cover={coverFor(vinyl)}

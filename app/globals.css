@@ -136,6 +136,10 @@
      whose tab bar does not grow with Dynamic Type, because at 130 % the three
      names no longer fit and the icon already says which tab it is. */
   --t-tab: min(var(--t-caption), 15px); /* px on purpose: a rem ceiling would grow too */
+  /* The word inside a floating control (the view switch over the shelf).
+     Same reasoning as the tab bar: it grows a little with the text size, but
+     the header has to keep fitting a 360 screen at 130 %. */
+  --t-chrome: min(var(--t-micro), 13px);
   /* The one tracked, uppercase register, reserved for labels that name a
      region. Never for anything you click. */
   --track-label: 0.18em;
@@ -155,6 +159,25 @@
   /* Nothing a finger must hit is smaller than this. It is a floor, not a
      suggestion, and it applies to the hit area — not to the ink. */
   --tap: 44px;
+  /* The floating controls over the artwork (the collection header): what a
+     thumb aims at without looking. In px on purpose: with the text at 130 %
+     the words grow, the buttons do not, and the header still fits a 360
+     screen. */
+  --tap-lg: 48px;
+  /* The spacing of that header, also in px: the gap between its controls
+     (never under 8, so two thumbs' targets never touch) and the inner padding
+     of the rack pill. In rem they grew with the text and pushed the last
+     button off a 360 screen at 130 %. */
+  --chrome-gap: 8px;
+  --chrome-pad: 12px;
+  /* The pill's padding when the name has had to go to two lines: four px a
+     side is what lets «Mi / Colección» fit at 320 with the text at 130 %. */
+  --chrome-pad-tight: 8px;
+  /* The «+» badge on the search circle, and how far it sits from the corner:
+     the circle stays 48 at 130 %, so the badge cannot grow either or it
+     covers the magnifier. */
+  --badge: 16px;
+  --badge-inset: 6px;
 }
 
 /**
@@ -442,6 +465,15 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Where the keyboard is. The browser's own ring is a 1px blue that almost
+   disappears on ink; this one is the system's focus line, with air around it.
+   :where() keeps it at zero specificity, so a control that draws its own
+   focus (a field, a pill) still wins. Only on keyboard focus, never on tap. */
+:where(:focus-visible) {
+  outline: 2px solid var(--line-focus);
+  outline-offset: 2px;
+}
+
 @media (pointer: coarse) {
   /* Rubber-banding the whole document is the single loudest "this is a web
      page" signal on iOS. Individual scrollers opt back in below. */
@@ -535,7 +567,7 @@ html {
  * imantado respete ese mismo margen en lugar de ignorarlo.
  */
 .rail-page {
-  --rail-pad: 1.25rem;
+  --rail-pad: var(--page-pad, 1.25rem);
   margin-left: calc(-1 * var(--rail-pad));
   margin-right: calc(-1 * var(--rail-pad));
   padding-left: var(--rail-pad);
@@ -549,7 +581,24 @@ html {
 
 @media (min-width: 640px) {
   .rail-page {
-    --rail-pad: 2rem;
+    --rail-pad: var(--page-pad, 2rem);
+  }
+}
+
+/* El margen lateral de Page, dicho una vez para que los carriles salgan
+   justo hasta el borde y no más: con 2rem fijos, en una página de medida
+   (1.5rem) el carril se pasaba 8px y el perfil tenía scroll lateral a 768.
+   Tiene que coincidir con las clases px-* de Page (AppShell). */
+.page-measure,
+.page-full {
+  --page-pad: 1.25rem;
+}
+@media (min-width: 640px) {
+  .page-measure {
+    --page-pad: 1.5rem;
+  }
+  .page-full {
+    --page-pad: 2rem;
   }
 }
 
@@ -670,8 +719,9 @@ input[type="search"]::-webkit-search-decoration {
 /* While a sheet owns the screen, nothing behind it may scroll or be reached.
    pinch-zoom rather than none: panning stays off, so the page under the sheet
    still cannot be dragged, but two fingers can still zoom — and a sheet with
-   a record's details on it is exactly where somebody needs to. */
-body[data-sheet-open="1"] {
+   a record's details on it is exactly where somebody needs to. The attribute
+   counts the sheets open (see Sheet), so any value locks. */
+body[data-sheet-open] {
   overflow: hidden;
   touch-action: pinch-zoom;
 }

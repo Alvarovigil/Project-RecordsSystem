@@ -2,6 +2,7 @@
 
 import { Mark } from "@/components/ui/Loading";
 import { SITE_NAME } from "@/lib/site";
+import { isColdStartOn } from "@/lib/launch";
 
 /**
  * The first screen of the session, held until the app is actually ready.
@@ -43,6 +44,25 @@ export default function BootScreen({ leaving = false }: { leaving?: boolean }) {
     >
       <Mark size={52} spinning />
       <p className="label text-content-faint">{SITE_NAME}</p>
+    </div>
+  );
+}
+
+/**
+ * What a route of the shelf shows while it loads: the opening screen on a
+ * cold start, and on a navigation nothing but the shelf's own ground.
+ *
+ * As the route's `loading.tsx` the opening screen came up on every first visit
+ * from another tab — the mark and the name for a third of a second, a launch
+ * screen in the middle of a running app. Moving inside the app, the screen
+ * that is coming is a dark room with covers in it, so the wait is that dark
+ * room, empty for a moment, and the sleeves arrive into it as they always do.
+ */
+export function ShelfLoading({ path }: { path: string }) {
+  if (isColdStartOn(path)) return <BootScreen />;
+  return (
+    <div aria-busy="true" className="fixed inset-0 bg-ink">
+      <span className="sr-only">Cargando la colección</span>
     </div>
   );
 }

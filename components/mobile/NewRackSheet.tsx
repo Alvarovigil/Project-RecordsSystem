@@ -7,6 +7,7 @@ import { coverFor } from "@/lib/cover";
 import { cleanArtist } from "@/lib/artist";
 import type { Vinyl } from "@/lib/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * Hacer un rack, que es más que ponerle un nombre.
  *
@@ -156,8 +157,7 @@ export default function NewRackSheet({
                       className="pressable block w-full text-left"
                     >
                       <span className="relative block">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        <RetryImg
                           src={coverFor(v)}
                           alt=""
                           loading="lazy"

@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/Toast";
 import type { ListWithRecord } from "@/lib/data/types";
 import { listTitleFor } from "@/lib/list-title";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * What a kept list actually is, shown on the way past it.
  *
@@ -204,8 +205,7 @@ export default function ListHoverCard({
           return (
             <li key={i} className="aspect-square overflow-hidden rounded-[3px] bg-fill-subtle">
               {src && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
+                <RetryImg src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
               )}
             </li>
           );

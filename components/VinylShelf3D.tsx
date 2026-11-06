@@ -2,11 +2,11 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { PerspectiveCamera } from "@react-three/drei";
-import { forwardRef, memo, Suspense, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from "react";
+import { forwardRef, memo, Suspense, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type ReactNode } from "react";
 import * as THREE from "three";
 import { useReducedMotion } from "framer-motion";
 import type { Vinyl } from "@/lib/types";
-import { coverFor } from "@/lib/cover";
+import { COVER_RETRY_MS, coverFor } from "@/lib/cover";
 import { hasWebGL, markWebGLLost } from "@/lib/webgl";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
@@ -53,10 +53,9 @@ function sampleEdgeColor(img: HTMLImageElement): string {
   }
 }
 
-function loadTextureCached(url: string): Promise<LoadedCover> {
-  const hit = TEXTURE_CACHE.get(url);
-  if (hit) return hit;
-  const p = new Promise<LoadedCover>((resolve, reject) => {
+
+function loadImageOnce(url: string): Promise<LoadedCover> {
+  return new Promise<LoadedCover>((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
@@ -69,6 +68,30 @@ function loadTextureCached(url: string): Promise<LoadedCover> {
     };
     img.onerror = (e) => reject(e);
     img.src = url;
+  });
+}
+
+/**
+ * One load per cover for the whole session — but only a load that worked.
+ *
+ * The cache used to keep the rejected promise too, so a cover that failed
+ * once (a tunnel, a lift) never came back until a reload. Now a failure is
+ * retried a couple of times with a growing wait, and if it still fails it
+ * leaves the cache, so the next sleeve that asks for it tries again.
+ */
+function loadTextureCached(url: string): Promise<LoadedCover> {
+  const hit = TEXTURE_CACHE.get(url);
+  if (hit) return hit;
+  const attempt = (n: number): Promise<LoadedCover> =>
+    loadImageOnce(url).catch((e) => {
+      if (n >= COVER_RETRY_MS.length) throw e;
+      return new Promise<LoadedCover>((resolve, reject) => {
+        setTimeout(() => attempt(n + 1).then(resolve, reject), COVER_RETRY_MS[n]);
+      });
+    });
+  const p = attempt(0).catch((e) => {
+    if (TEXTURE_CACHE.get(url) === p) TEXTURE_CACHE.delete(url);
+    throw e;
   });
   TEXTURE_CACHE.set(url, p);
   return p;
@@ -152,7 +175,11 @@ type Props = {
   fallback?: ReactNode;
 };
 
-type SceneProps = Omit<Props, "onUnavailable" | "fallback"> & { onContextLost: (e: Event) => void };
+type SceneProps = Omit<Props, "onUnavailable" | "fallback"> & {
+  onContextLost: (e: Event) => void;
+  /** el primer fotograma con los discos ya pintados */
+  onFirstFrame?: () => void;
+};
 
 /** Everything about the light that is worth arguing over. */
 export type LightRig = {
@@ -408,6 +435,7 @@ function spineInk(edge: string): { bg: string; ink: string; halo: string } {
 const VinylShelf3D = forwardRef<VinylShelfHandle, SceneProps>(function VinylShelf3D(
   {
     onContextLost,
+    onFirstFrame,
     vinilos,
     onOpen,
     onActiveChange,
@@ -684,7 +712,8 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, SceneProps>(function VinylShel
         setOpenIdx(null);
       },
     }),
-    [vinilos.length],
+    // todo lo que usa va por refs (lengthRef, target): el asa no envejece
+    [],
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1017,6 +1046,8 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, SceneProps>(function VinylShel
             hoverSpring={tuning.hoverSpring}
             hoverLift={tuning.hoverLift}
           />
+          {/* dentro del mismo Suspense: solo cuenta cuando la tira ya está */}
+          {onFirstFrame && <FirstFrame onFrame={onFirstFrame} />}
         </Suspense>
       </Canvas>
     </div>
@@ -1051,19 +1082,50 @@ const SafeShelf = forwardRef<VinylShelfHandle, Props>(function SafeShelf(
     setOk(false);
   };
 
+  /**
+   * Hasta el primer fotograma, la espera encima del lienzo.
+   *
+   * En un teléfono lento el lienzo existe segundos antes de pintar nada (el
+   * contexto, los sombreadores, las primeras texturas) y, sin esto, eso se ve
+   * como una pantalla negra. La espera de la marca se queda delante hasta que
+   * la tira de discos ha pintado de verdad.
+   */
+  const [drawn, setDrawn] = useState(false);
+  const onFirstFrame = useCallback(() => setDrawn(true), []);
+
   const ground = fallback ?? <div aria-hidden className="h-full w-full bg-ink" />;
   if (!ok) return <>{ground}</>;
 
   return (
     <ErrorBoundary fallback={ground} onError={fail}>
-      <VinylShelf3D ref={ref} {...props} onContextLost={(e: Event) => {
-        // without this the browser never offers the context back
-        e.preventDefault();
-        fail();
-      }} />
+      <div className="relative h-full w-full">
+        <VinylShelf3D
+          ref={ref}
+          {...props}
+          onFirstFrame={drawn ? undefined : onFirstFrame}
+          onContextLost={(e: Event) => {
+            // without this the browser never offers the context back
+            e.preventDefault();
+            fail();
+          }}
+        />
+        {!drawn && <div className="pointer-events-none absolute inset-0">{ground}</div>}
+      </div>
     </ErrorBoundary>
   );
 });
+
+/** Avisa una vez, en el primer fotograma en que se monta. */
+function FirstFrame({ onFrame }: { onFrame: () => void }) {
+  const done = useRef(false);
+  useFrame(() => {
+    if (done.current) return;
+    done.current = true;
+    // el aviso después de este fotograma: así lo que se quita deja ver algo ya pintado
+    requestAnimationFrame(onFrame);
+  });
+  return null;
+}
 
 // Memoised: the page re-renders on every playback tick, and without this the
 // whole scene tree would be reconciled each time — the transport animation
@@ -1448,15 +1510,27 @@ function Sleeve({
   const [sampledEdge, setSampledEdge] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
-    loadTextureCached(url)
-      .then(({ texture: t, edgeColor }) => {
-        if (cancelled) return;
-        setTexture(t);
-        setSampledEdge(edgeColor);
-      })
-      .catch(() => {});
+    let onOnline: (() => void) | null = null;
+    const load = () =>
+      loadTextureCached(url)
+        .then(({ texture: t, edgeColor }) => {
+          if (cancelled) return;
+          setTexture(t);
+          setSampledEdge(edgeColor);
+        })
+        .catch(() => {
+          // out of retries: try once more when the connection comes back
+          if (cancelled) return;
+          onOnline = () => {
+            onOnline = null;
+            void load();
+          };
+          window.addEventListener("online", onOnline, { once: true });
+        });
+    void load();
     return () => {
       cancelled = true;
+      if (onOnline) window.removeEventListener("online", onOnline);
     };
   }, [url]);
 

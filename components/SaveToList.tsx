@@ -277,7 +277,7 @@ export function RowSave({
         onClick={() => setOpen((v) => !v)}
         aria-label="Guardar en otro rack"
         title="Guardar en otro rack"
-        className="reveal-on-hover ml-1 flex w-6 items-center justify-center rounded-sm text-paper/30 transition hover:text-paper"
+        className="reveal-on-hover ml-1 flex w-6 items-center justify-center rounded-sm text-content-faint transition hover:text-paper"
       >
         <svg width="9" height="9" viewBox="0 0 8 8" fill="none">
           <path d="M1 2.5 L4 5.5 L7 2.5" stroke="currentColor" strokeWidth="1.2" />

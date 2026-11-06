@@ -66,7 +66,7 @@ export function LikeButton({
       aria-pressed={liked}
       aria-label={liked ? "Quitar me gusta" : "Me gusta"}
       className={`pressable hit -my-1 -ml-1 flex items-center gap-1.5 rounded-full px-1 py-1 transition-colors ${
-        liked ? "text-[#ff6b57]" : "text-content-muted hover:text-paper"
+        liked ? "text-accent" : "text-content-muted hover:text-paper"
       }`}
     >
       <Heart size={px} filled={liked} />

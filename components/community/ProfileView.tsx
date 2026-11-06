@@ -28,6 +28,7 @@ import { coverFor } from "@/lib/cover";
 import Loading from "@/components/ui/Loading";
 import Verified from "@/components/ui/Verified";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * One profile screen, for you and for everyone else.
  *
@@ -264,8 +265,7 @@ export default function ProfileView({
 
         <div className="relative h-[26svh] max-h-[230px] w-full overflow-hidden">
           {backdrop ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <RetryImg
               src={backdrop}
               alt=""
               className="h-full w-full scale-125 object-cover blur-2xl"
@@ -447,8 +447,7 @@ export default function ProfileView({
                       onClick={() => setOpenRecord(v)}
                       className="pressable block w-full text-left"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <RetryImg
                         src={coverFor(v)}
                         alt=""
                         loading="lazy"

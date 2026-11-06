@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * The app, running, inside a phone — not a drawing of it.
  *
@@ -225,8 +226,7 @@ function Collection({ justAdded }: { justAdded: boolean }) {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src(c)} alt="" className="aspect-square w-full rounded-[3px] object-cover" />
+              <RetryImg src={src(c)} alt="" className="aspect-square w-full rounded-[3px] object-cover" />
               <span className="mt-2 block truncate text-[13px] font-medium text-paper">
                 {i === 0 && justAdded ? SCANNED.title : TITLES[c]?.[0]}
               </span>
@@ -251,8 +251,7 @@ function Collection({ justAdded }: { justAdded: boolean }) {
             className="absolute inset-x-0 top-[58px] flex justify-center px-4"
           >
             <span className="flex items-center gap-2.5 rounded-full bg-[#1b1b1b] py-1.5 pl-1.5 pr-4 shadow-[0_10px_30px_rgba(0,0,0,0.6)]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src(SCANNED.cover)} alt="" className="h-8 w-8 rounded-full object-cover" />
+              <RetryImg src={src(SCANNED.cover)} alt="" className="h-8 w-8 rounded-full object-cover" />
               <span className="text-[13px] text-paper">{SCANNED.title} → Mi Colección</span>
             </span>
           </motion.div>
@@ -279,8 +278,7 @@ function Scanner({ caught }: { caught: boolean }) {
         )}
       </AnimatePresence>
       {/* what the camera is looking at: a sleeve, close, out of focus */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <RetryImg
         src={src(SCANNED.cover)}
         alt=""
         className="absolute inset-0 h-full w-full scale-125 object-cover opacity-40 blur-[2px]"
@@ -359,8 +357,7 @@ function Scanner({ caught }: { caught: boolean }) {
               transition={{ type: "spring", damping: 30, stiffness: 420 }}
               className="flex items-center gap-3 rounded-lg bg-white/[0.16] px-3 py-2.5 backdrop-blur-2xl"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src(SCANNED.cover)} alt="" className="h-11 w-11 rounded-md object-cover" />
+              <RetryImg src={src(SCANNED.cover)} alt="" className="h-11 w-11 rounded-md object-cover" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-medium text-paper">
                   {SCANNED.title}

@@ -11,6 +11,7 @@ import { coverFor } from "@/lib/cover";
 import type { Vinyl } from "@/lib/types";
 import type { ListVisibility } from "@/lib/data/types";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * Everything you can do TO a list, as opposed to inside it.
  *
@@ -172,8 +173,7 @@ export default function ListEditSheet({
               <ul className="divide-y divide-line">
                 {records.map((v) => (
                   <li key={v.id} className="flex items-center gap-3 px-5 py-2.5">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <RetryImg
                       src={coverFor(v)}
                       alt=""
                       loading="lazy"

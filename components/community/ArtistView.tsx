@@ -53,18 +53,19 @@ export default function ArtistView({ slug }: { slug: string }) {
   const group = useMemo(() => findArtist(lib.releases, slug), [lib.releases, slug]);
   const name = group?.name ?? slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
+  const { lists: libLists, releases: libReleases, idsOf: libIdsOf } = lib;
   const collections = useMemo(
     () =>
       resolveCollections(
-        lib.lists.map((l) => ({
+        libLists.map((l) => ({
           id: l.id,
           name: l.title,
-          vinylIds: lib.idsOf(l.id),
+          vinylIds: libIdsOf(l.id),
           kind: l.kind,
         })),
-        lib.releases.map((r) => r.id),
+        libReleases.map((r) => r.id),
       ),
-    [lib.lists, lib.releases, lib.idsOf],
+    [libLists, libReleases, libIdsOf],
   );
   const mine = findCollection(collections);
 
@@ -212,7 +213,7 @@ export default function ArtistView({ slug }: { slug: string }) {
     }
   };
 
-  const owned = visitor ? [] : group?.records ?? [];
+  const owned = useMemo(() => (visitor ? [] : group?.records ?? []), [visitor, group]);
 
   /**
    * El género, del disco que sea: primero de los tuyos, y si no, del catálogo.

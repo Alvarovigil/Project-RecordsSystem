@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Vinyl } from "@/lib/types";
 import { coverFor } from "@/lib/cover";
 
+import RetryImg from "@/components/ui/RetryImg";
 type Props = {
   vinilos: Vinyl[];
   activeId?: string | null;
@@ -17,8 +18,7 @@ type Props = {
 function Cover({ vinyl, dim }: { vinyl: Vinyl; dim: boolean }) {
   const [loaded, setLoaded] = useState(false);
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <RetryImg
       src={coverFor(vinyl)}
       alt=""
       loading="lazy"
@@ -124,13 +124,13 @@ export default function VinylGrid({
                 tabIndex={-1}
               >
                 <div
-                  className={`mt-3 truncate text-[13px] leading-tight transition ${
+                  className={`mt-3 truncate text-sub leading-tight transition ${
                     sounding ? "text-paper" : "text-paper/90"
                   }`}
                 >
                   {v.title}
                 </div>
-                <div className="mt-1 truncate text-[12px] uppercase tracking-[0.14em] text-paper/50">
+                <div className="mt-1 truncate text-micro uppercase tracking-[0.14em] text-paper/50">
                   {v.artist}
                 </div>
               </button>

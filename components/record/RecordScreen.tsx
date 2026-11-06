@@ -6,6 +6,7 @@ import Sheet from "@/components/ui/Sheet";
 import { useDevice } from "@/hooks/useDevice";
 import { useBackToClose } from "@/hooks/useBackToClose";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * La superficie sobre la que vive un disco. Cualquier disco.
  *
@@ -28,10 +29,13 @@ import { useBackToClose } from "@/hooks/useBackToClose";
 export default function RecordScreen({
   open,
   onClose,
+  label,
   children,
 }: {
   open: boolean;
   onClose: () => void;
+  /** el nombre del diálogo para quien escucha la página: «Tusk, de Fleetwood Mac» */
+  label?: string;
   children: React.ReactNode;
 }) {
   const { isPhone } = useDevice();
@@ -58,6 +62,7 @@ export default function RecordScreen({
         <motion.div
           role="dialog"
           aria-modal="true"
+          aria-label={label || "Disco"}
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 16 }}
@@ -184,18 +189,25 @@ export function RecordTopBar({
             scrolled ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-1.5 opacity-0"
           }`}
         >
-          {/* cuadrada y sin redondear, como la del reproductor: una funda es cuadrada */}
-          <span className="h-10 w-10 shrink-0 overflow-hidden bg-paper/[0.06]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={cover} alt="" className="h-full w-full object-cover" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sub text-paper">{title}</span>
-            {artist && (
-              <span className="mono block truncate text-micro uppercase tracking-[0.16em] text-paper/50">
-                {artist}
-              </span>
-            )}
+          {/* Si no caben la miniatura y unas letras del título (letra al
+              130 % en un teléfono estrecho), la miniatura baja a una segunda
+              fila que no se ve y el título se queda con su sitio. Va al revés
+              en el código para que lo que salte sea la miniatura y no el
+              título; en pantalla el orden es el de siempre. */}
+          <span className="flex h-10 min-w-0 flex-1 flex-row-reverse flex-wrap content-start items-center gap-x-3 overflow-hidden">
+            {/* tan alto como la barra: así la fila de abajo empieza fuera */}
+            <span className="flex h-10 min-w-0 grow basis-24 flex-col justify-center">
+              <span className="block truncate text-sub text-paper">{title}</span>
+              {artist && (
+                <span className="block truncate text-caption text-content-secondary">
+                  {artist}
+                </span>
+              )}
+            </span>
+            {/* cuadrada y sin redondear, como la del reproductor: una funda es cuadrada */}
+            <span className="h-10 w-10 shrink-0 overflow-hidden bg-paper/[0.06]">
+              <RetryImg src={cover} alt="" className="h-full w-full object-cover" />
+            </span>
           </span>
           {trailing}
         </div>

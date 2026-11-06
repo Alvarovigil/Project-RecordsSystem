@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Device, { COVERS, EASE, ShelfHeader, TabBar, src, useOnScreen } from "./Device";
 
+import RetryImg from "@/components/ui/RetryImg";
 /**
  * Three moments of the app, each one the argument of the section it sits in.
  *
@@ -33,8 +34,7 @@ export function ScreenScan({ scale }: { scale?: number }) {
       <Device scale={scale}>
         <div className="relative flex h-full flex-col bg-black">
           {/* what the camera is looking at: a sleeve, close, out of focus */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <RetryImg
             src={src(COVERS.vandalist)}
             alt=""
             className="absolute inset-0 h-full w-full scale-125 object-cover opacity-40 blur-[2px]"
@@ -116,8 +116,7 @@ export function ScreenScan({ scale }: { scale?: number }) {
                   transition={{ type: "spring", damping: 30, stiffness: 420 }}
                   className="flex items-center gap-3 rounded-lg bg-white/[0.16] px-3 py-2.5 backdrop-blur-2xl"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src(COVERS.vandalist)} alt="" className="h-11 w-11 rounded-md object-cover" />
+                  <RetryImg src={src(COVERS.vandalist)} alt="" className="h-11 w-11 rounded-md object-cover" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-medium text-paper">The Vandalist</span>
                     <span className="mt-0.5 block truncate text-[12px] text-paper/55">
@@ -168,8 +167,7 @@ export function ScreenWishlist({ scale }: { scale?: number }) {
             <div className="grid grid-cols-2 gap-x-4 gap-y-7">
               {wished.map((c, i) => (
                 <motion.div key={c} layout className="relative" transition={{ duration: 0.5, ease: EASE }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <RetryImg
                     src={src(c)}
                     alt=""
                     className="aspect-square w-full rounded-[3px] object-cover"
@@ -210,8 +208,7 @@ export function ScreenWishlist({ scale }: { scale?: number }) {
                 className="absolute inset-x-0 top-[58px] flex justify-center px-4"
               >
                 <span className="flex items-center gap-2.5 rounded-full bg-[#1b1b1b] py-1.5 pl-1.5 pr-3 shadow-[0_10px_30px_rgba(0,0,0,0.6)]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src(COVERS.dune)} alt="" className="h-8 w-8 rounded-full object-cover" />
+                  <RetryImg src={src(COVERS.dune)} alt="" className="h-8 w-8 rounded-full object-cover" />
                   <span className="text-[13px] text-paper">Dune → Mi Colección</span>
                   <span className="ml-1 text-[12px] text-paper/50">Deshacer</span>
                 </span>
@@ -291,7 +288,7 @@ function Row({ children, live, i }: { children: React.ReactNode; live: boolean; 
       initial={{ opacity: 0, y: 14 }}
       animate={live ? { opacity: 1, y: 0 } : { opacity: 0, y: 14 }}
       transition={{ duration: 0.55, delay: 0.1 * i, ease: EASE }}
-      className="flex items-center gap-3.5 rounded-[14px] bg-fill-subtle p-3"
+      className="flex items-center gap-3.5 rounded-lg bg-fill-subtle p-3"
     >
       {children}
     </motion.div>
@@ -310,8 +307,7 @@ function Strip({ ids }: { ids: string[] }) {
   return (
     <span className="flex shrink-0 overflow-hidden rounded-[3px]">
       {ids.map((c) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img key={c} src={src(c)} alt="" className="h-11 w-11 object-cover" />
+        <RetryImg key={c} src={src(c)} alt="" className="h-11 w-11 object-cover" />
       ))}
     </span>
   );

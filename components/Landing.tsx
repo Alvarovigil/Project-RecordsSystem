@@ -74,7 +74,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
             Two sentences, and the full stop between them is doing the work:
             it makes the second half land as a separate promise rather than
             as a list of two nouns. */}
-        <span className="max-w-[46vw] text-[12px] uppercase leading-tight tracking-[0.05em] text-paper/80 sm:max-w-none sm:text-[13px]">
+        <span className="max-w-[46vw] text-micro uppercase leading-tight tracking-[0.05em] text-paper/80 sm:max-w-none sm:text-sub">
           Your records. Your people.
         </span>
 
@@ -131,7 +131,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
               corners — see AboutProject */}
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("rackr:about"))}
-            className="mt-8 text-[12px] uppercase tracking-[0.05em] text-paper/60 transition hover:text-paper sm:hidden"
+            className="mt-8 text-micro uppercase tracking-[0.05em] text-paper/60 transition hover:text-paper sm:hidden"
           >
             Sobre el proyecto
           </button>
@@ -148,7 +148,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
         >
           <div className="mx-auto max-w-[1100px]">
             <Reveal>
-              <p className="mono text-[12px] uppercase tracking-[0.14em] text-paper/50">
+              <p className="mono text-micro uppercase tracking-[0.14em] text-paper/50">
                 El club
               </p>
               {/* the mark signs the section instead of naming it twice */}
@@ -172,7 +172,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
                   enlace y un club de gente con el mismo problema que tú. Eso es
                   todo, y da para bastante.
                 </p>
-                <p className="mt-5 max-w-[46ch] text-[15px] leading-relaxed text-paper/50">
+                <p className="mt-5 max-w-[46ch] text-body leading-relaxed text-paper/50">
                   Todo lo de aquí dentro sale de la misma idea: que una
                   colección es un objeto y no una biblioteca de streaming. Se
                   ordena a mano, se recorre funda a funda y se enseña entera.
@@ -180,7 +180,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
               </Reveal>
 
               <Reveal delay={180}>
-                <p className="mono text-[12px] uppercase tracking-[0.14em] text-paper/50">
+                <p className="mono text-micro uppercase tracking-[0.14em] text-paper/50">
                   Lo que no es
                 </p>
                 <ul className="mt-5 max-w-[42ch] divide-y divide-paper/[0.08] border-y border-paper/[0.08]">
@@ -190,7 +190,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
                     </li>
                   ))}
                 </ul>
-                <p className="mt-6 max-w-[42ch] text-[15px] leading-relaxed text-paper/50">
+                <p className="mt-6 max-w-[42ch] text-body leading-relaxed text-paper/50">
                   Tu colección no es un muro que se mueve solo: si pasas dos
                   meses sin entrar, te espera exactamente igual de ordenada.
                 </p>
@@ -198,7 +198,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
             </div>
 
             <Reveal delay={240}>
-              <p className="mono mt-16 text-[12px] uppercase tracking-[0.14em] text-paper/50">
+              <p className="mono mt-16 text-micro uppercase tracking-[0.14em] text-paper/50">
                 Y se resume en tres cosas
               </p>
             </Reveal>
@@ -232,10 +232,10 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
               <div className="mx-auto max-w-[1180px]">
                 <Reveal>
                   <div className="flex items-baseline gap-4">
-                    <span className="mono text-[12px] tracking-[0.24em] text-[#f83a23]">
+                    <span className="mono text-micro tracking-[0.24em] text-accent">
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    <span className="mono text-[12px] uppercase tracking-[0.1em] text-paper/50">
+                    <span className="mono text-micro uppercase tracking-[0.1em] text-paper/50">
                       {p.kicker}
                     </span>
                   </div>
@@ -276,10 +276,10 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
                     <ul className="mt-10 max-w-[46ch] divide-y divide-paper/[0.08] border-y border-paper/[0.08]">
                       {p.points.map((pt) => (
                         <li key={pt.label} className="py-4">
-                          <span className="mono block text-[12px] uppercase tracking-[0.1em] text-paper/50">
+                          <span className="mono block text-micro uppercase tracking-[0.1em] text-paper/50">
                             {pt.label}
                           </span>
-                          <span className="mt-2 block text-[15px] leading-relaxed text-paper/80">
+                          <span className="mt-2 block text-body leading-relaxed text-paper/80">
                             {pt.text}
                           </span>
                         </li>
@@ -308,7 +308,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
             <div className="mt-12">
               <EntryDoor variant="closing" />
             </div>
-            <p className="mono mt-6 text-[12px] uppercase tracking-[0.12em] text-paper/50">
+            <p className="mono mt-6 text-micro uppercase tracking-[0.12em] text-paper/50">
               Gratis · Sin anuncios · Cancela cuando quieras (no hay nada que cancelar)
             </p>
           </Reveal>
@@ -319,10 +319,10 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
             height and its gap, so the footer ends above it. */}
         <footer className="border-t border-paper/[0.07] px-5 pb-[calc(var(--safe-bottom)+88px)] pt-8 sm:px-8 sm:pb-8">
           <div className="mx-auto flex max-w-[1100px] flex-col items-center justify-between gap-3 text-center sm:flex-row">
-            <span className="mono text-[12px] uppercase tracking-[0.12em] text-paper/50">
+            <span className="mono text-micro uppercase tracking-[0.12em] text-paper/50">
               Rackr Club
             </span>
-            <span className="mono text-[12px] uppercase tracking-[0.12em] text-paper/50">
+            <span className="mono text-micro uppercase tracking-[0.12em] text-paper/50">
               Hecho por gente con demasiados discos
             </span>
           </div>
@@ -440,7 +440,6 @@ function StickyMark() {
        */
       style={{ top: "calc(var(--safe-top) + 16px)" }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       {/**
        * Inverted against whatever it is over.
        *
@@ -452,6 +451,7 @@ function StickyMark() {
        * used to disappear, and now it cannot, because it is defined by
        * contrast rather than by lying on top.
        */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/logo.svg"
         alt="Rackr Club"

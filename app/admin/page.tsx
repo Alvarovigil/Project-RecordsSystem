@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/admin/auth";
 import { getOverview, listUsers } from "@/lib/admin/queries";
 
+import RetryImg from "@/components/ui/RetryImg";
 export const dynamic = "force-dynamic";
 
 export default async function AdminHome({
@@ -124,8 +125,7 @@ export default async function AdminHome({
                     <Link href={`/admin/u/${u.id}`} className="flex items-center gap-3">
                       <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-paper/10 mono text-[12px] text-paper/60">
                         {u.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={u.avatarUrl} alt="" className="h-full w-full object-cover" />
+                          <RetryImg src={u.avatarUrl} alt="" className="h-full w-full object-cover" />
                         ) : (
                           u.displayName.slice(0, 2).toUpperCase()
                         )}

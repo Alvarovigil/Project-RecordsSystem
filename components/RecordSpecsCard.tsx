@@ -56,7 +56,7 @@ export default function RecordSpecsCard({
       <button
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className="pressable flex w-full items-center justify-between gap-3 rounded-[14px] bg-fill-subtle px-5 py-4 text-left"
+        className="pressable flex w-full items-center justify-between gap-3 rounded-lg bg-fill-subtle px-5 py-4 text-left"
       >
         <span className="text-body text-paper">Ficha técnica</span>
         <span className="flex items-center gap-2">

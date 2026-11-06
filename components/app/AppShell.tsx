@@ -7,7 +7,7 @@ import TopNav from "./TopNav";
 import TabBar from "./TabBar";
 import RotateLock from "./RotateLock";
 import { useDevice } from "@/hooks/useDevice";
-import { noteEntry } from "@/lib/launch";
+import { noteEntry, noteScreen } from "@/lib/launch";
 import { settleLayers } from "@/hooks/useBackToClose";
 
 // the first client code to run: whatever the address is now is where this
@@ -41,6 +41,7 @@ export default function AppShell({
   // component that survives navigation
   useEffect(() => {
     recordVisit(pathname);
+    noteScreen(pathname);
   }, [pathname]);
 
   // a reload (or a restored PWA) with a sheet open leaves its mark behind
@@ -154,7 +155,7 @@ export function Page({
   return (
     <main className={`min-h-screen-d bg-surface text-paper ${className}`}>
       <div
-        className={`w-full pb-chrome ${full ? "px-5 sm:px-8" : "mx-auto px-5 sm:px-6"}`}
+        className={`w-full pb-chrome ${full ? "page-full px-5 sm:px-8" : "page-measure mx-auto px-5 sm:px-6"}`}
         style={{
           maxWidth: full ? undefined : width,
           paddingTop: "max(1.5rem, var(--safe-top))",

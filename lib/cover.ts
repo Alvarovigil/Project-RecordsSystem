@@ -48,3 +48,12 @@ function escapeXml(s: string) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
 }
+
+/**
+ * Lo que se espera antes de cada reintento de una portada que no ha llegado.
+ *
+ * Un bache de cobertura (un túnel, un ascensor) no puede dejar una funda en
+ * blanco el resto de la sesión. Lo usan el estante 3D y la cuadrícula: la
+ * misma paciencia en las dos vistas de los mismos discos.
+ */
+export const COVER_RETRY_MS = [1500, 5000];

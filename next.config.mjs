@@ -9,6 +9,10 @@ const nextConfig = {
   },
   transpilePackages: ["three"],
 
+  // `next lint` mira app, components y lib por defecto; los hooks también
+  // tienen reglas de hooks que cumplir
+  eslint: { dirs: ["app", "components", "hooks", "lib", "scripts"] },
+
   /**
    * A build can be told to write somewhere else.
    *

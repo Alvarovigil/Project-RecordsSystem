@@ -271,6 +271,36 @@ test("recargar con la ficha abierta y abrir el buscador: un «atrás» lo cierra
   assert.deepEqual(closed, ["buscador"]);
 });
 
+test("recargar con la ficha abierta: las entradas muertas salen y un «atrás» vuelve a la pantalla anterior", () => {
+  // antes de recargar: la ficha abierta encima de /coleccion
+  const t = setup();
+  const before = t.layer("ficha", []);
+  before.open();
+  t.settle();
+  assert.equal(t.current(), "/coleccion#1");
+  // la recarga: la entrada conserva su estado y nace otro coordinador sin capas
+  const reloaded = createLayerHistory({
+    history: t.history,
+    path: () => t.current().split("#")[0],
+    defer: (fn) => fn(),
+    timer: () => () => {},
+  });
+  reloaded.settle();
+  t.settle(); // el go() del falso es asíncrono; su popstate va al coordinador viejo, que no cuenta
+  reloaded.pop(t.history.state);
+  assert.equal(t.current(), "/coleccion#0", "se vuelve a la página de debajo");
+  t.back();
+  assert.equal(t.current(), "/actividad#0", "un solo «atrás» sale de la pantalla");
+});
+
+test("recargar con una marca sin dirección de base: solo se limpia, no se camina a ciegas", () => {
+  const t = setup({ __NA: true, [LAYER_KEY]: 1 });
+  t.coord.settle();
+  t.settle();
+  assert.equal(t.current(), "/coleccion#0");
+  assert.equal(t.index, 1, "no se ha movido del sitio");
+});
+
 test("una marca colgada sin settle también se limpia al abrir", () => {
   const t = setup({ __NA: true, [LAYER_KEY]: 1 });
   const closed: string[] = [];

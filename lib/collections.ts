@@ -146,8 +146,26 @@ export function isDeletable(id: string) {
   return id !== DEFAULT_ID && id !== WISHLIST_ID;
 }
 
+/**
+ * El id de un rack nuevo hecho en este navegador.
+ *
+ * Antes era `col-${Date.now()}`: dos racks creados en el mismo milisegundo
+ * (un doble toque, un duplicado) compartían id y uno pisaba al otro. Ahora es
+ * aleatorio, con el prefijo `col-` de siempre, y el prefijo no es decoración:
+ * `isRealId` (lib/data) decide por la forma de uuid pelado si un id es de la
+ * base o del estante local, y un rack local sin prefijo se iría a buscar a
+ * Supabase y no estaría. La base nunca ve estos ids: al crear cuenta,
+ * lib/migrate crea los racks de nuevo y Postgres pone su propio uuid.
+ */
+export function newCollectionId(): string {
+  const c = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  if (c && typeof c.randomUUID === "function") return `col-${c.randomUUID()}`;
+  // sin randomUUID (contexto no seguro, navegador viejo): tiempo y azar juntos
+  return `col-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export function newCollection(name: string): Collection {
-  return { id: `col-${Date.now()}`, name, vinylIds: [], sortBy: "custom" };
+  return { id: newCollectionId(), name, vinylIds: [], sortBy: "custom" };
 }
 
 import type { Vinyl } from "./types";
