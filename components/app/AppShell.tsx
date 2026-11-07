@@ -7,7 +7,7 @@ import TopNav from "./TopNav";
 import TabBar from "./TabBar";
 import RotateLock from "./RotateLock";
 import { useDevice } from "@/hooks/useDevice";
-import { noteEntry, noteScreen } from "@/lib/launch";
+import { isColdStartOn, noteEntry, noteScreen } from "@/lib/launch";
 import { settleLayers } from "@/hooks/useBackToClose";
 
 // the first client code to run: whatever the address is now is where this
@@ -76,7 +76,7 @@ export default function AppShell({
           be a full-screen filter over a live scene, which is the one place a
           phone cannot afford one. It has its own way in — the sleeves fold up
           as their covers decode — so it is left alone. */}
-      {ownsHeader ? children : <PageFade key={pathname}>{children}</PageFade>}
+      {ownsHeader ? children : <PageFade key={pathname} path={pathname}>{children}</PageFade>}
       {showTabs && (
         <div className={measured ? "contents" : "contents md:hidden"}>
           <TabBar />
@@ -102,8 +102,12 @@ export default function AppShell({
  * the moment it finishes, and skipped entirely for anyone who has asked the
  * system for less motion.
  */
-function PageFade({ children }: { children: React.ReactNode }) {
-  const [arrived, setArrived] = useState(false);
+function PageFade({ children, path }: { children: React.ReactNode; path: string }) {
+  /* En frío ya ha llegado: lo que pinta el servidor se ve desde el primer
+     fotograma, no transparente hasta que carga el código (F8: en un móvil
+     lento eran tres segundos de negro). El desenfoque es para cambiar de
+     pantalla, no para abrir la aplicación. */
+  const [arrived, setArrived] = useState(() => isColdStartOn(path));
 
   useEffect(() => {
     // one frame late on purpose: setting the end state in the same paint as

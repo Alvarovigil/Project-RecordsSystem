@@ -58,10 +58,13 @@ export default function MobileSearch({
   onRemoveFromList,
   onUndoAdd,
   onJumpTo,
+  initialQuery = "",
 }: {
   open: boolean;
   onClose: () => void;
   autoScan?: boolean;
+  /** la frase con la que abrirse: volver de /entrar con `?buscar=` (F8) */
+  initialQuery?: string;
   collections: Collection[];
   activeCollectionId: string;
   allVinilos: Vinyl[];
@@ -109,11 +112,12 @@ export default function MobileSearch({
       setScanning(true);
       return;
     }
+    if (initialQuery) setQ(initialQuery);
     // the delay lets the sheet finish rising; focusing mid-animation on iOS
     // raises the keyboard against a moving target and the layout jumps
     const t = setTimeout(() => inputRef.current?.focus(), 320);
     return () => clearTimeout(t);
-  }, [open, autoScan]);
+  }, [open, autoScan, initialQuery]);
 
   if (!open) return null;
 
@@ -131,7 +135,9 @@ export default function MobileSearch({
         !catalogueFailed &&
         search.localResults.length === 0 &&
         search.addable.length === 0
-      : search.people.length === 0 && search.communityLists.length === 0);
+      : !search.peopleFailed &&
+        search.people.length === 0 &&
+        search.communityLists.length === 0);
   /** la pregunta está en camino y todavía no hay filas del catálogo */
   const waiting =
     mode === "vinyls" &&
@@ -141,7 +147,7 @@ export default function MobileSearch({
 
   /** apuntar un disco que no tienes, sin meterlo en la colección */
   const wishCatalogue = async (r: DiscogsResult) => {
-    if (gate()) return;
+    if (gate({ buscar: q })) return;
     const list = findWishlist(collections);
     if (!list) return;
     const saving: { done?: Promise<boolean> | void } = {};
@@ -157,7 +163,7 @@ export default function MobileSearch({
 
   const saveCatalogue = async (r: DiscogsResult) => {
     // sin cuenta, el «+» lleva a entrar (ver useEntryGate)
-    if (gate()) return null;
+    if (gate({ buscar: q })) return null;
     /* La promesa del guardado, cogida al vuelo: `addFromCatalogue` llama a
        `onSaveToList` sin esperarlo, y el aviso no puede salir antes de saber
        si se guardó. */
@@ -247,7 +253,7 @@ export default function MobileSearch({
               onChange={setMode}
               segments={[
                 { value: "vinyls", label: "Discos" },
-                { value: "people", label: "Usuarios y racks" },
+                { value: "people", label: "Personas y racks" },
               ]}
             />
           </div>
@@ -294,6 +300,18 @@ export default function MobileSearch({
             <p className="mt-6 text-sub text-content-muted">
               Escribe el título o el artista. Si no lo tienes, aparecerá abajo para añadirlo.
             </p>
+          )}
+
+          {/* sin respuesta no hay «nada»: lo dice, con su reintento */}
+          {mode === "people" && q.trim() && !search.loading && search.peopleFailed && (
+            <div className="mt-5">
+              <EmptyState
+                compact
+                title="No hemos podido buscar"
+                body="Puede ser la conexión. Prueba otra vez en un momento."
+                action={{ label: "Reintentar", onClick: search.retryPeople }}
+              />
+            </div>
           )}
 
           {nothing && (
@@ -556,6 +574,7 @@ export default function MobileSearch({
         item={looking}
         onClose={() => setLooking(null)}
         targetName={target?.name ?? "Mi Colección"}
+        buscar={q}
         saved={Boolean(looking && search.savedIn[`d${looking.id}`])}
         busy={search.adding === looking?.id}
         onSave={() => (looking ? saveCatalogue(looking) : null)}

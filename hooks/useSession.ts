@@ -152,7 +152,10 @@ export function useIsVisitor() {
 export function useEntryGate() {
   const { available, loading, user } = useSession();
   const router = useRouter();
-  return useCallback(() => {
+  /* `back.buscar`: la frase del buscador desde el que se llama. Viaja en la
+     dirección (`?buscar=`), así «atrás» y el `next` de /entrar vuelven a
+     abrirlo con ella (F8). */
+  return useCallback((back?: { buscar?: string }) => {
     // no accounts on this site (the local-only app), or a real one: write
     if (!available || user) return false;
     // Still reading the session: nothing is written, and nobody is sent
@@ -162,7 +165,10 @@ export function useEntryGate() {
     if (loading) return true;
     // se llama desde dentro de una capa (el escáner): primero salen sus
     // entradas, o la vuelta atrás del cierre se traga la navegación
-    leaveLayers(() => router.push(entryHref()));
+    leaveLayers(() => {
+      keepSearchInAddress(back?.buscar);
+      router.push(entryHref());
+    });
     return true;
   }, [available, loading, user, router]);
 }
@@ -193,6 +199,30 @@ export function entryHref() {
   const here = window.location.pathname + window.location.search;
   if (here.startsWith("/entrar")) return "/entrar";
   return `/entrar?next=${encodeURIComponent(here)}`;
+}
+
+/** The address parameter that reopens the shelf's search with a phrase. */
+export const SEARCH_PARAM = "buscar";
+
+/**
+ * Writes `?buscar=<frase>` onto the entry we are leaving, so that both «atrás»
+ * and the `next` of /entrar come back to it. Runs inside `leaveLayers`, once
+ * the layers' entries are out and history sits on the page itself. Next's own
+ * state goes with it untouched (`__NA`), so the router does not re-render the
+ * page under a new query in the instant before it leaves: the query is only
+ * read when somebody comes back to this entry.
+ *
+ * So the router does not see `?buscar=` here: `useSearchParams` keeps the old
+ * address until the next navigation, and nothing on this page reacts to it.
+ * It is read on the way back — «atrás» restores this entry, or /entrar's
+ * `next` navigates to it — which is a navigation, and then the page sees it.
+ */
+function keepSearchInAddress(phrase?: string) {
+  const q = phrase?.trim();
+  if (!q || typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  url.searchParams.set(SEARCH_PARAM, q);
+  window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
 }
 
 /** the `next` /entrar was given, if it is a path on this site */

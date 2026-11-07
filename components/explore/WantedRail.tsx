@@ -34,6 +34,7 @@ export default function WantedRail({
   onSaved,
   savingId,
   savedIds,
+  onRows,
 }: {
   title: string;
   subtitle: string;
@@ -46,6 +47,8 @@ export default function WantedRail({
   onSaved?: (vinyl: Vinyl) => void;
   savingId: number | null;
   savedIds: Set<number>;
+  /** cuántos discos ha enseñado al contestar (Explorar sabe así qué cargó) */
+  onRows?: (count: number) => void;
 }) {
   const [rows, setRows] = useState<WantedRow[] | null>(null);
   const [looking, setLooking] = useState<WantedRow | null>(null);
@@ -59,9 +62,15 @@ export default function WantedRail({
       .then((d) => {
         if (!alive) return;
         // what you already own is not a recommendation
-        setRows((d.results ?? []).filter((r: WantedRow) => !ownedIds.has(r.id)).slice(0, 12));
+        const next = (d.results ?? []).filter((r: WantedRow) => !ownedIds.has(r.id)).slice(0, 12);
+        setRows(next);
+        onRows?.(next.length);
       })
-      .catch(() => alive && setRows([]));
+      .catch(() => {
+        if (!alive) return;
+        setRows([]);
+        onRows?.(0);
+      });
     return () => {
       alive = false;
     };

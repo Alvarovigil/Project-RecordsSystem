@@ -236,7 +236,7 @@ export default function CollectionsOverlay({
             </span>
             <button
               onClick={editing ? () => setEditId(null) : onClose}
-              className="text-[12px] uppercase tracking-[0.2em] text-paper/50 hover:text-paper transition"
+              className="hit text-[12px] uppercase tracking-[0.2em] text-paper/50 hover:text-paper transition"
             >
               {editing ? "← Atrás" : "Cerrar"}
             </button>
@@ -364,14 +364,14 @@ export default function CollectionsOverlay({
                   <div className="mt-5 flex items-center gap-2 rounded-md border border-paper/[0.06] p-2">
                     <button
                       onClick={() => setEditId(active.id)}
-                      className="flex-1 rounded-control bg-paper/5 px-3 py-1.5 text-[12px] text-paper transition hover:bg-paper/10"
+                      className="hit-y flex-1 rounded-control bg-paper/5 px-3 py-1.5 text-[12px] text-paper transition hover:bg-paper/10"
                     >
                       Editar lista →
                     </button>
                     {!isPrimaryIn(collections, active.id) && (
                       <button
                         onClick={() => setRenaming(true)}
-                        className="rounded-control px-3 py-1.5 text-[12px] text-paper/70 transition hover:bg-paper/5 hover:text-paper"
+                        className="hit-y rounded-control px-3 py-1.5 text-[12px] text-paper/70 transition hover:bg-paper/5 hover:text-paper"
                       >
                         Renombrar
                       </button>
@@ -381,7 +381,7 @@ export default function CollectionsOverlay({
                         onClick={() => {
                           if (confirm(`Eliminar "${active.name}"?`)) onDelete(active.id);
                         }}
-                        className="rounded-control px-3 py-1.5 text-[12px] text-paper/50 transition hover:bg-red-500/10 hover:text-red-400"
+                        className="hit-y rounded-control px-3 py-1.5 text-[12px] text-paper/50 transition hover:bg-red-500/10 hover:text-red-400"
                       >
                         Borrar
                       </button>
@@ -402,7 +402,7 @@ export default function CollectionsOverlay({
                     value={listFilter}
                     onChange={(e) => setListFilter(e.target.value)}
                     placeholder="Filtrar…"
-                    className="w-[110px] bg-transparent text-right text-[12px] text-paper outline-none placeholder:text-content-muted"
+                    className="-my-2.5 w-[110px] bg-transparent py-2.5 text-right text-[12px] text-paper outline-none placeholder:text-content-muted"
                   />
                 )}
               </div>
@@ -618,6 +618,11 @@ export default function CollectionsOverlay({
               {/* create new — sticky footer-ish */}
               <div className="px-6 py-4 mt-2 border-t border-paper/[0.04]">
                 <div className="flex items-center gap-3">
+                  {/* a field cannot carry the 44px layer, so its label does: a
+                      tap above or below the line still lands in the field. The
+                      field sits over the layer, so a tap on it still places
+                      the caret where it falls. */}
+                  <label className="hit-y flex-1">
                   <input
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
@@ -629,8 +634,9 @@ export default function CollectionsOverlay({
                       }
                     }}
                     placeholder="Rack nuevo"
-                    className="flex-1 bg-transparent border-b border-paper/[0.07] py-1.5 text-[13px] text-paper outline-none placeholder:text-content-muted focus:border-paper/60 transition"
+                    className="relative z-[1] w-full bg-transparent border-b border-paper/[0.07] py-1.5 text-[13px] text-paper outline-none placeholder:text-content-muted focus:border-paper/60 transition"
                   />
+                  </label>
                   <button
                     onClick={() => {
                       if (newName.trim()) {
@@ -639,7 +645,7 @@ export default function CollectionsOverlay({
                       }
                     }}
                     disabled={!newName.trim()}
-                    className="text-[12px] uppercase tracking-[0.18em] text-paper/60 hover:text-paper transition disabled:opacity-25"
+                    className="hit text-[12px] uppercase tracking-[0.18em] text-paper/60 hover:text-paper transition disabled:opacity-25"
                   >
                     Crear
                   </button>
@@ -697,7 +703,7 @@ function RowAction({
       }}
       aria-label={label}
       title={label}
-      className={`flex h-7 w-7 items-center justify-center rounded-sm bg-ink/70 text-paper/50 backdrop-blur-sm transition hover:bg-ink ${
+      className={`hit-y flex h-7 w-7 items-center justify-center rounded-sm bg-ink/70 text-paper/50 backdrop-blur-sm transition hover:bg-ink ${
         danger ? "hover:text-red-400" : "hover:text-paper"
       }`}
     >

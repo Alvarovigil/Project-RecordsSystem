@@ -74,6 +74,9 @@ export function useCatalogueSearch({
   const [results, setResults] = useState<DiscogsResult[]>([]);
   const [people, setPeople] = useState<Profile[]>([]);
   const [communityLists, setCommunityLists] = useState<ListWithRecord[]>([]);
+  /** personas y racks no han podido buscarse: no es que no haya ninguno */
+  const [peopleFailed, setPeopleFailed] = useState(false);
+  const [peopleAttempt, setPeopleAttempt] = useState(0);
   const [loading, setLoading] = useState(false);
   /**
    * When the catalogue could not answer properly, and why.
@@ -266,23 +269,37 @@ export function useCatalogueSearch({
     if (mode !== "people" || !query.trim()) {
       setPeople([]);
       setCommunityLists([]);
+      setPeopleFailed(false);
       return;
     }
     let cancelled = false;
     const handle = setTimeout(async () => {
       setLoading(true);
       const repo = getRepository();
-      const [p, l] = await Promise.all([repo.searchProfiles(query), repo.searchLists(query)]);
-      if (cancelled) return;
-      setPeople(p);
-      setCommunityLists(l);
-      setLoading(false);
+      try {
+        const [p, l] = await Promise.all([repo.searchProfiles(query), repo.searchLists(query)]);
+        if (cancelled) return;
+        setPeople(p);
+        setCommunityLists(l);
+        setPeopleFailed(false);
+      } catch {
+        // sin respuesta no hay «nada»: lo dice quien enseña la búsqueda
+        if (cancelled) return;
+        setPeople([]);
+        setCommunityLists([]);
+        setPeopleFailed(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }, 250);
     return () => {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [query, mode]);
+  }, [query, mode, peopleAttempt]);
+
+  /** vuelve a buscar personas y racks con la frase de ahora */
+  const retryPeople = useCallback(() => setPeopleAttempt((n) => n + 1), []);
 
   // ---- your own shelf, instantly ------------------------------------------
   const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -451,6 +468,9 @@ export function useCatalogueSearch({
     lastError,
     people,
     communityLists,
+    /** personas y racks no han podido buscarse (nunca es «nada») */
+    peopleFailed,
+    retryPeople,
     loading,
     /** null when the catalogue answered in full; see CatalogueNotice */
     degraded,

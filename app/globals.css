@@ -237,6 +237,34 @@
   transform: translate(-50%, -50%);
 }
 
+/**
+ * The same layer, grown along one axis only, for controls that touch a
+ * neighbour on the other: a 44px layer between two pressed-together segments
+ * (or rows) reaches into the next one and wins its taps. `.hit-y` keeps the
+ * control's own width; `.hit-x` keeps its own height.
+ */
+:where(.hit-x, .hit-y) {
+  position: relative;
+}
+.hit-y::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: max(100%, var(--tap));
+  transform: translateY(-50%);
+}
+.hit-x::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: max(100%, var(--tap));
+  transform: translateX(-50%);
+}
+
 html,
 body {
   background: var(--ink);

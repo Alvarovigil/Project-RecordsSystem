@@ -119,7 +119,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
               <li key={c.id}>
                 <a
                   href={`#${c.id}`}
-                  className="block text-[34px] uppercase tracking-[-0.01em] text-paper/85 transition hover:text-paper sm:text-[46px] md:text-[58px]"
+                  className="block overflow-hidden text-[34px] uppercase tracking-[-0.01em] text-paper/85 transition hover:text-paper sm:text-[46px] md:text-[58px]"
                 >
                   {c.word}
                 </a>
@@ -131,7 +131,7 @@ export default function Landing({ authFailed = false }: { authFailed?: boolean }
               corners — see AboutProject */}
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("rackr:about"))}
-            className="mt-8 text-micro uppercase tracking-[0.05em] text-paper/60 transition hover:text-paper sm:hidden"
+            className="hit mt-8 text-micro uppercase tracking-[0.05em] text-paper/60 transition hover:text-paper sm:hidden"
           >
             Sobre el proyecto
           </button>

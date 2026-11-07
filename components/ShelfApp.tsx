@@ -28,9 +28,11 @@ import {
 } from "@/lib/collections";
 import { useDevice } from "@/hooks/useDevice";
 import Loading from "@/components/ui/Loading";
+import { leaveLayers } from "@/hooks/useBackToClose";
+import { SEARCH_PARAM } from "@/hooks/useSession";
 import { useToast, ToastIcon } from "@/components/ui/Toast";
 import type { SavedList } from "@/lib/data/types";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 /**
  * The opening screen, in the first chunk rather than behind its own.
  *
@@ -39,8 +41,8 @@ import { useSearchParams } from "next/navigation";
  * was a black screen. Forty lines of markup; it ships with the page and is
  * painted from the server's HTML.
  */
-import BootScreen from "@/components/mobile/BootScreen";
-import { isColdEntry } from "@/lib/launch";
+import BootScreen, { ShelfLoading } from "@/components/mobile/BootScreen";
+import { isColdStartOn } from "@/lib/launch";
 
 import RetryImg from "@/components/ui/RetryImg";
 /**
@@ -130,6 +132,9 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
   const [foreign, setForeign] = useState<{ list: SavedList; items: Vinyl[] } | null>(null);
   const [collectionsOpen, setCollectionsOpen] = useState(false);
   const { isPhone, measured } = useDevice();
+  /* la pantalla que se está montando, no la de la barra de direcciones: al
+     navegar, el primer render llega antes de que cambie la dirección (F8) */
+  const here = usePathname();
   const [hydrated, setHydrated] = useState(false);
   /**
    * The phone's opening screen: once per launch, never on navigation — and
@@ -140,7 +145,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
     // en el servidor no hay lanzamiento que apuntar: el módulo vive entre
     // peticiones y marcarlo aquí lo dejaría marcado para todas
     if (typeof window === "undefined") return true;
-    if (!bootedThisLaunch && !isColdEntry()) bootedThisLaunch = true;
+    if (!bootedThisLaunch && !isColdStartOn(here)) bootedThisLaunch = true;
     return bootedThisLaunch;
   });
   /**
@@ -423,6 +428,25 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
     setSearchScanning(scan);
     setSearchOpen(true);
   };
+  /* ?buscar=<frase>: se vuelve de /entrar (con «atrás» o con su `next`) al
+     buscador que se dejó, con la misma frase (F8). La dirección se limpia al
+     leerla, pasando por el coordinador de «atrás», para que cerrar el buscador
+     o recargar no lo vuelva a abrir. */
+  const [searchSeed, setSearchSeed] = useState("");
+  const askedFor = params.get(SEARCH_PARAM);
+  useEffect(() => {
+    const phrase = askedFor?.trim();
+    if (!phrase) return;
+    leaveLayers(() => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete(SEARCH_PARAM);
+      // sin el estado de Next: así el router se entera y `buscar` deja de estar
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+      setSearchSeed(phrase);
+      setSearchScanning(false);
+      setSearchOpen(true);
+    });
+  }, [askedFor]);
   const [open, setOpen] = useState<Vinyl | null>(null);
   /**
    * Un disco que se abre recién guardado desde el catálogo.
@@ -792,7 +816,10 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
    * the same screen the server painted, wrapped so that it is the very element
    * the phone branch keeps on screen — the mark does not restart its turn.
    */
-  if (!measured) return <><BootScreen /></>;
+  // Y solo en frío: al llegar desde otra pestaña, el fondo sin la marca, como
+  // en `loading.tsx` (F8). En frío sigue siendo el mismo elemento de antes.
+  if (!measured)
+    return isColdStartOn(here) ? <><BootScreen /></> : <ShelfLoading path={here} />;
 
   if (isPhone) {
     return (
@@ -887,9 +914,11 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         <MobileSearch
           open={searchOpen}
           autoScan={searchScanning}
+          initialQuery={searchSeed}
           onClose={() => {
             setSearchOpen(false);
             setSearchScanning(false);
+            setSearchSeed("");
           }}
           collections={resolvedCollections}
           activeCollectionId={activeCollectionId}
@@ -1212,7 +1241,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                 <button
                   onClick={() => setSpecsOpen(false)}
                   aria-label="Cerrar la ficha técnica"
-                  className="pressable flex h-9 w-9 items-center justify-center rounded-full bg-fill-subtle text-paper/50 transition hover:bg-fill hover:text-paper"
+                  className="hit pressable flex h-9 w-9 items-center justify-center rounded-full bg-fill-subtle text-paper/50 transition hover:bg-fill hover:text-paper"
                 >
                   <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden>
                     <path d="M2.5 2.5 L11.5 11.5 M11.5 2.5 L2.5 11.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -1249,7 +1278,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
                 }}
                 aria-label={v === "shelf" ? "Vista estantería" : "Vista cuadrícula"}
                 aria-pressed={view === v}
-                className={`flex h-[26px] w-[30px] items-center justify-center transition ${
+                className={`hit-y flex h-[26px] w-[30px] items-center justify-center transition ${
                   view === v
                     ? "bg-paper/90 text-ink"
                     : "text-paper/50 hover:text-paper"
@@ -1402,7 +1431,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
         >
           <button
             onClick={goPrev}
-            className="-m-3 p-3 text-paper/70 hover:text-paper transition"
+            className="hit -m-3 p-3 text-paper/70 hover:text-paper transition"
             aria-label="Previous"
           >
             <Skip dir="prev" />
@@ -1479,7 +1508,7 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
           {/* the next arrow steps aside to make room for the satellite */}
           <button
             onClick={goNext}
-            className={`-m-3 p-3 text-paper/70 hover:text-paper transition-[transform,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            className={`hit -m-3 p-3 text-paper/70 hover:text-paper transition-[transform,color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
               showSounding ? "translate-x-[36px]" : "translate-x-0"
             }`}
             aria-label="Next"
@@ -1584,9 +1613,11 @@ export default function ShelfApp({ authenticated = false }: { authenticated?: bo
       <SearchOverlay
         open={searchOpen}
         autoScan={searchScanning}
+        initialQuery={searchSeed}
         onClose={() => {
           setSearchOpen(false);
           setSearchScanning(false);
+          setSearchSeed("");
         }}
         collections={resolvedCollections}
         activeCollectionId={activeCollectionId}

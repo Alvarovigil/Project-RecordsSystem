@@ -46,7 +46,7 @@ export default function AboutProject() {
           fighting the player for the bottom of the screen. */}
       <button
         onClick={() => setOpen(true)}
-        className="landing-hides fixed bottom-5 left-5 z-[70] hidden text-[13px] uppercase tracking-[0.05em] text-paper/80 transition hover:text-paper sm:block"
+        className="hit landing-hides fixed bottom-5 left-5 z-[70] hidden text-[13px] uppercase tracking-[0.05em] text-paper/80 transition hover:text-paper sm:block"
       >
         Sobre el proyecto
       </button>

@@ -4,6 +4,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { createLocalRepository } from "./local";
 import { createSupabaseRepository } from "./supabase";
 import type { LibraryRepository } from "./types";
+import { authTokenName, storedSessionIn } from "@/lib/auth-cookie";
 
 let cached: LibraryRepository | null = null;
 const listeners = new Set<() => void>();
@@ -25,26 +26,11 @@ const listeners = new Set<() => void>();
  */
 function hasStoredSession(): boolean {
   if (typeof window === "undefined") return false;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!url) return false;
+  // la misma respuesta que da el armazón de Explorar: ver lib/auth-cookie
+  const name = authTokenName(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+  if (!name) return false;
   try {
-    const ref = new URL(url).hostname.split(".")[0];
-    const name = `sb-${ref}-auth-token`;
-    // @supabase/ssr keeps the session in cookies — that is the point of the
-    // package, so the server can read it too — and splits it across
-    // `…auth-token.0`, `.1` when the token outgrows one cookie. Presence of
-    // any chunk is the signal; validating it is the client's job, not ours.
-    //
-    // Exactly the token or one of its chunks, never a prefix match: the PKCE
-    // flow leaves `…auth-token-code-verifier` behind when somebody starts a
-    // Google sign-in and backs out, and `startsWith(name)` read that as a
-    // session. The app then built the signed-in backend for a visitor, and
-    // every rack and profile threw «Sin sesión» from listReleases until the
-    // session layer corrected it.
-    const chunk = new RegExp(`^${name}(\\.\\d+)?=`);
-    if (document.cookie.split("; ").some((c) => chunk.test(c))) return true;
-    // older clients, and anything configured with the localStorage adapter
-    return Boolean(localStorage.getItem(name));
+    return storedSessionIn(name, document.cookie, localStorage.getItem(name));
   } catch {
     return false;
   }

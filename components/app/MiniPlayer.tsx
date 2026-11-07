@@ -69,7 +69,7 @@ export default function MiniPlayer() {
         <button
           onClick={() => setOpen(nowPlaying)}
           aria-label={`Abrir ${nowPlaying.title}`}
-          className="pressable min-w-0 flex-1 text-left"
+          className="hit pressable min-w-0 flex-1 text-left"
         >
           <span className="block truncate text-sub text-paper">{nowPlaying.title}</span>
           <span className="mono block truncate text-micro uppercase tracking-[0.16em] text-paper/50">
@@ -80,7 +80,7 @@ export default function MiniPlayer() {
         <button
           onClick={toggleCurrent}
           aria-label={playing ? "Pausar" : "Reproducir"}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-paper/25 text-paper transition hover:border-paper/60"
+          className="hit flex h-9 w-9 items-center justify-center rounded-full border border-paper/25 text-paper transition hover:border-paper/60"
         >
           {playing ? (
             <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
@@ -98,7 +98,7 @@ export default function MiniPlayer() {
             separate text link would be a 9px target next to a 44px one */}
         <Link
           href="/coleccion"
-          className="mono hidden shrink-0 text-micro uppercase tracking-[0.16em] text-paper/50 transition hover:text-paper sm:block"
+          className="hit mono hidden shrink-0 text-micro uppercase tracking-[0.16em] text-paper/50 transition hover:text-paper sm:block"
         >
           Ver en mi colección
         </Link>

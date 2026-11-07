@@ -86,6 +86,7 @@ export default function CatalogueSheet({
   onSaved,
   action,
   extra,
+  buscar,
 }: {
   item: CatalogueItem | null;
   onClose: () => void;
@@ -118,6 +119,8 @@ export default function CatalogueSheet({
   action?: React.ReactNode;
   /** a second, context-specific action — the scanner uses it for editions */
   extra?: React.ReactNode;
+  /** la frase del buscador que la abrió: sin cuenta, «atrás» desde /entrar vuelve a ella */
+  buscar?: string;
 }) {
   // open by default, but still closable: a panel that cannot be folded is a
   // panel the reader is not allowed to finish with
@@ -202,7 +205,7 @@ export default function CatalogueSheet({
                 {action ?? (
                   <>
                     <button
-                      onClick={() => (gate() ? undefined : void keep())}
+                      onClick={() => (gate({ buscar }) ? undefined : void keep())}
                       disabled={saved || busy}
                       className="pressable flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-paper px-4 text-sub font-medium text-ink transition-colors disabled:opacity-45"
                     >
@@ -225,7 +228,7 @@ export default function CatalogueSheet({
                         label={
                           wished && !visitor ? "Ya está en tu lista de deseos" : "Añadir a la lista de deseos"
                         }
-                        onClick={() => (gate() ? undefined : onWish?.())}
+                        onClick={() => (gate({ buscar }) ? undefined : onWish?.())}
                       >
                         {wished && !visitor ? (
                           <path

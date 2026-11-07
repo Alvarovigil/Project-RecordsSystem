@@ -36,6 +36,8 @@ type Props = {
   onJumpTo: (v: Vinyl, pick?: boolean) => void;
   /** open straight into the camera — the shelf offers scanning as its own act */
   autoScan?: boolean;
+  /** la frase con la que abrirse: volver de /entrar con `?buscar=` (F8) */
+  initialQuery?: string;
 };
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -58,6 +60,7 @@ export default function SearchOverlay({
   localVinilos,
   onJumpTo,
   autoScan = false,
+  initialQuery = "",
 }: Props) {
   // the chosen destination sticks between saves, like a pinboard would
   const [targetId, setTargetId] = useState(activeCollectionId);
@@ -76,6 +79,9 @@ export default function SearchOverlay({
     degraded,
     people,
     communityLists,
+    peopleFailed,
+    retryPeople,
+    retry: retryCatalogue,
     loading,
     adding,
     savedIn,
@@ -96,22 +102,24 @@ export default function SearchOverlay({
   useEffect(() => {
     if (open && autoScan) {
       setScanning(true);
-    } else if (open) setTimeout(() => inputRef.current?.focus(), 50);
-    else {
+    } else if (open) {
+      if (initialQuery) setQ(initialQuery);
+      setTimeout(() => inputRef.current?.focus(), 50);
+    } else {
       // clearing the query is enough: the hook derives every result set from
       // it, so there is nothing else left holding yesterday's search
       setQ("");
       setMode("vinyls");
       setScanning(false);
     }
-  }, [open, autoScan]);
+  }, [open, autoScan, initialQuery]);
 
   // Saving keeps the search open on purpose: adding several records in a row
   // is the common case, and a closing overlay would punish it.
   // sin cuenta, cualquier «añadir» de aquí lleva a entrar (ver useEntryGate)
   const gate = useEntryGate();
   const add = (r: SearchResult, listId: string) =>
-    gate() ? Promise.resolve(null) : addFromCatalogue(r, listId, onSaveToList);
+    gate({ buscar: q }) ? Promise.resolve(null) : addFromCatalogue(r, listId, onSaveToList);
 
   // one cursor over the visible list: ↑↓ to move, ↵ to act on it
   const rackCovers = useRackCovers(communityLists);
@@ -197,7 +205,7 @@ export default function SearchOverlay({
                 mode === m ? "text-paper" : "text-paper/50 hover:text-paper/70"
               }`}
             >
-              {m === "vinyls" ? "Vinilos" : "Usuarios y racks"}
+              {m === "vinyls" ? "Vinilos" : "Personas y racks"}
               {mode === m && (
                 <span className="absolute left-0 right-0 -bottom-px h-px bg-paper" />
               )}
@@ -265,13 +273,23 @@ export default function SearchOverlay({
           )}
           {mode === "vinyls" && (
             <div className="px-2 pb-1 pt-2">
-              <CatalogueNotice degraded={degraded} compact />
+              <CatalogueNotice
+                degraded={degraded}
+                compact
+                empty={addable.length === 0}
+                onRetry={
+                  (degraded === "down" || degraded === "rate-limit") && addable.length === 0 && !loading
+                    ? retryCatalogue
+                    : undefined
+                }
+              />
             </div>
           )}
           {mode === "vinyls" && loading && rowCount === 0 && (
             <div className="text-paper/50 text-sm py-3">Buscando…</div>
           )}
-          {mode === "vinyls" && !loading && rowCount === 0 && q.trim() && (
+          {/* con el catálogo sin contestar no es «sin resultados»: lo dice el aviso de arriba */}
+          {mode === "vinyls" && !loading && rowCount === 0 && q.trim() && degraded !== "down" && degraded !== "rate-limit" && (
             <div className="text-paper/50 text-sm py-3">Sin resultados</div>
           )}
 
@@ -304,7 +322,19 @@ export default function SearchOverlay({
                 </>
               )}
 
-              {!loading && q.trim() && people.length === 0 && communityLists.length === 0 && (
+              {!loading && q.trim() && peopleFailed && (
+                <div className="py-3 text-sm text-paper/50">
+                  No hemos podido buscar. Puede ser la conexión.{" "}
+                  <button
+                    type="button"
+                    onClick={retryPeople}
+                    className="hit text-paper underline underline-offset-4"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              )}
+              {!loading && q.trim() && !peopleFailed && people.length === 0 && communityLists.length === 0 && (
                 <div className="py-3 text-sm text-paper/50">
                   Nadie con ese nombre, ninguna lista con ese título.
                 </div>
@@ -481,6 +511,7 @@ export default function SearchOverlay({
         item={looking}
         onClose={() => setLooking(null)}
         targetName={collections.find((c) => c.id === targetId)?.name ?? "Mi Colección"}
+        buscar={q}
         saved={Boolean(looking && savedIn[`d${looking.id}`])}
         busy={adding === looking?.id}
         onSave={() => (looking ? add(looking, targetId) : null)}

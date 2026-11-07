@@ -636,19 +636,24 @@ export function createSupabaseRepository(sb: SupabaseClient): LibraryRepository 
       if (!query.trim()) return [];
       // search_profiles returns setof profiles, so the new column arrives on
       // its own — one of the few places where "select *" earns its keep
-      const { data } = await sb.rpc("search_profiles", { q: query.trim() });
+      // Un fallo no es «nadie se llama así»: se lanza, y quien busca dice
+      // «no hemos podido buscar» en vez de «nada para…» (F8, como popularLists)
+      const { data, error } = await sb.rpc("search_profiles", { q: query.trim() });
+      if (error) throw error;
       return ((data ?? []) as any[]).map(toProfile);
     },
 
     async searchLists(query) {
       if (!query.trim()) return [];
-      const { data } = await sb
+      const { data, error } = await sb
         .from("lists")
         .select("*, profiles!lists_owner_id_fkey!inner(username, display_name, avatar_url)")
         .eq("visibility", "public")
         .ilike("title", `%${query.trim()}%`)
         .order("item_count", { ascending: false })
         .limit(20);
+      // lo mismo: vacío y bien es [], mal se lanza
+      if (error) throw error;
       return ((data ?? []) as any[]).map(withOwner);
     },
 

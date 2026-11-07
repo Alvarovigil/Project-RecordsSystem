@@ -38,6 +38,7 @@ export default function FromOthersRail({
   ownedIds,
   onOpen,
   onSettle,
+  onFail,
 }: {
   /** los racks que ya se están enseñando arriba; de ahí sale todo esto */
   lists: ListWithRecord[];
@@ -52,6 +53,11 @@ export default function FromOthersRail({
    * justo el fotograma en que se vería el salto.
    */
   onSettle?: (count: number) => void;
+  /**
+   * No se ha podido leer ninguno de los racks. No es lo mismo que cero
+   * discos: quien lo envuelve dice que no se ha podido cargar, no que no hay.
+   */
+  onFail?: () => void;
 }) {
   const repo = useRepository();
   const [finds, setFinds] = useState<Find[] | null>(null);
@@ -68,11 +74,17 @@ export default function FromOthersRail({
         repo
           .releasesOfList(l.id)
           .then((rs) => rs.map((vinyl) => ({ vinyl, from: l })))
-          .catch(() => [] as Find[]),
+          .catch(() => null),
       ),
     )
-      .then((all) => {
+      .then((read) => {
         if (!alive) return;
+        // todos fallaron: no se sabe qué hay en ellos
+        if (read.every((r) => r === null)) {
+          setFinds([]);
+          return onFail?.();
+        }
+        const all = read.map((r) => r ?? []);
         /**
          * Uno por disco, y repartidos entre racks.
          *
@@ -100,7 +112,7 @@ export default function FromOthersRail({
       .catch(() => {
         if (!alive) return;
         setFinds([]);
-        onSettle?.(0);
+        onFail?.();
       });
 
     return () => {

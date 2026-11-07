@@ -140,7 +140,7 @@ export default function VinylEditOverlay({
              but glass of whichever polarity the sleeve leaves room for. An
              opaque black puck on a sleeve is a hole punched in it; white
              glass on a white sleeve is nothing at all. */
-          className={`flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-xl transition ${
+          className={`hit flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-xl transition ${
             look.corner === "light"
               ? "bg-ink/25 text-paper hover:bg-ink/45"
               : "bg-paper/[0.14] text-paper/80 hover:bg-paper/25 hover:text-paper"

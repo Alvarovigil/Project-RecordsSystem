@@ -32,7 +32,7 @@ export default function AccountMenu() {
     return (
       <button
         onClick={signInWithGoogle}
-        className="flex items-center gap-2 border border-paper/25 px-3 py-1.5 text-[12px] uppercase tracking-[0.18em] text-paper/70 transition hover:border-paper/60 hover:text-paper"
+        className="hit flex h-8 items-center gap-2 border border-paper/25 px-3 text-[12px] uppercase tracking-[0.18em] text-paper/70 transition hover:border-paper/60 hover:text-paper"
       >
         <GoogleMark />
         Entrar
@@ -56,13 +56,13 @@ export default function AccountMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-label="Tu cuenta"
         title={profile ? `${profile.displayName} · tu cuenta` : "Tu cuenta"}
-        className="group relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-paper/25 mono text-[12px] text-paper/80 transition-all duration-fast hover:scale-105 hover:border-paper hover:shadow-[0_0_0_3px_rgba(245,243,238,0.10)]"
+        className="hit group relative flex h-8 w-8 items-center justify-center rounded-full border border-paper/25 mono text-[12px] text-paper/80 transition-all duration-fast hover:scale-105 hover:border-paper hover:shadow-[0_0_0_3px_rgba(245,243,238,0.10)]"
       >
         {profile?.avatarUrl ? (
           <RetryImg
             src={profile.avatarUrl}
             alt=""
-            className="h-full w-full object-cover brightness-90 transition duration-fast group-hover:brightness-110"
+            className="h-full w-full rounded-full object-cover brightness-90 transition duration-fast group-hover:brightness-110"
           />
         ) : (
           initials
@@ -114,7 +114,9 @@ function MenuLink({
   return (
     <Link
       href={href}
-      className="block px-3 py-2 text-[13px] text-paper/80 transition hover:bg-paper/[0.06] hover:text-paper"
+      /* con el dedo (tableta), filas de 44: cada una es su propia zona, sin
+         capas que se pisen entre filas */
+      className="block px-3 py-2 text-[13px] text-paper/80 transition hover:bg-paper/[0.06] hover:text-paper [@media(pointer:coarse)]:flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center"
     >
       {children}
     </Link>

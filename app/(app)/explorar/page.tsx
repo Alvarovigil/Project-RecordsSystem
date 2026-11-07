@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import ExploreView from "@/components/ExploreView";
+import { ExploreShell } from "@/components/explore/ExploreFrame";
 
 export const metadata = {
   title: "Explorar",
@@ -7,10 +8,12 @@ export const metadata = {
 };
 
 export default function ExplorePage() {
-  // reading the query string makes this page dynamic; the boundary keeps the
-  // shell rendering while it resolves
+  // Reading the query string makes this boundary render on the client. What
+  // the server sends in its place is the screen's frame — field, titles and
+  // skeletons — and not an empty hole: on a slow phone that hole was three
+  // seconds of black (F8).
   return (
-    <Suspense>
+    <Suspense fallback={<ExploreShell />}>
       <ExploreView />
     </Suspense>
   );

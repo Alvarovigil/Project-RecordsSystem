@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { Page, Section } from "@/components/app/AppShell";
 import { Cover } from "@/components/ui/Avatar";
@@ -24,7 +25,7 @@ import { useRepository } from "@/hooks/useRepository";
 import RecordSheet from "@/components/mobile/RecordSheet";
 import { usePlaybackContext } from "@/lib/playback-context";
 import { useLibrary } from "@/hooks/useLibrary";
-import { useEntryGate, useIsVisitor } from "@/hooks/useSession";
+import { useEntryGate, useSession } from "@/hooks/useSession";
 import { layersBusy } from "@/hooks/useBackToClose";
 import { useCatalogueSearch } from "@/hooks/useCatalogueSearch";
 import { useToast } from "@/components/ui/Toast";
@@ -33,6 +34,15 @@ import type { ActivityEvent, ListWithRecord, SuggestedProfile } from "@/lib/data
 import type { Vinyl } from "@/lib/types";
 
 import RetryImg from "@/components/ui/RetryImg";
+import {
+  OTHERS,
+  RACKS,
+  RECENTS_KEY,
+  RecentChip,
+  SearchBar,
+  SearchField,
+} from "@/components/explore/ExploreFrame";
+import { isColdStartOn } from "@/lib/launch";
 /** the sample shelf is nobody's, so for a visitor nothing counts as owned */
 const NOTHING: Set<string> = new Set();
 
@@ -64,8 +74,21 @@ const NOTHING: Set<string> = new Set();
 
 type Scope = "all" | "records" | "lists" | "people";
 
-const RECENTS_KEY = "vinilos.recent-searches.v1";
 const MAX_RECENTS = 8;
+
+/**
+ * Lo que el servidor ya pintó, si lo pintó: el armazón de `ExploreShell`.
+ *
+ * Solo existe en la primera carga, y solo mientras este componente se monta
+ * encima por primera vez. Quien sustituye al armazón tiene que empezar
+ * diciendo lo mismo que él — mismo título, mismas búsquedas recientes —, o
+ * el relevo mueve la pantalla.
+ */
+function readShell(): { visitor: boolean } | null {
+  if (typeof document === "undefined") return null;
+  const el = document.querySelector("[data-explore-shell]");
+  return el ? { visitor: el.hasAttribute("data-visitor") } : null;
+}
 
 export default function ExploreView() {
   const repo = useRepository();
@@ -76,7 +99,7 @@ export default function ExploreView() {
   const router = useRouter();
   const params = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
-  /** only the phone pill cares: it stays open while the cursor is in it */
+  const [shell] = useState(readShell);
 
   /**
    * The search lives in the address as `?q=`, not only in this component.
@@ -93,13 +116,38 @@ export default function ExploreView() {
   /** no network, or the last read failed: the skeleton gives way to a retry */
   const [offline, setOffline] = useState(false);
   const [failed, setFailed] = useState(false);
+  /** solo la gente: los racks sí llegaron */
+  const [peopleFailed, setPeopleFailed] = useState(false);
   const [retry, setRetry] = useState(0);
+  /**
+   * Desde cuándo se espera una respuesta sin tener ninguna. El plazo de 8 s
+   * cuenta desde ahí, no desde la última petición: con la red cortada, la
+   * sesión rehace el repositorio una y otra vez, cada vez se volvía a pedir
+   * todo y el plazo volvía a empezar — a los 35 s seguía el esqueleto (F8).
+   */
+  const waitingSince = useRef<number | null>(null);
+  const waitingFor = useRef<string | null>(null);
+  /** los racks (y la gente) ya han contestado, con algo o con nada */
+  const [listsSettled, setListsSettled] = useState(false);
+  /**
+   * Leer otra vez. Lo que había contestado deja de contar: mientras vuelve la
+   * respuesta, los huecos esperan con su esqueleto en vez de afirmar que no
+   * hay nada (F8).
+   */
+  const reread = useCallback(() => {
+    waitingSince.current = null;
+    setFailed(false);
+    setListsSettled(false);
+    setPeopleFailed(false);
+    setFindsFailed(false);
+    setRetry((n) => n + 1);
+  }, []);
   useEffect(() => {
     const sync = () => setOffline(!navigator.onLine);
     // the connection is back: read again, without anybody pressing anything
     const back = () => {
       setOffline(false);
-      setRetry((n) => n + 1);
+      reread();
     };
     sync();
     window.addEventListener("online", back);
@@ -108,7 +156,7 @@ export default function ExploreView() {
       window.removeEventListener("online", back);
       window.removeEventListener("offline", sync);
     };
-  }, []);
+  }, [reread]);
 
   // the query into the address, replacing the entry (typing is not a place to
   // go back to). Not while a layer owns history: its entry has this address
@@ -134,7 +182,8 @@ export default function ExploreView() {
   const [people, setPeople] = useState<SuggestedProfile[]>([]);
   const [library, setLibrary] = useState<Vinyl[]>([]);
   const [loading, setLoading] = useState(false);
-  const [recents, setRecents] = useState<string[]>([]);
+  // tras el armazón, las mismas que ya ha pintado; si no, al montar (abajo)
+  const [recents, setRecents] = useState<string[]>(() => (shell ? readRecents() : []));
   /** the record whose sheet is open, opened from a result */
   const [openRecord, setOpenRecord] = useState<Vinyl | null>(null);
   /* recién guardado desde el catálogo: llega con la hoja de racks puesta */
@@ -180,7 +229,13 @@ export default function ExploreView() {
 
   /** lo que ya está en tu estantería, por id de disco */
   const ownedIds = useMemo(() => new Set(lib.releases.map((v) => v.id)), [lib.releases]);
-  const visitor = useIsVisitor();
+  /* Sin sesión o con ella. Mientras se lee, lo que dijo el armazón del
+     servidor (que lo miró antes del primer pintado); sin armazón, como
+     `useIsVisitor`: «con sesión» hasta saberlo. */
+  const session = useSession();
+  const visitor = session.loading
+    ? Boolean(shell?.visitor)
+    : session.available && !session.user;
   const gate = useEntryGate();
 
   // sin sesión la estantería de ejemplo no es de nadie: no se quita nada de
@@ -206,7 +261,7 @@ export default function ExploreView() {
     );
     setWantedSaving(null);
     if (!v)
-      return toast.show(catalogue.lastError.current ?? "No se pudo añadir ese disco.", {
+      return toast.show(catalogue.lastError.current ?? "No hemos podido añadir ese disco.", {
         tone: "error",
       });
     setWantedSaved((s) => new Set(s).add(row.id));
@@ -242,7 +297,11 @@ export default function ExploreView() {
    * sin él con sus esqueletos y, si luego trae algo, se pone al final, donde
    * no mueve nada de lo que ya se ve. Más plazo era una pantalla en blanco.
    */
-  const [pulseAt, setPulseAt] = useState<"top" | "end" | null>(null);
+  /* En frío no se espera: el servidor ya ha pintado los esqueletos (ver
+     `ExploreShell`) y el pulso, si llega, va al final, donde no mueve nada. */
+  const [pulseAt, setPulseAt] = useState<"top" | "end" | null>(() =>
+    isColdStartOn("/explorar") ? "end" : null,
+  );
   const pulseLate = useRef(false);
   useEffect(() => {
     const t = setTimeout(() => {
@@ -251,10 +310,12 @@ export default function ExploreView() {
     }, 300);
     return () => clearTimeout(t);
   }, []);
-  /** los racks destacados (y la gente) ya han contestado, con algo o con nada */
-  const [listsSettled, setListsSettled] = useState(false);
   /** cuántos discos de otros han salido; null mientras se buscan */
   const [findsCount, setFindsCount] = useState<number | null>(null);
+  /** no se pudo leer ninguno de esos racks: no es que estén vacíos */
+  const [findsFailed, setFindsFailed] = useState(false);
+  /** discos que ha enseñado «Lo que todo el mundo busca» (del catálogo) */
+  const [wantedRows, setWantedRows] = useState(0);
 
   /** guardar desde la esquina de la portada, sin abrir nada */
   const saveRow = async (r: (typeof addable)[number]) => {
@@ -265,7 +326,7 @@ export default function ExploreView() {
       void lib.saveToList(vinyl, listId),
     );
     if (!v)
-      return toast.show(catalogue.lastError.current ?? "No se pudo añadir ese disco.", {
+      return toast.show(catalogue.lastError.current ?? "No hemos podido añadir ese disco.", {
         tone: "error",
       });
     toast.show(`${v.title} · guardado`, { media: { src: r.thumb ?? coverFor(v) } });
@@ -281,20 +342,36 @@ export default function ExploreView() {
   useEffect(() => {
     let alive = true;
     const q = query.trim();
-    setFailed(false);
     /* A read that never answers (offline, the session refreshing against no
-       network) is a failure too: past this, it says so instead of pulsing. */
-    const slow = setTimeout(() => alive && setFailed(true), 12000);
-    const done = () => clearTimeout(slow);
+       network) is a failure too: past this, it says so instead of pulsing.
+       Una lectura repetida no borra el error de la anterior: lo borra la
+       respuesta buena, o «Reintentar». Si no, el aviso parpadeaba con cada
+       repetición y, entre medias, el hueco volvía a decir «Todavía no hay». */
+    if (waitingSince.current === null || waitingFor.current !== q) {
+      waitingSince.current = Date.now();
+      waitingFor.current = q;
+    }
+    const left = Math.max(0, 8000 - (Date.now() - waitingSince.current));
+    const slow = setTimeout(() => alive && setFailed(true), left);
+    const done = () => {
+      clearTimeout(slow);
+      waitingSince.current = null;
+    };
     const fail = () => {
       clearTimeout(slow);
       if (!alive) return;
+      waitingSince.current = null;
       setLoading(false);
       setFailed(true);
     };
 
     if (!q) {
       setLoading(true);
+      /* Lo que contestó una lectura anterior no vale para esta: si falló y
+         luego se volvió a leer, el hueco se quedaba con «ya ha contestado»
+         sin error y decía «Todavía no hay racks» mientras la nueva lectura
+         seguía en el aire (F8). Con racks ya en pantalla no cambia nada. */
+      setListsSettled(false);
       const placePulse = (e: ActivityEvent[]) => {
         setPulse(e);
         setPulseAt((at) => at ?? (pulseLate.current ? "end" : "top"));
@@ -313,8 +390,10 @@ export default function ExploreView() {
             return fail();
           }
           done();
+          setFailed(false);
           setLists(l.value);
           setPeople(p.status === "fulfilled" ? p.value : []);
+          setPeopleFailed(p.status === "rejected");
           setListsSettled(true);
           setLoading(false);
         })
@@ -335,13 +414,21 @@ export default function ExploreView() {
         .then(([l, p]) => {
           if (!alive) return;
           done();
+          setFailed(false);
           setLists(l);
           setPeople(
             p.map((x) => ({ ...x, shared: 0, mutuals: 0, followers: 0, covers: [], chosen: false })),
           );
           setLoading(false);
         })
-        .catch(fail);
+        .catch(() => {
+          // lo que hubiera (los racks de portada, otra frase) no es la respuesta
+          if (alive) {
+            setLists([]);
+            setPeople([]);
+          }
+          fail();
+        });
     }, 220);
 
     return () => {
@@ -349,7 +436,9 @@ export default function ExploreView() {
       clearTimeout(t);
       clearTimeout(slow);
     };
-  }, [repo, query, library, retry]);
+    // `library` (tu estantería) no entra: esta lectura no la usa, y cuando
+    // llegaba volvía a lanzarla, borrando el error de la anterior
+  }, [repo, query, retry]);
 
   const remember = useCallback((q: string) => {
     const clean = q.trim();
@@ -404,10 +493,50 @@ export default function ExploreView() {
   );
   const total = counts.records + counts.lists + counts.people;
   const loadingAnything = loading || catalogue.loading;
+  /**
+   * Buscar pregunta a dos sitios: a la comunidad (racks y personas) y al
+   * catálogo. Si uno no contesta, de esa parte no se sabe nada — ni «nada
+   * para…» ni un «0» en su pestaña. Lo que sí llegó se enseña, con una nota
+   * corta para lo que falta (F8).
+   */
+  const communityDown = searching && (offline || failed) && !loading;
+  const catalogueDown = catalogue.degraded === "down" || catalogue.degraded === "rate-limit";
+  /** alguna de las dos todavía no ha contestado a esta frase */
+  const waitingAny = loadingAnything || catalogue.pending;
+  const retrySearch = () => {
+    reread();
+    catalogue.retry();
+  };
+  /** el número de una pestaña, solo si su fuente ha contestado */
+  const tabCount = {
+    records:
+      catalogueDown || (counts.records === 0 && (catalogue.pending || catalogue.loading))
+        ? null
+        : counts.records,
+    lists: communityDown || (counts.lists === 0 && loading) ? null : counts.lists,
+    people: communityDown || (counts.people === 0 && loading) ? null : counts.people,
+  };
   const show = (s: Scope) => scope === "all" || scope === s;
   /** sin red o con la lectura caída tampoco va a llegar nada más */
   const listsDone = listsSettled || offline || failed;
-  const othersTitle = visitor ? "De los racks de aquí abajo" : "Lo tienen ellos, tú no";
+  /**
+   * La lectura no ha llegado: ni se sabe si hay racks ni si no los hay.
+   *
+   * «Todavía no hay…» es una afirmación sobre la comunidad, y solo se puede
+   * hacer con una respuesta buena y vacía delante. Sin red, o con la lectura
+   * caída, lo dice un solo aviso bajo el buscador, con un solo «Reintentar»
+   * que lo vuelve a pedir todo; las secciones que dependen de esa lectura se
+   * cierran enteras, sin título (F8). Tres avisos iguales, uno por sección,
+   * hacían dudar de cuál tocar y parecía que lo demás sí había cargado.
+   */
+  const listsFailed = (offline || failed) && lists.length === 0;
+  /** algo de la portada no ha llegado: el aviso único lo dice */
+  const homeDown = listsFailed || peopleFailed || findsFailed;
+  /** …y algo sí: entonces es «parte de Explorar», no Explorar entero */
+  const somethingLoaded =
+    lists.length > 0 || people.length > 0 || wantedRows > 0 || (pulse?.length ?? 0) > 0;
+  const others = visitor ? OTHERS.visitor : OTHERS.member;
+  const othersTitle = others.title;
   const pulseSection = pulse !== null && pulse.length > 0 && (
     <Section
       title="Se está moviendo"
@@ -439,85 +568,16 @@ export default function ExploreView() {
        * for something with edges, and on a page this wide a lone line does not
        * read as a place to type at all.
        */}
-      {/* The bar itself carries no background on a phone: the pill is the
-           thing that floats, and it can only look like it floats if what is
-           behind it goes past it. A scrim across the full width would have
-           made the blur decorative. */}
-      <div className="sticky top-0 z-20 -mx-5 bg-surface/95 px-5 pb-3 pt-1 backdrop-blur-md sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pb-7 sm:pt-0 sm:backdrop-blur-none">
-        <div className="mx-auto w-full max-w-[560px]">
-          {/**
-           * Un campo, del ancho de la página.
-           *
-           * Era una píldora que crecía: en reposo medía nueve caracteres y se
-           * quedaba flotando en mitad del ancho, gorda y centrada, con un
-           * palmo de negro a cada lado y otro por encima. La animación era
-           * bonita de describir y el resultado era un botón perdido en medio
-           * de una pantalla vacía — nada más entrar, que es justo cuando hay
-           * que ver qué se puede hacer aquí.
-           *
-           * Ahora es lo que es: un campo, alineado con todo lo demás, del
-           * ancho del contenido y de la altura de un control. Sin sombra ni
-           * aro — está sobre el fondo de la aplicación, no flotando sobre
-           * nada — y sin animación, porque no cambia de tamaño.
-           */}
-          <div
-            className="relative flex h-11 w-full items-center gap-2.5 rounded-full bg-fill-subtle px-4 transition-colors focus-within:bg-fill sm:h-auto sm:gap-0 sm:rounded-none sm:border-b sm:border-line sm:bg-transparent sm:px-0 sm:focus-within:bg-transparent sm:focus-within:border-line-strong">
-            {/* the magnifier lives on the phone only: collapsed to a pill the
-                field has no shape of its own to explain what it is, which is
-                exactly the job the icon exists for — and exactly why the wide
-                version, where the placeholder is a full sentence, does without
-                it */}
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 16 16"
-              fill="none"
-              aria-hidden
-              className="shrink-0 text-content-muted sm:hidden"
-            >
-              <circle cx="7" cy="7" r="4.6" stroke="currentColor" strokeWidth="1.4" />
-              <path d="M10.4 10.4 L14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onBlur={() => remember(query)}
-              enterKeyHint="search"
-              type="search"
-              autoCapitalize="none"
-              autoCorrect="off"
-              aria-label="Buscar discos, racks o personas"
-              placeholder="Buscar"
-              /**
-               * The query, set as type rather than typed into a widget.
-               *
-               * A rounded box with a magnifying glass in it is the search
-               * field every site has, and it looked borrowed here — the rest
-               * of this product is words, hairlines and mono micro-type, with
-               * no chrome anywhere. So the field is the sentence: large,
-               * centred under the title, on a rule that lights up when the
-               * cursor is in it. The magnifier goes for the same reason it
-               * went from the bar — the placeholder already says what to do,
-               * and the icon was saying it a second time in another language.
-               */
-              className="peer min-w-0 flex-1 self-stretch bg-transparent text-left sm:self-auto text-sub text-paper outline-none placeholder:text-content-faint sm:w-full sm:pb-3 sm:pt-1 sm:text-center sm:text-title sm:placeholder:text-transparent"
-            />
-
-            {/* The wide field asks the longer question, and it is drawn rather
-                than set as the placeholder because the two breakpoints want
-                different words and only one `placeholder` exists. Reading it
-                off the device would mean swapping the text after hydration on
-                the screen where this is the first thing you see. CSS decides,
-                so it is right on frame one. */}
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-1 hidden text-center text-title text-content-faint sm:peer-placeholder-shown:block"
-            >
-              Busca discos, listas o personas
-            </span>
-
-            {searching && (
+      {/* La barra y el campo son los mismos que pinta el servidor antes de
+          que llegue este código (ver ExploreFrame): no se mueven al relevarlo. */}
+      <SearchBar>
+        <SearchField
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onBlur={() => remember(query)}
+          after={
+            searching && (
               <button
                 onClick={() => {
                   setQuery("");
@@ -535,89 +595,96 @@ export default function ExploreView() {
                   />
                 </svg>
               </button>
-            )}
-          </div>
+            )
+          }
+        />
 
-          {/**
-           * The scopes as a line of words, not as a switch.
-           *
-           * A segmented pill is a control you press; these are the four shapes
-           * one answer can take, and they read better as a caption under the
-           * question — the same mono micro-type that names every region on
-           * every other screen. It also stops the two most prominent objects
-           * on the page from both being rounded rectangles fighting for the
-           * middle of the screen.
-           *
-           * The counts do the work the pill was doing: they say where the
-           * answers are before you choose, so choosing is informed rather than
-           * exploratory.
-           */}
-          {searching && (
-            <div className="mt-4 flex flex-wrap items-baseline justify-center gap-x-6 gap-y-2">
-              {(
-                [
-                  ["all", "Todo", null],
-                  ["records", "Discos", counts.records],
-                  ["lists", "Racks", counts.lists],
-                  ["people", "Usuarios", counts.people],
-                ] as const
-              ).map(([value, label, n]) => {
-                const active = scope === value;
-                return (
-                  <button
-                    key={value}
-                    onClick={() => setScope(value)}
-                    aria-pressed={active}
-                    className={`pressable label transition-colors ${
-                      active ? "text-paper" : "text-content-faint hover:text-content-secondary"
-                    }`}
-                  >
-                    {label}
-                    {n !== null && (
-                      <span className={`ml-1.5 ${active ? "text-content-muted" : "text-content-faint"}`}>
-                        {n}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
+        {/**
+         * The scopes as a line of words, not as a switch.
+         *
+         * A segmented pill is a control you press; these are the four shapes
+         * one answer can take, and they read better as a caption under the
+         * question — the same mono micro-type that names every region on
+         * every other screen. It also stops the two most prominent objects
+         * on the page from both being rounded rectangles fighting for the
+         * middle of the screen.
+         *
+         * The counts do the work the pill was doing: they say where the
+         * answers are before you choose, so choosing is informed rather than
+         * exploratory.
+         */}
+        {/* Una sola fila, siempre: con letra grande (360 al 130 %) se
+            partía en dos y «Personas» quedaba sola debajo. Si no cabe, se
+            desliza de lado (`rail`); si cabe, centrada (`w-max mx-auto`). */}
+        {searching && (
+          <div className="rail mt-4">
+          <div className="mx-auto flex w-max items-baseline gap-x-6 whitespace-nowrap">
+            {(
+              [
+                ["all", "Todo", null],
+                ["records", "Discos", tabCount.records],
+                ["lists", "Racks", tabCount.lists],
+                ["people", "Personas", tabCount.people],
+              ] as const
+            ).map(([value, label, n]) => {
+              const active = scope === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => setScope(value)}
+                  aria-pressed={active}
+                  className={`pressable label transition-colors ${
+                    active ? "text-paper" : "text-content-faint hover:text-content-secondary"
+                  }`}
+                >
+                  {label}
+                  {n !== null && (
+                    <span className={`ml-1.5 ${active ? "text-content-muted" : "text-content-faint"}`}>
+                      {n}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          </div>
+        )}
+      </SearchBar>
 
       {/* ------------------------------------------------ nothing typed yet */}
       {!searching && (
         <>
+          {homeDown && (
+            <div className="mt-6">
+              <EmptyState
+                compact
+                title={
+                  offline
+                    ? "Sin conexión"
+                    : somethingLoaded
+                      ? "No hemos podido cargar parte de Explorar"
+                      : "No hemos podido cargar Explorar"
+                }
+                body={
+                  offline
+                    ? "Cuando vuelva la conexión, esto se carga solo."
+                    : "Puede ser la conexión. Prueba otra vez en un momento."
+                }
+                action={{ label: "Reintentar", onClick: reread }}
+              />
+            </div>
+          )}
+
           {recents.length > 0 && (
             <Section title="Búsquedas recientes">
               <ul className="flex flex-wrap gap-2">
                 {recents.map((r) => (
-                  <li
+                  <RecentChip
                     key={r}
-                    className="flex items-center rounded-full bg-fill"
-                  >
-                    <button
-                      onClick={() => setQuery(r)}
-                      className="pressable py-2 pl-3.5 pr-1.5 text-sub text-content-secondary hover:text-paper"
-                    >
-                      {r}
-                    </button>
-                    <button
-                      onClick={() => forget(r)}
-                      aria-label={`Quitar ${r} del historial`}
-                      className="pressable flex h-8 w-7 items-center justify-center text-content-faint hover:text-paper"
-                    >
-                      <svg width="9" height="9" viewBox="0 0 14 14" fill="none">
-                        <path
-                          d="M2 2 L12 12 M12 2 L2 12"
-                          stroke="currentColor"
-                          strokeWidth="1.6"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </button>
-                  </li>
+                    text={r}
+                    onPick={() => setQuery(r)}
+                    onForget={() => forget(r)}
+                  />
                 ))}
               </ul>
             </Section>
@@ -650,8 +717,9 @@ export default function ExploreView() {
            * y, si al final no hay nada que enseñar, Hold lo cierra sin mover
            * lo que se está mirando.
            */}
+          {/* si su lectura falló, fuera entera: el aviso de arriba ya lo dice */}
+          <Closing open={!listsFailed && !findsFailed}>
           <Hold
-            className="mt-9 first:mt-0"
             empty={listsDone && (lists.length === 0 || findsCount === 0)}
             fallback={
               <EmptySlot
@@ -680,45 +748,33 @@ export default function ExploreView() {
             <Section
               title={othersTitle}
               // sin sesión el título ya dice de dónde salen: la nota no lo repite
-              note={
-                visitor
-                  ? "Ábrelos y verás quién más los tiene."
-                  : "Discos sacados de los racks de aquí abajo. Ábrelos y verás quién más los tiene."
-              }
+              note={others.note}
             >
               {lists.length > 0 ? (
                 <FromOthersRail
+                  /* si no se pudo leer ninguno, «Reintentar» lo monta de nuevo
+                     para que los vuelva a pedir, aunque los racks sean los
+                     mismos; si salió bien, no se toca */
+                  key={findsFailed ? `fallo-${retry}` : "bien"}
                   lists={lists}
                   ownedIds={visitor ? NOTHING : ownedIds}
                   onOpen={(f) => setOpenRecord(f.vinyl)}
                   onSettle={setFindsCount}
+                  onFail={() => setFindsFailed(true)}
                 />
               ) : (
                 <SkeletonFindRail />
               )}
             </Section>
           </Hold>
+          </Closing>
 
-          <Section
-            id="racks"
-            title="Racks que vale la pena abrir"
-            note="Montados con criterio, no carpetas."
-          >
-            {(offline || failed) && lists.length === 0 ? (
-              /* Sin red el esqueleto latía para siempre: no decía ni «espera»
-                 ni «algo ha fallado». Ahora lo dice, y al volver la conexión
-                 se vuelve a pedir solo. */
-              <EmptyState
-                compact
-                title={offline ? "Sin conexión" : "No hemos podido cargar Explorar"}
-                body={
-                  offline
-                    ? "Cuando vuelva la conexión, esto se carga solo."
-                    : "Puede ser la conexión. Prueba otra vez en un momento."
-                }
-                action={{ label: "Reintentar", onClick: () => setRetry((n) => n + 1) }}
-              />
-            ) : (loading || !listsSettled) && lists.length === 0 ? (
+          {/* Sin red el esqueleto latía para siempre. Ahora, si la lectura
+              cae, la sección se va y lo dice el aviso de arriba; al volver
+              la conexión se vuelve a pedir sola. */}
+          <Closing open={!listsFailed}>
+          <Section id="racks" title={RACKS.title} note={RACKS.note}>
+            {(loading || !listsSettled) && lists.length === 0 ? (
               <SkeletonRackRail n={5} />
             ) : lists.length === 0 ? (
               /* A heading with nothing under it is the worst of both: it does
@@ -730,10 +786,7 @@ export default function ExploreView() {
                 body="O nadie ha publicado un rack público, o no hemos podido leerlos. Prueba a recargar; si sigue vacío, busca algo concreto."
                 /* se vuelve a pedir aquí mismo: recargar la página entera
                    tiraba lo que ya estaba escrito en el buscador */
-                action={{
-                  label: "Reintentar",
-                  onClick: () => setRetry((n) => n + 1),
-                }}
+                action={{ label: "Reintentar", onClick: reread }}
               />
             ) : (
               /* one line, sliding sideways: the community is something you
@@ -761,12 +814,13 @@ export default function ExploreView() {
               </ul>
             )}
           </Section>
+          </Closing>
 
-          {/* sin red y sin nadie que enseñar, el aviso de arriba ya lo dice:
-              aquí solo quedaría un título sobre nada. Mientras carga, su
-              esqueleto; si se queda vacía, Hold la cierra sin empujar nada. */}
+          {/* Si su lectura cayó, fuera entera, sin título. Mientras carga, su
+              esqueleto; si se queda vacía de verdad, Hold la cierra sin
+              empujar nada. */}
+          <Closing open={!listsFailed && !peopleFailed}>
           <Hold
-            className="mt-9 first:mt-0"
             empty={listsDone && people.length === 0}
             fallback={
               <EmptySlot
@@ -808,6 +862,7 @@ export default function ExploreView() {
             )}
           </Section>
           </Hold>
+          </Closing>
 
           {/**
            * Las dos listas del catálogo, debajo del club y no encima.
@@ -826,6 +881,7 @@ export default function ExploreView() {
             // y otra vez si vuelve la conexión
             key={`${visitor ? "visitor" : "member"}-${retry}`}
             title="Lo que todo el mundo busca"
+            onRows={setWantedRows}
             subtitle={`Los vinilos de ${new Date().getFullYear()} más perseguidos ahora mismo.${
               visitor ? "" : " Sin lo que ya tienes."
             }`}
@@ -874,12 +930,19 @@ export default function ExploreView() {
           {/* said before the results, not after: someone who reads "nada para
               «x»" and then scrolls past a note explaining why has already
               drawn their conclusion */}
-          {catalogue.degraded && (
-            <div className="mb-6">
-              <CatalogueNotice degraded={catalogue.degraded} />
-            </div>
-          )}
-          {total === 0 && !loadingAnything ? (
+          {total === 0 && !waitingAny && (communityDown || catalogueDown) ? (
+            /* «Nada para…» es una respuesta; sin ella delante, no se dice */
+            <EmptyState
+              title={offline ? "Sin conexión" : "No hemos podido buscar"}
+              body={
+                offline
+                  ? "Cuando vuelva la conexión, esto se carga solo."
+                  : "Puede ser la conexión. Prueba otra vez en un momento."
+              }
+              action={{ label: "Reintentar", onClick: retrySearch }}
+              secondary={{ label: "Borrar búsqueda", onClick: () => setQuery("") }}
+            />
+          ) : total === 0 && !waitingAny ? (
             <EmptyState
               title={`Nada para «${query}»`}
               body="Prueba con menos palabras, o solo con el nombre del artista. Para un disco que todavía no tienes, el código de barras acierta más que el título."
@@ -891,6 +954,28 @@ export default function ExploreView() {
             />
           ) : (
             <div className="space-y-9">
+              {/* Llegó una parte: lo que falta lo dice una nota corta, antes
+                  de los resultados y no después (quien lee una lista sin
+                  aviso ya ha sacado su conclusión). */}
+              {(catalogueDown || communityDown) && !waitingAny && (
+                <div className="space-y-3">
+                  {catalogueDown && (
+                    <CatalogueNotice
+                      degraded={catalogue.degraded}
+                      empty={addable.length === 0}
+                      onRetry={catalogue.retry}
+                    />
+                  )}
+                  {communityDown && (
+                    <PartNote onRetry={reread}>
+                      {offline
+                        ? "Sin conexión: faltan racks y personas."
+                        : "No hemos podido buscar racks ni personas."}
+                    </PartNote>
+                  )}
+                </div>
+              )}
+              {catalogue.degraded === "partial" && <CatalogueNotice degraded="partial" />}
               {/**
                * Un solo resultado por disco, lo tengas o no.
                *
@@ -908,7 +993,7 @@ export default function ExploreView() {
                */}
               {show("records") && found.length > 0 && (
                 <ResultBlock
-                  title="Vinilos"
+                  title="Discos"
                   onAll={() => setScope("records")}
                   showAll={scope === "all"}
                 >
@@ -1016,7 +1101,7 @@ export default function ExploreView() {
 
               {show("people") && people.length > 0 && (
                 <ResultBlock
-                  title="Usuarios"
+                  title="Personas"
                   onAll={() => setScope("people")}
                   showAll={scope === "all"}
                 >
@@ -1041,10 +1126,25 @@ export default function ExploreView() {
                   mistake as an empty shelf on a cold start: saying something
                   false quickly is worse than saying nothing slowly. */}
               {scope !== "all" &&
-                !loadingAnything &&
-                ((scope === "records" && records.length === 0) ||
+                !waitingAny &&
+                ((scope === "records" && found.length === 0) ||
                   (scope === "lists" && lists.length === 0) ||
-                  (scope === "people" && people.length === 0)) && (
+                  (scope === "people" && people.length === 0)) &&
+                (((scope === "lists" || scope === "people") && communityDown) ||
+                (scope === "records" && catalogueDown) ? (
+                  /* racks y usuarios vienen de la misma lectura: si cayó, no
+                     se sabe si los hay */
+                  <EmptyState
+                    compact
+                    title={offline ? "Sin conexión" : "No hemos podido buscar"}
+                    body={
+                      offline
+                        ? "Cuando vuelva la conexión, esto se carga solo."
+                        : "Puede ser la conexión. Prueba otra vez en un momento."
+                    }
+                    action={{ label: "Reintentar", onClick: retrySearch }}
+                  />
+                ) : (
                   <EmptyState
                     compact
                     title="Aquí no hay resultados"
@@ -1054,7 +1154,7 @@ export default function ExploreView() {
                       onClick: () => setScope("all"),
                     }}
                   />
-                )}
+                ))}
             </div>
           )}
         </div>
@@ -1142,6 +1242,49 @@ function ResultBlock({
  * No es `EmptyState`: ese trae su propio título, que repetiría el de la
  * sección, y una acción obligatoria que el hueco de la gente no tiene.
  */
+/**
+ * Lo que falta de una búsqueda que llegó a medias: una línea y su reintento,
+ * con la misma superficie que el aviso del catálogo.
+ */
+function PartNote({ children, onRetry }: { children: React.ReactNode; onRetry: () => void }) {
+  return (
+    <div role="status" className="rounded-lg bg-fill-subtle px-4 py-3 text-sub text-content-muted">
+      <p className="leading-snug">{children}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="pressable hit mt-2 font-medium text-paper underline underline-offset-4"
+      >
+        Reintentar
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Una sección cuya lectura ha fallado se cierra entera, en 200 ms de alto (y
+ * sin transición si se ha pedido menos movimiento): desaparecer de golpe
+ * hacía saltar todo lo de debajo en un solo fotograma. Lleva el margen de la
+ * sección, para que también se cierre.
+ */
+function Closing({ open, children }: { open: boolean; children: React.ReactNode }) {
+  const reduce = useReducedMotion();
+  return (
+    <AnimatePresence initial={false}>
+      {open && (
+        <motion.div
+          key="abierta"
+          className="mt-9 first:mt-0 [overflow-y:clip]"
+          exit={{ height: 0, marginTop: 0, opacity: 0 }}
+          transition={{ duration: reduce ? 0 : 0.2, ease: [0.2, 0, 0, 1] }}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function EmptySlot({
   title,
   note,
@@ -1153,7 +1296,9 @@ function EmptySlot({
 }) {
   return (
     <Section title={title} fill>
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg bg-fill-subtle px-6 py-8 text-center">
+      {/* A partir de 1024 la losa es muy ancha: la frase va a la izquierda,
+          en la línea de los títulos, no flotando en el centro de 1400 px. */}
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg bg-fill-subtle px-6 py-8 text-center lg:items-start lg:text-left">
         <p className="max-w-[32ch] text-sub text-content-muted">{note}</p>
         {action && (
           <button

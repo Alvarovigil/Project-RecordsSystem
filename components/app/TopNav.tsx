@@ -120,7 +120,7 @@ export default function TopNav({
           <Link
             href={preview ? "/" : "/coleccion"}
             aria-label="Rackr Club"
-            className="shrink-0 transition hover:opacity-100"
+            className="hit shrink-0 transition hover:opacity-100"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.svg" alt="" className="h-[13px] w-auto translate-y-[1px]" />
@@ -142,7 +142,7 @@ export default function TopNav({
                     href={l.href}
                     aria-current={active ? "page" : undefined}
                     style={touch ? { paddingBlock: 12, marginBlock: -12 } : undefined}
-                    className={`text-[15px] leading-none transition-colors duration-150 ${
+                    className={`hit text-[15px] leading-none transition-colors duration-150 ${
                       active
                         ? "font-semibold text-paper"
                         : "font-medium text-paper/50 hover:text-paper/75"
@@ -155,12 +155,15 @@ export default function TopNav({
             })}
           </ul>
         </div>
-        <div className="flex shrink-0 items-center gap-5">
+        {/* `min-h-8`: la cuenta (el avatar o «Entrar», 32 px) no existe hasta
+            que se lee la sesión, y sin su alto reservado la barra crecía 9 px
+            al llegar y empujaba la página entera (F8). */}
+        <div className="flex min-h-8 shrink-0 items-center gap-5">
           {right}
           <button
             onClick={search}
             style={touch ? { paddingBlock: 12, marginBlock: -12 } : undefined}
-            className="group flex items-center gap-2 text-[15px] font-medium leading-none text-paper/50 transition-colors duration-150 hover:text-paper/75"
+            className="hit group flex items-center gap-2 text-[15px] font-medium leading-none text-paper/50 transition-colors duration-150 hover:text-paper/75"
           >
             {/**
              * No magnifying glass.
