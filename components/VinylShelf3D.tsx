@@ -903,6 +903,17 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, SceneProps>(function VinylShel
     onActiveChange?.(vinilos[active]);
   }, [active, vinilos, onActiveChange]);
 
+  /**
+   * Una sola exposición para el `gl` del lienzo y para <Exposure>.
+   *
+   * Eran dos números: 0.95 en el `gl` (el de «Light the pile properly») y un
+   * 0.64 de antes que se quedó en <Exposure>. Con @react-three/fiber 8 el `gl`
+   * se volvía a aplicar en cada render del lienzo y el 0.64 no duraba un
+   * fotograma; con la 9 solo se aplica cuando cambia, y el estante salía un
+   * quinto más oscuro. El que se ve en producción es este.
+   */
+  const exposure = rig?.exposure ?? (vertical ? 0.95 : 1.2);
+
   return (
     <div
       ref={containerRef}
@@ -945,7 +956,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, SceneProps>(function VinylShel
         dpr={[1, 1.5]}
         gl={{
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: rig?.exposure ?? (vertical ? 0.95 : 1.2),
+          toneMappingExposure: exposure,
           powerPreference: "high-performance",
           antialias: true,
         }}
@@ -971,7 +982,7 @@ const VinylShelf3D = forwardRef<VinylShelfHandle, SceneProps>(function VinylShel
         <color attach="background" args={["#0a0a0a"]} />
         {/* the gl prop only lands when the context is created, so exposure has
             to be pushed in again whenever it changes */}
-        <Exposure value={rig?.exposure ?? (vertical ? 0.64 : 1.2)} />
+        <Exposure value={exposure} />
         <FogRig openProgressRef={openProgress} near={fogNear} far={fogFar} />
         <ambientLight intensity={lights.ambient} />
         <AnimatedLight

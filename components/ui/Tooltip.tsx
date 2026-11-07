@@ -32,7 +32,7 @@ export default function Tooltip({
   side?: "top" | "bottom";
 }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [at, setAt] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => () => clearTimeout(timer.current), []);

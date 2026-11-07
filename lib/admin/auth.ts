@@ -49,8 +49,8 @@ export function passwordMatches(candidate: string) {
 }
 
 /** True when the current request carries a valid admin password session. */
-export function isAdminRequest() {
-  return verifyToken(cookies().get(ADMIN_COOKIE)?.value);
+export async function isAdminRequest() {
+  return verifyToken((await cookies()).get(ADMIN_COOKIE)?.value);
 }
 
 /**
@@ -84,8 +84,8 @@ export function adminUserId() {
  * does not trust the cookie on its own), compared with the panel's owner.
  */
 export async function isAdmin() {
-  if (isAdminRequest()) return true;
-  const sb = getSupabaseServerClient();
+  if (await isAdminRequest()) return true;
+  const sb = await getSupabaseServerClient();
   if (!sb) return false;
   const { data: auth } = await sb.auth.getUser();
   return auth.user?.id === adminUserId();

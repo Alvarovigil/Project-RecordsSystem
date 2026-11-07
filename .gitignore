@@ -22,3 +22,6 @@ supabase/.temp/
 
 # local builds with NEXT_DIST_DIR (a second dev server, verification builds)
 .next-*
+
+# `next dev` (Next 16) lo regenera solo en cada arranque: no es del proyecto
+AGENTS.md

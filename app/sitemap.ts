@@ -11,7 +11,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/explorar`, priority: 0.6 },
   ];
 
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   if (!supabase) return base;
 
   const [{ data: profiles }, { data: lists }] = await Promise.all([

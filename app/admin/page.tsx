@@ -6,11 +6,12 @@ import { getOverview, listUsers } from "@/lib/admin/queries";
 import RetryImg from "@/components/ui/RetryImg";
 export const dynamic = "force-dynamic";
 
-export default async function AdminHome({
-  searchParams,
-}: {
-  searchParams: { q?: string };
-}) {
+export default async function AdminHome(
+  props: {
+    searchParams: Promise<{ q?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   if (!(await isAdmin())) redirect("/admin/login");
 
   const overview = await getOverview();

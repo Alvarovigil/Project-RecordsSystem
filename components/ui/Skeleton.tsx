@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 /**
  * The shape of what is coming, while it comes.
@@ -22,8 +22,9 @@ export default function Skeleton({
   radius = 3,
 }: {
   className?: string;
-  /** sleeves are 3px, cards are 14, text is a pill — match the real thing */
-  radius?: number;
+  /** sleeves are 3px, cards are 14, text is a pill — match the real thing.
+   *  A token (`var(--r-lg)`) when the real thing is drawn with one. */
+  radius?: number | string;
 }) {
   return (
     <span
@@ -48,6 +49,34 @@ export function SkeletonText({
       className={`skeleton block ${className}`}
       style={{ width: w, height: "0.72em", borderRadius: 999 }}
     />
+  );
+}
+
+/**
+ * Una línea de texto que ocupa lo mismo que la de verdad.
+ *
+ * `SkeletonText` mide 0,72em y no tiene interlineado: debajo de una portada,
+ * tres de ellas suman menos que tres líneas de texto, y al llegar el texto la
+ * fila crece y empuja lo de abajo. Esta lleva dentro un espacio en blanco con
+ * la clase de tipo que tendrá la línea real (`text-sub`, `text-caption`…), así
+ * que mide exactamente una línea de esa letra, y la barra va pintada encima.
+ */
+export function SkeletonLine({
+  w = "70%",
+  className = "",
+}: {
+  w?: string;
+  /** la misma clase de tipo y el mismo margen que la línea que sustituye */
+  className?: string;
+}) {
+  return (
+    <span aria-hidden className={`relative block ${className}`}>
+      {"\u00a0"}
+      <span
+        className="skeleton absolute left-0 top-1/2 -translate-y-1/2"
+        style={{ width: w, height: "0.72em", borderRadius: 999 }}
+      />
+    </span>
   );
 }
 
@@ -113,9 +142,11 @@ function RackCardShape() {
   return (
     <div>
       <Skeleton className="aspect-square w-full" radius={3} />
-      <SkeletonText className="mt-3" w="72%" />
-      <SkeletonText className="mt-2" w="48%" />
-      <SkeletonText className="mt-3" w="34%" />
+      {/* título (`text-body`), firma (`text-sub`) y cifras (`text-caption`),
+          con los márgenes de ListCard: así mide lo mismo que la tarjeta */}
+      <SkeletonLine className="mt-2.5 text-body" w="72%" />
+      <SkeletonLine className="mt-1 text-sub" w="48%" />
+      <SkeletonLine className="mt-1.5 text-caption" w="34%" />
     </div>
   );
 }
@@ -152,6 +183,49 @@ export function SkeletonRackRail({ n = 5 }: { n?: number }) {
       {Array.from({ length: n }).map((_, i) => (
         <li key={i} className="w-[44vw] shrink-0 sm:w-[200px]">
           <RackCardShape />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * «Lo tienen ellos, tú no» — Explorar.
+ *
+ * La misma fila que `FromOthersRail`: el mismo ancho por funda, el mismo hueco,
+ * y debajo las tres líneas que imprime (título, artista, de dónde sale) con su
+ * interlineado real. Antes era una rejilla de seis que en el móvil hacía dos
+ * filas: medía casi el doble que el carril y, al llegar, todo lo de abajo
+ * subía de golpe.
+ */
+export function SkeletonFindRail({ n = 6 }: { n?: number }) {
+  return (
+    <ul aria-hidden className="rail rail-page mt-4 flex gap-3.5 overflow-hidden pb-2">
+      {Array.from({ length: n }).map((_, i) => (
+        <li key={i} className="w-[142px] shrink-0 sm:w-[164px]">
+          <Skeleton className="aspect-square w-full" />
+          <SkeletonLine className="mt-2.5 text-sub" w={i % 2 ? "64%" : "82%"} />
+          <SkeletonLine className="text-sub" w="52%" />
+          <SkeletonLine className="mt-1 text-caption" w="74%" />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * «Coleccionan como tú» — Explorar: tarjetas de persona en un carril.
+ *
+ * `PersonCard` es una tarjeta 3:4 de esquina `lg`; la fila tenía título y
+ * nada debajo mientras cargaba, y al llegar las tarjetas aparecía de golpe una
+ * franja de trescientos píxeles.
+ */
+export function SkeletonPersonRail({ n = 4 }: { n?: number }) {
+  return (
+    <ul aria-hidden className="rail rail-page flex gap-4 overflow-hidden pb-2 sm:gap-5">
+      {Array.from({ length: n }).map((_, i) => (
+        <li key={i} className="w-[46vw] shrink-0 sm:w-[196px] lg:w-[212px]">
+          <Skeleton className="aspect-[3/4] w-full" radius="var(--r-lg)" />
         </li>
       ))}
     </ul>
@@ -252,6 +326,97 @@ export function Reveal({
           {skeleton}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Un hueco que llega tarde y, si al final no hay nada, se cierra sin mover lo
+ * que estás mirando.
+ *
+ * Una sección que solo existe si hay datos tiene dos maneras de dar un salto:
+ * aparecer de golpe cuando llegan, y desaparecer cuando resulta que no había
+ * nada. Lo primero lo arregla su esqueleto, que ocupa lo mismo desde el primer
+ * fotograma. Lo segundo es esto: si la sección queda vacía estando por debajo
+ * de lo que se ve, se quita y no se entera nadie; si está a la vista, conserva
+ * su altura (enseñando `fallback`, que dice por qué no hay nada y puede
+ * llenarla con `flex-1`) y se quita en
+ * cuanto deja de verse por abajo. Lo que tienes delante no se mueve nunca.
+ *
+ * `className` lleva el ritmo vertical de la sección (`mt-9 first:mt-0`): la
+ * sección de dentro queda como primera de su caja y pierde su margen, y el
+ * hueco lo pone esta caja, que también se va cuando se cierra.
+ */
+export function Hold({
+  empty,
+  fallback = null,
+  className = "",
+  children,
+}: {
+  /** ya se sabe que no hay nada que enseñar */
+  empty: boolean;
+  /** lo que ocupa el hueco mientras se ve vacío */
+  fallback?: React.ReactNode;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  /** la altura que tenía mientras era algo: la que se sostiene */
+  const last = useRef(0);
+  const [held, setHeld] = useState<number | null>(null);
+  const [gone, setGone] = useState(false);
+
+  // De layout, no pasivo: el observador tiene que soltarse en el mismo commit
+  // en que la sección se vacía, antes de que mida la caja ya encogida.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || empty) return;
+    last.current = el.offsetHeight;
+    const ro = new ResizeObserver(() => {
+      last.current = el.offsetHeight;
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [empty, gone]);
+
+  // se decide antes de pintar: el fotograma vacío no llega a verse
+  useLayoutEffect(() => {
+    if (!empty) {
+      setHeld(null);
+      setGone(false);
+      return;
+    }
+    const el = ref.current;
+    if (!el || last.current === 0) return setGone(true);
+    if (el.getBoundingClientRect().top >= window.innerHeight) setGone(true);
+    else setHeld(last.current);
+  }, [empty]);
+
+  // sostenido a la vista: se quita en cuanto queda por debajo de lo visible
+  useEffect(() => {
+    const el = ref.current;
+    if (held === null || gone || !el) return;
+    const io = new IntersectionObserver(([e]) => {
+      const bottom = e.rootBounds?.bottom ?? window.innerHeight;
+      if (!e.isIntersecting && e.boundingClientRect.top >= bottom) setGone(true);
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [held, gone]);
+
+  if (gone) return null;
+  return (
+    <div
+      ref={ref}
+      className={className}
+      // en columna, para que el `fallback` pueda llenar el alto sostenido
+      style={
+        empty && held !== null
+          ? { minHeight: held, display: "flex", flexDirection: "column" }
+          : undefined
+      }
+    >
+      {empty ? fallback : children}
     </div>
   );
 }

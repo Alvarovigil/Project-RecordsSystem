@@ -23,14 +23,23 @@ import { COVER_RETRY_MS } from "@/lib/cover";
  * Mientras espera, la imagen fallida no se ve (ni el icono roto ni el `alt`):
  * se ve lo que haya debajo, que en una portada es su cuadrado. Si se agotan
  * los intentos, se pinta el `fallback`: otra dirección (la funda dibujada con
- * los colores del disco), un nodo, o por defecto una superficie neutra del
- * tamaño de la imagen. Nunca el icono roto.
+ * los colores del disco), un nodo (las iniciales de una persona), o por
+ * defecto una superficie neutra del tamaño de la imagen. Nunca el icono roto.
+ *
+ * El `fallback` de tipo dirección también puede fallar, y entonces va la
+ * superficie neutra: no se reintenta, porque es ya el último recurso.
+ *
+ * **`onError` significa «reintentos agotados»**, no «ha fallado una vez». Los
+ * fallos intermedios se los queda RetryImg; quien escucha `onError` se entera
+ * una sola vez, cuando ya se va a pintar el `fallback`. Es el momento de dejar
+ * de esperar (quitar un esqueleto, por ejemplo), no de pintar nada a cambio:
+ * para eso está `fallback`.
  */
 export function useImgRetry(src: string | null | undefined) {
   const [attempt, setAttempt] = useState(0);
   const [broken, setBroken] = useState(false);
   const [gaveUp, setGaveUp] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // otra imagen, otra cuenta
   const seen = useRef(src);
@@ -66,6 +75,8 @@ type Props = Omit<ImgHTMLAttributes<HTMLImageElement>, "src"> & {
   src?: string | null;
   /** qué se pinta si no hay manera: otra dirección o un nodo */
   fallback?: string | ReactNode;
+  /** se llama una sola vez, cuando se han agotado los reintentos */
+  onError?: ImgHTMLAttributes<HTMLImageElement>["onError"];
 };
 
 const RetryImg = forwardRef<HTMLImageElement, Props>(function RetryImg(
@@ -90,16 +101,40 @@ const RetryImg = forwardRef<HTMLImageElement, Props>(function RetryImg(
   const fail = r.fail;
   useEffect(() => {
     const el = own.current;
+    // una dirección `data:` no viaja por la red: no hay error que se haya
+    // adelantado a React, y una vacía mientras se decodifica no es un fallo
+    if (src?.startsWith("data:")) return;
     if (el && el.complete && el.naturalWidth === 0 && el.getAttribute("src")) fail();
     // solo al montar cada intento
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [r.attempt]);
 
+  /** la dirección de reserva que tampoco ha cargado (si la hay) */
+  const [deadFallback, setDeadFallback] = useState<string | null>(null);
+
   if (!src || r.gaveUp) {
-    if (typeof fallback === "string")
-      // eslint-disable-next-line @next/next/no-img-element
-      return <img ref={ref} src={fallback} alt={alt} className={className} style={style} {...rest} />;
-    if (fallback !== undefined && fallback !== null) return <>{fallback}</>;
+    if (typeof fallback === "string" && fallback !== deadFallback) {
+      const dead = () => setDeadFallback(fallback);
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          ref={(el) => {
+            if (typeof ref === "function") ref(el);
+            else if (ref) ref.current = el;
+            // el mismo caso que arriba: falló antes de que React escuchara
+            if (el && !fallback.startsWith("data:") && el.complete && el.naturalWidth === 0) dead();
+          }}
+          src={fallback}
+          alt={alt}
+          className={className}
+          style={style}
+          {...rest}
+          onError={dead}
+        />
+      );
+    }
+    if (typeof fallback !== "string" && fallback !== undefined && fallback !== null)
+      return <>{fallback}</>;
     return <span aria-hidden className={`block bg-fill-subtle ${className ?? ""}`} style={style} />;
   }
 

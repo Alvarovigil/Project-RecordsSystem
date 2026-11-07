@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import ArtistView from "@/components/community/ArtistView";
 import { resolveArtistVerdict } from "@/lib/artist-known-server";
 
-export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const name = params.slug.replace(/-/g, " ");
   return {
     title: name.replace(/\b\w/g, (c) => c.toUpperCase()),
@@ -23,7 +24,8 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
  * inventada ya no fabrica un artista. Ante un límite o una duda, la página
  * sale como siempre (lib/artist-known-server).
  */
-export default async function ArtistPage({ params }: { params: { slug: string } }) {
+export default async function ArtistPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   let slug = params.slug;
   try {
     slug = decodeURIComponent(params.slug);

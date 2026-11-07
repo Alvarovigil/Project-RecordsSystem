@@ -35,7 +35,7 @@ export default function ConfirmButton({
   className?: string;
 }) {
   const [armed, setArmed] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     if (!armed) return;

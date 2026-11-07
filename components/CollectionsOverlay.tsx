@@ -138,8 +138,8 @@ export default function CollectionsOverlay({
       alive = false;
     };
   }, [repo, open, activeId, sharingId]);
-  const openTimer = useRef<ReturnType<typeof setTimeout>>();
-  const closeTimer = useRef<ReturnType<typeof setTimeout>>();
+  const openTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   /** dwell on a row and the card appears; move on and it is gone */
   const arm = (list: ListWithRecord, el: HTMLElement) => {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Cover } from "@/components/ui/Avatar";
-import Skeleton, { SkeletonText } from "@/components/ui/Skeleton";
+import Skeleton, { Hold, SkeletonLine } from "@/components/ui/Skeleton";
 import CatalogueSheet, { type CatalogueItem } from "@/components/CatalogueSheet";
 import type { Vinyl } from "@/lib/types";
 
@@ -69,67 +69,69 @@ export default function WantedRail({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [genre]);
 
-  // nothing to say is better than a heading over an empty strip
-  if (rows !== null && rows.length === 0) return null;
-
+  // nothing to say is better than a heading over an empty strip — y si está a
+  // la vista cuando se vacía, se cierra cuando deja de estarlo (Hold)
   return (
-    <section className="mt-9">
-      {/* El mismo encabezado que las demás secciones de Explorar: un título que
-          se lee y una línea que dice por qué mirar. */}
-      <h2 className="text-heading font-medium leading-tight text-paper">{title}</h2>
-      <p className="mt-1.5 text-sub text-content-muted">{subtitle}</p>
+    <Hold empty={rows !== null && rows.length === 0} className="mt-9">
+      <section>
+        {/* El mismo encabezado que las demás secciones de Explorar: un título que
+            se lee y una línea que dice por qué mirar. */}
+        <h2 className="text-heading font-medium leading-tight text-paper">{title}</h2>
+        <p className="mt-1.5 text-sub text-content-muted">{subtitle}</p>
 
-      {/* The same rail as the racks above it: this is something to skim past,
-          and it bleeds off the right edge so the row says there is more. */}
-      <ul className="rail rail-page mt-4 flex gap-4 pb-2">
-        {rows === null
-          ? Array.from({ length: 6 }).map((_, i) => (
-              <li key={i} className="w-[38vw] shrink-0 sm:w-[168px]">
-                <Skeleton className="aspect-square w-full" />
-                <SkeletonText className="mt-2.5" w={i % 2 ? "62%" : "82%"} />
-                <SkeletonText className="mt-1.5" w="46%" />
-              </li>
-            ))
-          : rows.map((r) => (
-              <li key={r.id} className="w-[38vw] shrink-0 snap-start sm:w-[168px]">
-                <button
-                  onClick={() => setLooking(r)}
-                  className="pressable block w-full text-left"
-                >
-                  <span className="relative block">
-                    <Cover
-                      src={r.cover_image ?? r.thumb ?? null}
-                      className="w-full rounded-[3px]"
-                    />
-                    {savedIds.has(r.id) && (
-                      <span className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink/75 text-paper backdrop-blur-xl">
-                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden>
-                          <path d="M2.5 7.4 L5.6 10.5 L11.5 3.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </span>
-                    )}
-                  </span>
-                  <span className="mt-2.5 block truncate text-sub font-medium text-paper">
-                    {r.title}
-                  </span>
-                  {/* the number, because it is the argument */}
-                  <span className="mt-1 block truncate text-caption text-content-muted">
-                    {r.want.toLocaleString("es-ES")} lo quieren
-                  </span>
-                </button>
-              </li>
-            ))}
-      </ul>
+        {/* The same rail as the racks above it: this is something to skim past,
+            and it bleeds off the right edge so the row says there is more. */}
+        <ul className="rail rail-page mt-4 flex gap-4 pb-2">
+          {rows === null
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <li key={i} className="w-[38vw] shrink-0 sm:w-[168px]">
+                  <Skeleton className="aspect-square w-full" />
+                  {/* las dos líneas de abajo, con su letra y su interlineado */}
+                  <SkeletonLine className="mt-2.5 text-sub" w={i % 2 ? "62%" : "82%"} />
+                  <SkeletonLine className="mt-1 text-caption" w="46%" />
+                </li>
+              ))
+            : rows.map((r) => (
+                <li key={r.id} className="w-[38vw] shrink-0 snap-start sm:w-[168px]">
+                  <button
+                    onClick={() => setLooking(r)}
+                    className="pressable block w-full text-left"
+                  >
+                    <span className="relative block">
+                      <Cover
+                        src={r.cover_image ?? r.thumb ?? null}
+                        className="w-full rounded-[3px]"
+                      />
+                      {savedIds.has(r.id) && (
+                        <span className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink/75 text-paper backdrop-blur-xl">
+                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden>
+                            <path d="M2.5 7.4 L5.6 10.5 L11.5 3.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-2.5 block truncate text-sub font-medium text-paper">
+                      {r.title}
+                    </span>
+                    {/* the number, because it is the argument */}
+                    <span className="mt-1 block truncate text-caption text-content-muted">
+                      {r.want.toLocaleString("es-ES")} lo quieren
+                    </span>
+                  </button>
+                </li>
+              ))}
+        </ul>
 
-      <CatalogueSheet
-        item={looking}
-        onClose={() => setLooking(null)}
-        targetName={targetName}
-        saved={Boolean(looking && savedIds.has(looking.id))}
-        busy={savingId === looking?.id}
-        onSave={() => (looking ? onSave(looking) : null)}
-        onSaved={onSaved}
-      />
-    </section>
+        <CatalogueSheet
+          item={looking}
+          onClose={() => setLooking(null)}
+          targetName={targetName}
+          saved={Boolean(looking && savedIds.has(looking.id))}
+          busy={savingId === looking?.id}
+          onSave={() => (looking ? onSave(looking) : null)}
+          onSaved={onSaved}
+        />
+      </section>
+    </Hold>
   );
 }

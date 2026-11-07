@@ -3,11 +3,12 @@ import { adminConfigured, isAdmin } from "@/lib/admin/auth";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminLogin({
-  searchParams,
-}: {
-  searchParams: { error?: string };
-}) {
+export default async function AdminLogin(
+  props: {
+    searchParams: Promise<{ error?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   if (await isAdmin()) redirect("/admin");
 
   return (

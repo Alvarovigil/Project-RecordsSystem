@@ -16,15 +16,16 @@ export const metadata = { title: "Entrar", robots: { index: false } };
  * sentence about what an account is for, the button, and a way back to
  * looking.
  */
-export default async function EnterPage({
-  searchParams,
-}: {
-  searchParams: { next?: string };
-}) {
+export default async function EnterPage(
+  props: {
+    searchParams: Promise<{ next?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   // already in: straight on to where they were going, if it is on this site
   const onward = safeNext(searchParams.next);
   if (FAKE_SESSION) redirect(onward);
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { data } = (await supabase?.auth.getUser()) ?? { data: { user: null } };
   if (data.user) redirect(onward);
 

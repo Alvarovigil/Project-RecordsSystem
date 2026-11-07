@@ -9,9 +9,22 @@ const nextConfig = {
   },
   transpilePackages: ["three"],
 
-  // `next lint` mira app, components y lib por defecto; los hooks también
-  // tienen reglas de hooks que cumplir
-  eslint: { dirs: ["app", "components", "hooks", "lib", "scripts"] },
+  /**
+   * Sin la «N» de Next en desarrollo. Desde Next 15 flota abajo a la
+   * izquierda, justo encima de la pestaña Colección de la barra del móvil, y
+   * tapa lo que se está probando. Los errores siguen saliendo en su capa.
+   */
+  devIndicators: false,
+
+  /**
+   * Lo que Next 14 hacía sin pedírselo. Desde Next 15 una página dinámica no
+   * se reutiliza al volver a ella con un enlace: se vuelve a pedir al servidor
+   * y se ve su `loading.tsx` en cada cambio de pestaña. Treinta segundos era
+   * el valor de antes y es el que esta app da por hecho.
+   */
+  experimental: {
+    staleTimes: { dynamic: 30 },
+  },
 
   /**
    * A build can be told to write somewhere else.

@@ -24,7 +24,7 @@ export default async function ShelfPage() {
     );
   }
 
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { data } = (await supabase?.auth.getUser()) ?? { data: { user: null } };
   if (!data.user) redirect("/");
 

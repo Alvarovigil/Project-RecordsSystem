@@ -13,6 +13,13 @@
 // iTunes, not Discogs: same courtesy of identifying ourselves, different host.
 const UA = "Rackr/1.0 +https://rackr.club";
 
+/**
+ * Hecho una vez al día en el servidor, no en cada visita. Next 14 lo deducía
+ * solo (un GET que no mira la petición y cuyas consultas duran un día); desde
+ * Next 15 un GET se ejecuta en cada petición salvo que se diga.
+ */
+export const revalidate = 86400;
+
 
 
 /** artist, song — the only two things needed to find a preview */

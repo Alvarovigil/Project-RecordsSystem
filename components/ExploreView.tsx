@@ -6,7 +6,12 @@ import Link from "next/link";
 import { Page, Section } from "@/components/app/AppShell";
 import { Cover } from "@/components/ui/Avatar";
 import EmptyState from "@/components/ui/EmptyState";
-import { SkeletonRackRail } from "@/components/ui/Skeleton";
+import {
+  Hold,
+  SkeletonFindRail,
+  SkeletonPersonRail,
+  SkeletonRackRail,
+} from "@/components/ui/Skeleton";
 import CatalogueNotice from "@/components/ui/CatalogueNotice";
 import WantedRail, { type WantedRow } from "@/components/explore/WantedRail";
 import FromOthersRail from "@/components/explore/FromOthersRail";
@@ -225,6 +230,31 @@ export default function ExploreView() {
   const [looking, setLooking] = useState<CatalogueItem | null>(null);
   /* el pulso de la comunidad: lo que alguien acaba de colocar en su estantería */
   const [pulse, setPulse] = useState<ActivityEvent[] | null>(null);
+  /**
+   * Dónde va el pulso: arriba si llega a tiempo, al final si no.
+   *
+   * Es la única sección que va encima de todo y la que más a menudo sale
+   * vacía (quien no sigue a nadie no tiene pulso). Reservarle sitio dejaría
+   * un agujero arriba del todo; no reservarlo y meterlo cuando llega empuja
+   * la pantalla entera hacia abajo. Así que lo de debajo del buscador espera
+   * a saberlo, con un plazo muy corto (300 ms, lo que tarda en contestar
+   * casi siempre): si contesta antes, va arriba; si no, la pantalla se monta
+   * sin él con sus esqueletos y, si luego trae algo, se pone al final, donde
+   * no mueve nada de lo que ya se ve. Más plazo era una pantalla en blanco.
+   */
+  const [pulseAt, setPulseAt] = useState<"top" | "end" | null>(null);
+  const pulseLate = useRef(false);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      pulseLate.current = true;
+      setPulseAt((at) => at ?? "end");
+    }, 300);
+    return () => clearTimeout(t);
+  }, []);
+  /** los racks destacados (y la gente) ya han contestado, con algo o con nada */
+  const [listsSettled, setListsSettled] = useState(false);
+  /** cuántos discos de otros han salido; null mientras se buscan */
+  const [findsCount, setFindsCount] = useState<number | null>(null);
 
   /** guardar desde la esquina de la portada, sin abrir nada */
   const saveRow = async (r: (typeof addable)[number]) => {
@@ -265,19 +295,27 @@ export default function ExploreView() {
 
     if (!q) {
       setLoading(true);
+      const placePulse = (e: ActivityEvent[]) => {
+        setPulse(e);
+        setPulseAt((at) => at ?? (pulseLate.current ? "end" : "top"));
+      };
       repo
         .activity()
-        .then((e) => setPulse(e.filter((x) => !x.mine)))
-        .catch(() => setPulse([]));
+        .then((e) => placePulse(e.filter((x) => !x.mine)))
+        .catch(() => placePulse([]));
       /* Cada mitad por su lado: si fallan los racks, se dice; si solo
          fallan las personas, los racks se enseñan igual. */
       Promise.allSettled([repo.popularLists(), repo.suggestedProfiles()])
         .then(([l, p]) => {
           if (!alive) return;
-          if (l.status === "rejected") return fail();
+          if (l.status === "rejected") {
+            setListsSettled(true);
+            return fail();
+          }
           done();
           setLists(l.value);
           setPeople(p.status === "fulfilled" ? p.value : []);
+          setListsSettled(true);
           setLoading(false);
         })
         // without this a failed read leaves the skeleton pulsing for ever,
@@ -367,6 +405,19 @@ export default function ExploreView() {
   const total = counts.records + counts.lists + counts.people;
   const loadingAnything = loading || catalogue.loading;
   const show = (s: Scope) => scope === "all" || scope === s;
+  /** sin red o con la lectura caída tampoco va a llegar nada más */
+  const listsDone = listsSettled || offline || failed;
+  const othersTitle = visitor ? "De los racks de aquí abajo" : "Lo tienen ellos, tú no";
+  const pulseSection = pulse !== null && pulse.length > 0 && (
+    <Section
+      title="Se está moviendo"
+      note="Lo que otros acaban de colocar en sus estanterías."
+      href="/actividad"
+      linkLabel="Ver todo"
+    >
+      <PulseRail events={pulse} />
+    </Section>
+  );
 
   return (
     <Page width="full">
@@ -584,20 +635,50 @@ export default function ExploreView() {
            * las estanterías de otros que no está en la tuya. Las tendencias
            * siguen ahí, abajo, que es donde responden a «¿y qué más hay?».
            */}
-          {pulse !== null && pulse.length > 0 && (
-            <Section
-              title="Se está moviendo"
-              note="Lo que otros acaban de colocar en sus estanterías."
-              href="/actividad"
-              linkLabel="Ver todo"
-            >
-              <PulseRail events={pulse} />
-            </Section>
-          )}
+          {/* hasta saber dónde va el pulso no se monta nada: ver `pulseAt` */}
+          {pulseAt !== null && (
+          <>
+          {pulseAt === "top" && pulseSection}
 
-          {lists.length > 0 && (
+          {/**
+           * Su sitio está guardado desde el primer fotograma.
+           *
+           * Solo existía cuando llegaban los racks, y entonces aparecía de
+           * golpe con su esqueleto debajo: casi cuatrocientos píxeles que
+           * empujaban todo lo que ya estaba a la vista (CLS 0,62 en el móvil).
+           * Ahora el esqueleto ocupa lo mismo que el carril desde el principio
+           * y, si al final no hay nada que enseñar, Hold lo cierra sin mover
+           * lo que se está mirando.
+           */}
+          <Hold
+            className="mt-9 first:mt-0"
+            empty={listsDone && (lists.length === 0 || findsCount === 0)}
+            fallback={
+              <EmptySlot
+                title={othersTitle}
+                note={
+                  lists.length === 0
+                    ? "Todavía no hay racks de otros que mirar."
+                    : visitor
+                      ? "Ahora mismo no hay discos que enseñar aquí."
+                      : "Ahora mismo no hay nada en esos racks que no tengas ya."
+                }
+                action={
+                  lists.length > 0
+                    ? {
+                        label: "Abrir un rack",
+                        onClick: () =>
+                          document
+                            .getElementById("racks")
+                            ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                      }
+                    : undefined
+                }
+              />
+            }
+          >
             <Section
-              title={visitor ? "De los racks de aquí abajo" : "Lo tienen ellos, tú no"}
+              title={othersTitle}
               // sin sesión el título ya dice de dónde salen: la nota no lo repite
               note={
                 visitor
@@ -605,15 +686,21 @@ export default function ExploreView() {
                   : "Discos sacados de los racks de aquí abajo. Ábrelos y verás quién más los tiene."
               }
             >
-              <FromOthersRail
-                lists={lists}
-                ownedIds={visitor ? NOTHING : ownedIds}
-                onOpen={(f) => setOpenRecord(f.vinyl)}
-              />
+              {lists.length > 0 ? (
+                <FromOthersRail
+                  lists={lists}
+                  ownedIds={visitor ? NOTHING : ownedIds}
+                  onOpen={(f) => setOpenRecord(f.vinyl)}
+                  onSettle={setFindsCount}
+                />
+              ) : (
+                <SkeletonFindRail />
+              )}
             </Section>
-          )}
+          </Hold>
 
           <Section
+            id="racks"
             title="Racks que vale la pena abrir"
             note="Montados con criterio, no carpetas."
           >
@@ -631,7 +718,7 @@ export default function ExploreView() {
                 }
                 action={{ label: "Reintentar", onClick: () => setRetry((n) => n + 1) }}
               />
-            ) : loading && lists.length === 0 ? (
+            ) : (loading || !listsSettled) && lists.length === 0 ? (
               <SkeletonRackRail n={5} />
             ) : lists.length === 0 ? (
               /* A heading with nothing under it is the worst of both: it does
@@ -676,8 +763,22 @@ export default function ExploreView() {
           </Section>
 
           {/* sin red y sin nadie que enseñar, el aviso de arriba ya lo dice:
-              aquí solo quedaría un título sobre nada */}
-          {!((offline || failed) && people.length === 0) && (
+              aquí solo quedaría un título sobre nada. Mientras carga, su
+              esqueleto; si se queda vacía, Hold la cierra sin empujar nada. */}
+          <Hold
+            className="mt-9 first:mt-0"
+            empty={listsDone && people.length === 0}
+            fallback={
+              <EmptySlot
+                title={visitor ? "Gente con la que empezar" : "Coleccionan como tú"}
+                note={
+                  visitor
+                    ? "Todavía no hay colecciones que enseñar."
+                    : "Todavía no hay nadie con una colección parecida a la tuya."
+                }
+              />
+            }
+          >
           <Section
             /* Sin sesión no hay un «tú» con el que comparar: la estantería
                de la que saldría el parecido es la de ejemplo. */
@@ -691,18 +792,22 @@ export default function ExploreView() {
             {/* The same rail as the crates above, for the same reason: this is
                 something to skim past, not a directory to work through. And
                 the cards are shelves rather than faces — see PersonCard. */}
-            <ul className="rail rail-page flex gap-4 pb-2 sm:gap-5">
-              {people.slice(0, 12).map((p) => (
-                <li
-                  key={p.id}
-                  className="w-[46vw] shrink-0 snap-start sm:w-[196px] lg:w-[212px]"
-                >
-                  <PersonCard profile={p} />
-                </li>
-              ))}
-            </ul>
+            {people.length === 0 ? (
+              <SkeletonPersonRail />
+            ) : (
+              <ul className="rail rail-page flex gap-4 pb-2 sm:gap-5">
+                {people.slice(0, 12).map((p) => (
+                  <li
+                    key={p.id}
+                    className="w-[46vw] shrink-0 snap-start sm:w-[196px] lg:w-[212px]"
+                  >
+                    <PersonCard profile={p} />
+                  </li>
+                ))}
+              </ul>
+            )}
           </Section>
-          )}
+          </Hold>
 
           {/**
            * Las dos listas del catálogo, debajo del club y no encima.
@@ -756,6 +861,10 @@ export default function ExploreView() {
             />
           )}
 
+          {/* llegó tarde: al final, donde no empuja nada de lo que se ve */}
+          {pulseAt === "end" && pulseSection}
+          </>
+          )}
         </>
       )}
 
@@ -1019,6 +1128,43 @@ function ResultBlock({
       </div>
       <div className="mt-4">{children}</div>
     </section>
+  );
+}
+
+/**
+ * Una sección que se ha quedado vacía estando a la vista.
+ *
+ * Hold le guarda el alto para no mover nada, y ese alto en negro parecía una
+ * pantalla a medio cargar. Aquí lo ocupa la superficie de siempre (la de
+ * `Card` y `EmptyState`, sin contorno) con la frase que dice por qué no hay
+ * nada y, si la hay, una salida; lo tenue lo pone la frase, no la caja.
+ *
+ * No es `EmptyState`: ese trae su propio título, que repetiría el de la
+ * sección, y una acción obligatoria que el hueco de la gente no tiene.
+ */
+function EmptySlot({
+  title,
+  note,
+  action,
+}: {
+  title: string;
+  note: string;
+  action?: { label: string; onClick: () => void };
+}) {
+  return (
+    <Section title={title} fill>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-lg bg-fill-subtle px-6 py-8 text-center">
+        <p className="max-w-[32ch] text-sub text-content-muted">{note}</p>
+        {action && (
+          <button
+            onClick={action.onClick}
+            className="pressable hit text-sub font-medium text-content-secondary transition-colors hover:text-paper"
+          >
+            {action.label}
+          </button>
+        )}
+      </div>
+    </Section>
   );
 }
 

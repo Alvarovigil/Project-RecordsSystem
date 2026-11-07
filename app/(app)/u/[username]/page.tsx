@@ -7,8 +7,9 @@ import { DEMO_PROFILE } from "@/lib/demo";
 export const dynamic = "force-dynamic";
 
 /** Shared links should show who they lead to. */
-export async function generateMetadata({ params }: { params: { username: string } }) {
-  const supabase = getSupabaseServerClient();
+export async function generateMetadata(props: { params: Promise<{ username: string }> }) {
+  const params = await props.params;
+  const supabase = await getSupabaseServerClient();
   const { data } = (await supabase
     ?.from("profiles")
     .select("display_name, bio, avatar_url")
@@ -38,8 +39,9 @@ export async function generateMetadata({ params }: { params: { username: string 
  * account and by the placeholder community. There used to be a separate
  * component per case, and they had already drifted apart.
  */
-export default async function ProfilePage({ params }: { params: { username: string } }) {
-  const supabase = getSupabaseServerClient();
+export default async function ProfilePage(props: { params: Promise<{ username: string }> }) {
+  const params = await props.params;
+  const supabase = await getSupabaseServerClient();
 
   if (supabase) {
     const { data } = await supabase

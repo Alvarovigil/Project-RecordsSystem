@@ -5,8 +5,8 @@ import type { Vinyl } from "@/lib/types";
 
 const DATA_PATH = resolve(process.cwd(), "data/vinilos.json");
 
-export async function DELETE(_req: NextRequest, ctx: { params: { id: string } }) {
-  const id = ctx.params.id;
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const id = (await ctx.params).id;
   try {
     const raw = await readFile(DATA_PATH, "utf8");
     const list: Vinyl[] = JSON.parse(raw);

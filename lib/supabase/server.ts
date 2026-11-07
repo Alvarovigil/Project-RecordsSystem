@@ -4,9 +4,9 @@ import { cookies } from "next/headers";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, isSupabaseConfigured } from "./env";
 
 /** Server client bound to the request cookies (route handlers, RSC). */
-export function getSupabaseServerClient() {
+export async function getSupabaseServerClient() {
   if (!isSupabaseConfigured) return null;
-  const store = cookies();
+  const store = await cookies();
   return createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
       getAll: () => store.getAll(),

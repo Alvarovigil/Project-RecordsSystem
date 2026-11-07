@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { ImageResponse } from "next/og";
+import { ogFonts } from "@/lib/og/font";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
   const slug = req.nextUrl.searchParams.get("slug");
   if (!slug) return new Response("slug required", { status: 400 });
 
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   let release = supabase
     ? (
         await supabase
@@ -137,6 +138,6 @@ export async function GET(req: NextRequest) {
         <span style={{ fontSize: 30, opacity: 0.45, letterSpacing: 2 }}>rackr.club</span>
       </div>
     ),
-    size,
+    { ...size, fonts: await ogFonts() },
   );
 }

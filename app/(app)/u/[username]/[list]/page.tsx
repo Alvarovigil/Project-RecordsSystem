@@ -8,12 +8,13 @@ import { SITE_NAME } from "@/lib/site";
 export const dynamic = "force-dynamic";
 
 /** A shared list should arrive with its name, its owner and a cover. */
-export async function generateMetadata({
-  params,
-}: {
-  params: { username: string; list: string };
-}) {
-  const supabase = getSupabaseServerClient();
+export async function generateMetadata(
+  props: {
+    params: Promise<{ username: string; list: string }>;
+  }
+) {
+  const params = await props.params;
+  const supabase = await getSupabaseServerClient();
   if (!supabase) return { title: SITE_NAME };
 
   const { data: profile } = await supabase
@@ -46,12 +47,13 @@ export async function generateMetadata({
  * The server resolves who and which; one client view renders it, whether the
  * list belongs to a real account, to you, or to the placeholder community.
  */
-export default async function ListPage({
-  params,
-}: {
-  params: { username: string; list: string };
-}) {
-  const supabase = getSupabaseServerClient();
+export default async function ListPage(
+  props: {
+    params: Promise<{ username: string; list: string }>;
+  }
+) {
+  const params = await props.params;
+  const supabase = await getSupabaseServerClient();
 
   if (supabase) {
     const { data: profile } = await supabase

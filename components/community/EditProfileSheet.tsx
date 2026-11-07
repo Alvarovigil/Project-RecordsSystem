@@ -52,7 +52,7 @@ export default function EditProfileSheet({
   const [handleState, setHandleState] = useState<"idle" | "checking" | "free" | "taken" | "invalid">(
     "idle",
   );
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // reopening after a cancel must not show yesterday's half-typed edit
   useEffect(() => {

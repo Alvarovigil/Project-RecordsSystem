@@ -81,7 +81,7 @@ export async function resolveArtistVerdict(slug: string): Promise<ArtistVerdict>
   // sin catálogo, sin minuto o un slug que no salió de un enlace nuestro: duda
   if (!process.env.DISCOGS_TOKEN || !isPlainSlug(slug)) return "doubt";
   if (catalogueWaitSeconds() > 0) return "doubt";
-  const who = clientKey(headers());
+  const who = clientKey(await headers());
   if (clientCallWait(who) > 0) return "doubt";
   spendClientCalls(who);
 

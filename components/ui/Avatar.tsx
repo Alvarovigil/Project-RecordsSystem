@@ -71,24 +71,34 @@ export default function Avatar({
         width: px,
         height: px,
         // low saturation and low lightness: it must read as a placeholder on a
-        // near-black ground, not as a sticker
-        background: src ? undefined : `hsl(${hue} 24% 26%)`,
+        // near-black ground, not as a sticker. Painted under the photo too: while
+        // it loads or retries the circle is this person's colour, not a hole.
+        background: `hsl(${hue} 24% 26%)`,
         color: `hsl(${hue} 45% 84%)`,
         // never under 12px: an initial is something a person reads. In rem so
         // it follows the browser's text size like the rest of the type.
         fontSize: `${Math.max(12, Math.round(px * 0.4)) / 16}rem`,
         boxShadow: ring ? "0 0 0 2px var(--surface), 0 0 0 3.5px var(--accent)" : undefined,
       }}
-      className={`inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-medium leading-none ${
+      className={`relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden rounded-full font-medium leading-none ${
         interactive
           ? "transition duration-fast group-hover:brightness-110 group-hover:ring-2 group-hover:ring-paper/25"
           : ""
       }`}
     >
-      {src ? (
-        <RetryImg src={src} alt="" className="h-full w-full object-cover" />
-      ) : (
-        initials || "?"
+      {/* Las iniciales siempre, y la foto encima cuando llega. Mientras carga,
+          mientras se reintenta y si no llega nunca se ve quién es, no un
+          círculo vacío que dice «aquí falta algo». */}
+      {initials || "?"}
+      {src && (
+        <RetryImg
+          src={src}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          // agotados los intentos no se pinta nada: debajo ya están las iniciales
+          // (sin esto saldría la superficie neutra tapándolas)
+          fallback={<></>}
+        />
       )}
     </span>
   );

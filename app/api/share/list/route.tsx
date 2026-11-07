@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { ImageResponse } from "next/og";
+import { ogFonts } from "@/lib/og/font";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
   const slug = req.nextUrl.searchParams.get("list");
   if (!username || !slug) return new Response("user and list required", { status: 400 });
 
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   if (!supabase) return new Response("not available", { status: 503 });
 
   const { data: profile } = await supabase
@@ -130,6 +131,6 @@ export async function GET(req: NextRequest) {
         </span>
       </div>
     ),
-    size,
+    { ...size, fonts: await ogFonts() },
   );
 }

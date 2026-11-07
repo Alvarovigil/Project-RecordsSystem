@@ -909,8 +909,13 @@ html[data-in-app] .door-webview { display: var(--door-display, block); }
    Held still for anyone who asked for less motion — a permanently animating
    placeholder is worse for them than a plain grey box.
 --------------------------------------------------------------------------- */
-.skeleton {
+/* `relative` sin peso: un esqueleto que necesite ser `absolute` (las líneas de
+   SkeletonLine) lo pide con la utilidad, y esta regla, que va después, no se
+   la quita. Con `.skeleton` a secas ganaba ella y la línea medía 0 px. */
+:where(.skeleton) {
   position: relative;
+}
+.skeleton {
   overflow: hidden;
   background: var(--fill-subtle);
 }

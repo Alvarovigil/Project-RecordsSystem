@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { ogFonts } from "@/lib/og/font";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const alt = "Un rack en Rackr";
@@ -6,12 +7,9 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 /** A shared list arrives with its name, its size and whose it is. */
-export default async function Image({
-  params,
-}: {
-  params: { username: string; list: string };
-}) {
-  const supabase = getSupabaseServerClient();
+export default async function Image(props: { params: Promise<{ username: string; list: string }> }) {
+  const params = await props.params;
+  const supabase = await getSupabaseServerClient();
   const { data: profile } = (await supabase
     ?.from("profiles")
     .select("id, display_name")
@@ -46,7 +44,10 @@ export default async function Image({
           Rackr · lista
         </span>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          <span style={{ fontSize: 72, lineHeight: 1.05, letterSpacing: -2 }}>
+          {/* 1,2 y no 1,05: es el interlineado que salía de verdad en Next 14
+              (86 px entre líneas a 72 px). El Satori de Next 16 sí respeta el
+              1,05 y un titular a dos líneas quedaba más apretado que antes. */}
+          <span style={{ fontSize: 72, lineHeight: 1.2, letterSpacing: -2 }}>
             {list?.title ?? params.list}
           </span>
           {list?.description ? (
@@ -60,6 +61,6 @@ export default async function Image({
         </span>
       </div>
     ),
-    size,
+    { ...size, fonts: await ogFonts() },
   );
 }

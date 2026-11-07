@@ -104,7 +104,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${sans.variable} ${mono.variable}`}>
+    // data-scroll-behavior: Next 14 pasaba a «auto» el scroll suave del html
+    // al navegar entre páginas (el salto es instantáneo); Next 16 solo lo hace
+    // si se lo pide este atributo
+    <html lang="es" className={`${sans.variable} ${mono.variable}`} data-scroll-behavior="smooth">
       <body className="grain">
         {children}
         <ServiceWorker />

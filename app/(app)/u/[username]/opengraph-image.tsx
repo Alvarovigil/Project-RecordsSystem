@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { ogFonts } from "@/lib/og/font";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const alt = "Perfil en Rackr";
@@ -6,8 +7,9 @@ export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 /** A shared profile arrives with the person's name and what they've built. */
-export default async function Image({ params }: { params: { username: string } }) {
-  const supabase = getSupabaseServerClient();
+export default async function Image(props: { params: Promise<{ username: string }> }) {
+  const params = await props.params;
+  const supabase = await getSupabaseServerClient();
   const { data: profile } = (await supabase
     ?.from("profiles")
     .select("id, display_name, bio")
@@ -56,6 +58,6 @@ export default async function Image({ params }: { params: { username: string } }
         </span>
       </div>
     ),
-    size,
+    { ...size, fonts: await ogFonts() },
   );
 }

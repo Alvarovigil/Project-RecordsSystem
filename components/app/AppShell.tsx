@@ -200,9 +200,19 @@ export function Section({
   note,
   href,
   linkLabel = "Ver todo",
+  id,
+  fill = false,
   children,
 }: {
   title: string;
+  /** para llegar a ella con un enlace (`#id`); deja sitio a la barra fija */
+  id?: string;
+  /**
+   * Ocupa el alto que le dé su caja (un hueco sostenido, ver Hold). Lleva el
+   * título grande aunque no tenga nota: es la misma sección, vacía, y la nota
+   * va dentro del hueco.
+   */
+  fill?: boolean;
   /**
    * La frase que dice por qué mirar esto.
    *
@@ -217,11 +227,14 @@ export function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-9 first:mt-0">
-      <div className={`flex items-baseline justify-between ${note ? "" : "border-b border-line pb-2"}`}>
+    <section
+      id={id}
+      className={`mt-9 first:mt-0 ${id ? "scroll-mt-20 sm:scroll-mt-8" : ""} ${fill ? "flex flex-1 flex-col" : ""}`}
+    >
+      <div className={`flex items-baseline justify-between ${note || fill ? "" : "border-b border-line pb-2"}`}>
         <h2
           className={
-            note
+            note || fill
               ? "text-heading font-medium leading-tight text-paper"
               : "label text-content-muted"
           }
@@ -238,7 +251,7 @@ export function Section({
         )}
       </div>
       {note && <p className="mt-1.5 text-sub text-content-muted">{note}</p>}
-      <div className="mt-4">{children}</div>
+      <div className={`mt-4 ${fill ? "flex flex-1 flex-col" : ""}`}>{children}</div>
     </section>
   );
 }

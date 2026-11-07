@@ -108,6 +108,8 @@ export function useSession() {
     clearSnapshots();
     setAuthenticated(false);
     resetRepository();
+    // una carga entera a propósito: que no quede nada de la sesión en memoria
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = "/";
   }, [supabase]);
 

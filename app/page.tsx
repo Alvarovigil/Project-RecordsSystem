@@ -10,14 +10,15 @@ export const dynamic = "force-dynamic";
  * landing — and nothing of the 3D engine is even downloaded, because the app
  * lives on its own route with its own bundle.
  */
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: { auth?: string };
-}) {
+export default async function Home(
+  props: {
+    searchParams: Promise<{ auth?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   if (!isSupabaseConfigured) redirect("/coleccion");
 
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { data } = (await supabase?.auth.getUser()) ?? { data: { user: null } };
   if (data.user) redirect("/coleccion");
 

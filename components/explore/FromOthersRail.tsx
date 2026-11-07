@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRepository } from "@/hooks/useRepository";
-import { SkeletonCovers } from "@/components/ui/Skeleton";
+import { SkeletonFindRail } from "@/components/ui/Skeleton";
 import { coverFor } from "@/lib/cover";
 import type { ListWithRecord } from "@/lib/data/types";
 import type { Vinyl } from "@/lib/types";
@@ -37,12 +37,21 @@ export default function FromOthersRail({
   lists,
   ownedIds,
   onOpen,
+  onSettle,
 }: {
   /** los racks que ya se están enseñando arriba; de ahí sale todo esto */
   lists: ListWithRecord[];
   /** lo que ya tienes, para no ofrecértelo */
   ownedIds: Set<string>;
   onOpen: (find: Find) => void;
+  /**
+   * Cuántos hallazgos ha habido, en el mismo commit en que se pintan.
+   *
+   * Si son cero el carril no pinta nada, y quien lo envuelve (el título de la
+   * sección) tiene que saberlo a la vez — no un fotograma después, que es
+   * justo el fotograma en que se vería el salto.
+   */
+  onSettle?: (count: number) => void;
 }) {
   const repo = useRepository();
   const [finds, setFinds] = useState<Find[] | null>(null);
@@ -86,8 +95,13 @@ export default function FromOthersRail({
           }
         }
         setFinds(out);
+        onSettle?.(out.length);
       })
-      .catch(() => alive && setFinds([]));
+      .catch(() => {
+        if (!alive) return;
+        setFinds([]);
+        onSettle?.(0);
+      });
 
     return () => {
       alive = false;
@@ -100,7 +114,7 @@ export default function FromOthersRail({
   if (finds !== null && finds.length === 0) return null;
 
   if (finds === null)
-    return <SkeletonCovers n={6} cols="grid-cols-3 sm:grid-cols-6" gap="gap-4" />;
+    return <SkeletonFindRail />;
 
   return (
     <ul className="rail rail-page mt-4 flex gap-3.5 pb-2">
